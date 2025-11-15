@@ -112,7 +112,7 @@ def action_function(policy):
 
 
 ## Train the model - Extended training
-training_loop(env, model, action_function, Preprocessor, timesteps=2000)
+training_loop(env, model, action_function, Preprocessor, timesteps=1000000)
 
 ## Watch
 #sai.watch(model, action_function, Preprocessor)
