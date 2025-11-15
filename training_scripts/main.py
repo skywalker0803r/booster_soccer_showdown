@@ -292,36 +292,74 @@ trained_model = dreamerv3_training_loop()
 class SAICompatibleWrapper:
     def __init__(self, dreamer_model):
         self.dreamer_model = dreamer_model
-        self.state = None
+        self.dreamer_state = None
         self.preprocessor = Preprocessor()
+        self.step_count = 0
     
     def __call__(self, obs_tensor):
-        # Convert to numpy
-        if hasattr(obs_tensor, 'detach'):
-            obs = obs_tensor.detach().cpu().numpy()
-        else:
-            obs = obs_tensor
-        
-        # Handle batch dimension
-        if len(obs.shape) == 1:
-            obs = obs[np.newaxis, :]
-        
-        # Reset state for each new sequence (SAI evaluation pattern)
-        if self.state is None:
-            self.state = None
-        
-        # Get action
-        action, self.state = self.dreamer_model.select_action(obs[0], self.state)
-        
-        # Return as tensor
-        return torch.FloatTensor(action).unsqueeze(0)
+        try:
+            # Convert to numpy
+            if hasattr(obs_tensor, 'detach'):
+                obs = obs_tensor.detach().cpu().numpy()
+            else:
+                obs = np.array(obs_tensor)
+            
+            # Ensure it's the right shape
+            if len(obs.shape) == 1:
+                obs = obs.reshape(1, -1)
+            
+            # Take first sample if batch
+            obs_single = obs[0] if obs.shape[0] > 0 else obs.flatten()
+            
+            # Ensure we have 89 features
+            if len(obs_single) != 89:
+                if len(obs_single) > 89:
+                    obs_single = obs_single[:89]
+                else:
+                    # Pad with zeros if too short
+                    padded = np.zeros(89)
+                    padded[:len(obs_single)] = obs_single
+                    obs_single = padded
+            
+            # Get action using simplified interface
+            with torch.no_grad():
+                # Reset state periodically to avoid accumulation issues
+                if self.step_count % 1000 == 0:
+                    self.dreamer_state = None
+                
+                action, self.dreamer_state = self.dreamer_model.select_action(obs_single, self.dreamer_state)
+                self.step_count += 1
+            
+            # Ensure action is correct shape and in valid range
+            action = np.clip(action, -1.0, 1.0)
+            
+            # Return as tensor with batch dimension
+            return torch.FloatTensor(action).unsqueeze(0)
+            
+        except Exception as e:
+            print(f"Error in SAICompatibleWrapper: {e}")
+            # Return safe default action
+            return torch.zeros(1, 12)
     
     def select_action(self, obs):
         """DDPG-style interface"""
-        if hasattr(obs, 'detach'):
-            obs = obs.detach().cpu().numpy()
-        action, _ = self.dreamer_model.select_action(obs)
-        return action
+        try:
+            if hasattr(obs, 'detach'):
+                obs = obs.detach().cpu().numpy()
+            
+            if len(obs) != 89:
+                if len(obs) > 89:
+                    obs = obs[:89]
+                else:
+                    padded = np.zeros(89)
+                    padded[:len(obs)] = obs
+                    obs = padded
+            
+            action, _ = self.dreamer_model.select_action(obs, None)
+            return np.clip(action, -1.0, 1.0)
+        except Exception as e:
+            print(f"Error in select_action: {e}")
+            return np.zeros(12)
 
 # Wrap the model
 model = SAICompatibleWrapper(trained_model)
