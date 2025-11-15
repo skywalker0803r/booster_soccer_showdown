@@ -292,4 +292,4 @@ model = dreamerv3_training_loop()
 ## Benchmark the model locally
 sai.benchmark(model, action_function, Preprocessor)
 
-sai.submit("Vedanta", model, action_function, Preprocessor)
+sai.submit("Vedanta_DreamerV3", model, action_function, Preprocessor)

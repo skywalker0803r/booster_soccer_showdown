@@ -38,8 +38,9 @@ class RSSMCore(nn.Module):
         self.posterior_net = nn.Linear(hidden_dim * 2, stoch_dim * discrete_dim)
         
         # Decoder: latent -> obs reconstruction
+        decoder_input_dim = hidden_dim + stoch_dim * discrete_dim
         self.obs_decoder = nn.Sequential(
-            nn.Linear(hidden_dim + stoch_dim, hidden_dim),
+            nn.Linear(decoder_input_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
@@ -50,7 +51,7 @@ class RSSMCore(nn.Module):
         
         # Reward prediction
         self.reward_predictor = nn.Sequential(
-            nn.Linear(hidden_dim + stoch_dim, hidden_dim // 2),
+            nn.Linear(decoder_input_dim, hidden_dim // 2),
             nn.ReLU(),
             nn.Linear(hidden_dim // 2, 1)
         )
@@ -275,8 +276,12 @@ class SimpleDreamerV3(nn.Module):
             
             # KL divergence between prior and posterior
             if 'posterior_logits' in state:
-                prior_dist = torch.distributions.Categorical(logits=state['prior_logits'])
-                posterior_dist = torch.distributions.Categorical(logits=state['posterior_logits'])
+                # Reshape logits for categorical distribution
+                prior_logits = state['prior_logits'].reshape(-1, self.rssm.stoch_dim, self.rssm.discrete_dim)
+                posterior_logits = state['posterior_logits'].reshape(-1, self.rssm.stoch_dim, self.rssm.discrete_dim)
+                
+                prior_dist = torch.distributions.Categorical(logits=prior_logits)
+                posterior_dist = torch.distributions.Categorical(logits=posterior_logits)
                 kl_loss += torch.distributions.kl_divergence(posterior_dist, prior_dist).mean()
         
         reconstruction_loss /= len(states)
@@ -344,17 +349,14 @@ class SimpleDreamerV3(nn.Module):
     
     def select_action(self, obs, state=None):
         """Select action for a single observation"""
-        if state is None:
-            state = self.rssm.init_state(1)
-        
         with torch.no_grad():
             obs_tensor = torch.FloatTensor(obs).unsqueeze(0)
             
-            # Encode observation
-            obs_embed = self.rssm.encode_obs(obs_tensor)
-            
-            # Update state with observation
-            if 'deter' in state:
+            if state is None:
+                # Initialize state for first observation
+                state = self.rssm.init_state(1)
+                # Encode first observation
+                obs_embed = self.rssm.encode_obs(obs_tensor)
                 posterior_input = torch.cat([state['deter'], obs_embed], dim=-1)
                 posterior_logits = self.rssm.posterior_net(posterior_input)
                 stoch = self.rssm.get_stochastic_state(posterior_logits)
@@ -363,10 +365,14 @@ class SimpleDreamerV3(nn.Module):
                     'stoch': stoch
                 }
             else:
-                # First observation
+                # Update state with new observation (using previous action would be better but we don't have it here)
+                obs_embed = self.rssm.encode_obs(obs_tensor)
+                posterior_input = torch.cat([state['deter'], obs_embed], dim=-1)
+                posterior_logits = self.rssm.posterior_net(posterior_input)
+                stoch = self.rssm.get_stochastic_state(posterior_logits)
                 state = {
-                    'deter': torch.zeros(1, self.rssm.hidden_dim),
-                    'stoch': self.rssm.get_stochastic_state(self.rssm.prior_net(torch.zeros(1, self.rssm.hidden_dim)))
+                    'deter': state['deter'],
+                    'stoch': stoch
                 }
             
             # Get action from policy

@@ -1,13 +1,2 @@
-我在參加一個比賽
-當我在colab終端機上執行python training_scripts/main.py
-他就會因為我在python training_scripts/main.py最後一行寫的
-sai.submit("Vedanta", model, action_function, Preprocessor)
-把模型提交到排行榜上面
-目前我的分數是-1.76
-第一名是-1.67
-我準備了官方文件在docs你可以參考
-你的第一個任務是幫助我提高分數打敗第一名
-我想說直接用dreamerv3這是deepmind做出來超厲害的算法
-來取代現有的DDPG算法
-你覺得如何 說出你的想法
-然後你只要提供想法跟寫程式就好 執行我自己手動來再跟你講結果
+/content/booster_soccer_showdown/training_scripts/simple_dreamerv3.py:116 in decode_obs
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (8x768 and 288x256)
