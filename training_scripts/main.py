@@ -170,14 +170,16 @@ model = SimpleDreamerV3(
 
 ## Define an action function
 def action_function(policy):
-    expected_bounds = [-1, 1]
-    action_percent = (policy - expected_bounds[0]) / (
-        expected_bounds[1] - expected_bounds[0]
-    )
-    bounded_percent = np.minimum(np.maximum(action_percent, 0), 1)
+    # DreamerV3 already outputs actions in [-1, 1] range
+    # We need to map them to the environment's action space
+    # Clip to ensure we're within [-1, 1]
+    clipped_policy = np.clip(policy, -1, 1)
+    
+    # Map from [-1, 1] to [action_space.low, action_space.high]
+    action_percent = (clipped_policy + 1) / 2  # Convert [-1, 1] to [0, 1]
     return (
         env.action_space.low
-        + (env.action_space.high - env.action_space.low) * bounded_percent
+        + (env.action_space.high - env.action_space.low) * action_percent
     )
 
 
