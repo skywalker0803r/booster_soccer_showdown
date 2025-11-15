@@ -7,7 +7,7 @@ from ddpg import DDPG_FF
 from training import training_loop
 
 ## Initialize the SAI client
-sai = SAIClient(comp_id="booster-soccer-showdown")
+sai = SAIClient(comp_id="booster-soccer-showdown",api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv")
 
 ## Make the environment
 env = sai.make_env()
