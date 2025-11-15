@@ -1,172 +1,196 @@
-Creating SimpleDreamerV3 model...
-=== Starting DreamerV3 Training ===
-Training for 600 episodes...
-Episode 0: Reward = -2.490, Steps = 225
-  New best reward: -2.490
-Episode 20: Reward = -2.494, Steps = 511
-Episode 40: Reward = -2.491, Steps = 300
-  Latest training losses: WM=14.801, Actor=0.155, Critic=0.005
-Episode 60: Reward = -2.493, Steps = 234
-Episode 80: Reward = -2.494, Steps = 232
-Episode 100: Reward = -2.493, Steps = 287
-  Latest training losses: WM=13.298, Actor=-0.037, Critic=0.002
-  Saved checkpoint at episode 100
-Episode 120: Reward = -2.495, Steps = 401
-Episode 140: Reward = -2.492, Steps = 273
-  Latest training losses: WM=8.724, Actor=-0.025, Critic=0.001
-Episode 160: Reward = -2.495, Steps = 303
-Episode 180: Reward = -2.491, Steps = 240
-Episode 200: Reward = -2.492, Steps = 268
-  Latest training losses: WM=15.096, Actor=-0.028, Critic=0.001
-  Saved checkpoint at episode 200
-Episode 220: Reward = -2.493, Steps = 450
-Episode 240: Reward = -2.494, Steps = 269
-  Latest training losses: WM=9.978, Actor=-0.014, Critic=0.000
-Episode 260: Reward = -2.493, Steps = 286
-Episode 280: Reward = -2.494, Steps = 266
-Episode 300: Reward = -2.493, Steps = 327
-  Latest training losses: WM=12.064, Actor=0.017, Critic=0.000
-  Saved checkpoint at episode 300
-Episode 320: Reward = -2.489, Steps = 363
-Episode 340: Reward = -2.489, Steps = 501
-  Latest training losses: WM=8.754, Actor=-0.096, Critic=0.001
-Episode 360: Reward = -2.494, Steps = 292
-Episode 380: Reward = -2.494, Steps = 582
-Episode 400: Reward = -2.491, Steps = 350
-  Latest training losses: WM=6.329, Actor=-0.121, Critic=0.001
-  Saved checkpoint at episode 400
-Episode 420: Reward = -2.487, Steps = 441
-Episode 440: Reward = -2.492, Steps = 479
-  Latest training losses: WM=9.620, Actor=0.282, Critic=0.002
-Episode 460: Reward = -2.495, Steps = 385
-Episode 480: Reward = -2.494, Steps = 373
-Episode 500: Reward = -2.495, Steps = 402
-  Latest training losses: WM=9.681, Actor=-0.167, Critic=0.001
-  Saved checkpoint at episode 500
-Episode 520: Reward = -2.495, Steps = 698
-Episode 540: Reward = -2.494, Steps = 369
-  Latest training losses: WM=12.262, Actor=-0.020, Critic=0.000
-Episode 560: Reward = -2.495, Steps = 586
-Episode 580: Reward = -2.495, Steps = 630
-=== Training Complete ===
-Best reward achieved: 0.000
-⚠ The 'benchmark' method is deprecated and will be removed in a future release. Use 'evaluate' instead.
-
-
-╭─ Preprocessing class ────────────────────────────────────────────────────────────────────────────╮
-│                                                                                                  │
-│  class Preprocessor():                                                                           │
-│                                                                                                  │
-│      def get_task_onehot(self, info):                                                            │
-│          if 'task_index' in info:                                                                │
-│              return info['task_index']                                                           │
-│          else:                                                                                   │
-│              return np.array([])                                                                 │
-│                                                                                                  │
-│      def quat_rotate_inverse(self, q: np.ndarray, v: np.ndarray):                                │
-│          q_w = q[:,[-1]]                                                                         │
-│          q_vec = q[:,:3]                                                                         │
-│          a = v * (2.0 * q_w**2 - 1.0)                                                            │
-│          b = np.cross(q_vec, v) * (q_w * 2.0)                                                    │
-│          c = q_vec * (np.dot(q_vec, v).reshape(-1,1) * 2.0)                                      │
-│          return a - b + c                                                                        │
-│                                                                                                  │
-│      def modify_state(self, obs, info):                                                          │
-│                                                                                                  │
-│          if len(obs.shape) == 1:                                                                 │
-│              obs = np.expand_dims(obs, axis=0)                                                   │
-│                                                                                                  │
-│          task_onehot = self.get_task_onehot(info)                                                │
-│          if len(task_onehot.shape) == 1:                                                         │
-│              task_onehot = np.expand_dims(task_onehot, axis=0)                                   │
-│                                                                                                  │
-│          if len(info["robot_quat"].shape) == 1:                                                  │
-│              info["robot_quat"] = np.expand_dims(info["robot_quat"], axis = 0)                   │
-│              info["robot_gyro"] = np.expand_dims(info["robot_gyro"], axis = 0)                   │
-│              info["robot_accelerometer"] = np.expand_dims(info["robot_accelerometer"], axis = 0  │
-│              info["robot_velocimeter"] = np.expand_dims(info["robot_velocimeter"], axis = 0)     │
-│              info["goal_team_0_rel_robot"] = np.expand_dims(info["goal_team_0_rel_robot"], axis  │
-│              info["goal_team_1_rel_robot"] = np.expand_dims(info["goal_team_1_rel_robot"], axis  │
-│              info["goal_team_0_rel_ball"] = np.expand_dims(info["goal_team_0_rel_ball"], axis =  │
-│              info["goal_team_1_rel_ball"] = np.expand_dims(info["goal_team_1_rel_ball"], axis =  │
-│              info["ball_xpos_rel_robot"] = np.expand_dims(info["ball_xpos_rel_robot"], axis = 0  │
-│              info["ball_velp_rel_robot"] = np.expand_dims(info["ball_velp_rel_robot"], axis = 0  │
-│              info["ball_velr_rel_robot"] = np.expand_dims(info["ball_velr_rel_robot"], axis = 0  │
-│              info["player_team"] = np.expand_dims(info["player_team"], axis = 0)                 │
-│              info["goalkeeper_team_0_xpos_rel_robot"] = np.expand_dims(info["goalkeeper_team_0_  │
-│              info["goalkeeper_team_0_velp_rel_robot"] = np.expand_dims(info["goalkeeper_team_0_  │
-│              info["goalkeeper_team_1_xpos_rel_robot"] = np.expand_dims(info["goalkeeper_team_1_  │
-│              info["goalkeeper_team_1_velp_rel_robot"] = np.expand_dims(info["goalkeeper_team_1_  │
-│              info["target_xpos_rel_robot"] = np.expand_dims(info["target_xpos_rel_robot"], axis  │
-│              info["target_velp_rel_robot"] = np.expand_dims(info["target_velp_rel_robot"], axis  │
-│              info["defender_xpos"] = np.expand_dims(info["defender_xpos"], axis = 0)             │
-│                                                                                                  │
-│          robot_qpos = obs[:,:12]                                                                 │
-│          robot_qvel = obs[:,12:24]                                                               │
-│          quat = info["robot_quat"]                                                               │
-│          base_ang_vel = info["robot_gyro"]                                                       │
-│          project_gravity = self.quat_rotate_inverse(quat, np.array([0.0, 0.0, -1.0]))            │
-│                                                                                                  │
-│          obs = np.hstack((robot_qpos,                                                            │
-│                           robot_qvel,                                                            │
-│                           project_gravity,                                                       │
-│                           base_ang_vel,                                                          │
-│                           info["robot_accelerometer"],                                           │
-│                           info["robot_velocimeter"],                                             │
-│                           info["goal_team_0_rel_robot"],                                         │
-│                           info["goal_team_1_rel_robot"],                                         │
-│                           info["goal_team_0_rel_ball"],                                          │
-│                           info["goal_team_1_rel_ball"],                                          │
-│                           info["ball_xpos_rel_robot"],                                           │
-│                           info["ball_velp_rel_robot"],                                           │
-│                           info["ball_velr_rel_robot"],                                           │
-│                           info["player_team"],                                                   │
-│                           info["goalkeeper_team_0_xpos_rel_robot"],                              │
-│                           info["goalkeeper_team_0_velp_rel_robot"],                              │
-│                           info["goalkeeper_team_1_xpos_rel_robot"],                              │
-│                           info["goalkeeper_team_1_velp_rel_robot"],                              │
-│                           info["target_xpos_rel_robot"],                                         │
-│                           info["target_velp_rel_robot"],                                         │
-│                           info["defender_xpos"],                                                 │
-│                           task_onehot))                                                          │
-│                                                                                                  │
-│          return obs                                                                              │
-│                                                                                                  │
-│                                                                                                  │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-✓ Successfully loaded preprocessing class.
-
-╭─ Action function ────────────────────────────────────────────────────────────────────────────────╮
-│                                                                                                  │
-│  def action_function(policy):                                                                    │
-│      expected_bounds = [-1, 1]                                                                   │
-│      action_percent = (policy - expected_bounds[0]) / (                                          │
-│          expected_bounds[1] - expected_bounds[0]                                                 │
-│      )                                                                                           │
-│      bounded_percent = np.minimum(np.maximum(action_percent, 0), 1)                              │
-│      return (                                                                                    │
-│          env.action_space.low                                                                    │
-│          + (env.action_space.high - env.action_space.low) * bounded_percent                      │
-│      )                                                                                           │
-│                                                                                                  │
-│                                                                                                  │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-✓ Successfully loaded action function.
-
-╭─ Model ──────────────────────────────────────────────────────────────────────────────────────────╮
-│                                                                                                  │
-│  Type:          pytorch                                                                          │
-│  Environment:    LowerT1GoaliePenaltyKick-v0                                                     │
-│  Preprocess Function:  Custom                                                                    │
-│  Action Function:  Custom                                                                        │
-│                                                                                                  │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-✓ Successfully loaded model.
-
+KeyboardInterrupt: 
 ╭──────────────────────────────── Evaluation Progress (Batch 1/9) ─────────────────────────────────╮
 │            ┏━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━┳━━━━━━┳━━━━━━━━━━━┓            │
 │            ┃ Steps ┃ Finished Envs ┃ Completed ┃ Avg Score ┃ FPS ┃ Time ┃ Remaining ┃            │
 │            ┡━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━╇━━━━━━╇━━━━━━━━━━━┩            │
 │            │   0   │     0/12      │   0.0%    │   0.00    │ 0.0 │ 0.7s │  599.3s   │            │
 │            └───────┴───────────────┴───────────┴───────────┴─────┴──────┴───────────┘            │
-╰─────────────────────────────────────────── 0/100 envs ───────────────────────────────────────────╯
+╰─────────────────────────────────────────── 0/100 envs ───────────────────────────────────────────╯╭────────────────
+ ────────────── Traceback (most recent call last) ────────────────────────────────╮
+│ /content/booster_soccer_showdown/training_scripts/main.py:335 in <module>                        │
+│                                                                                                  │
+│   332 ## Benchmark the model locally                                                             │
+│   333 sai.benchmark(model, action_function, Preprocessor, model_type='pytorch')                  │
+│   334                                                                                            │
+│ ❱ 335 sai.submit("Vedanta_DreamerV3", model, action_function, Preprocessor, model_type='pytorc   │
+│   336                                                                                            │
+│                                                                                                  │
+│ ╭─────────────────────────────────────────── locals ───────────────────────────────────────────╮ │
+│ │           env = <CustomEvaluationWrapper<TimeLimit<OrderEnforcing<PassiveEnvChecker<GoalieP… │ │
+│ │             F = <module 'torch.nn.functional' from                                           │ │
+│ │                 '/usr/local/lib/python3.12/dist-packages/torch/nn/functional.py'>            │ │
+│ │         model = <__main__.SAICompatibleWrapper object at 0x7b0f9fd777d0>                     │ │
+│ │            np = <module 'numpy' from                                                         │ │
+│ │                 '/usr/local/lib/python3.12/dist-packages/numpy/__init__.py'>                 │ │
+│ │        random = <module 'random' from '/usr/lib/python3.12/random.py'>                       │ │
+│ │           sai = <sai_rl.sai_client.SAIClient object at 0x7b0fcdc19460>                       │ │
+│ │         torch = <module 'torch' from                                                         │ │
+│ │                 '/usr/local/lib/python3.12/dist-packages/torch/__init__.py'>                 │ │
+│ │ trained_model = SimpleDreamerV3(                                                             │ │
+│ │                   (rssm): RSSMCore(                                                          │ │
+│ │                 │   (obs_encoder): Sequential(                                               │ │
+│ │                 │     (0): Linear(in_features=89, out_features=256, bias=True)               │ │
+│ │                 │     (1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)             │ │
+│ │                 │     (2): ReLU()                                                            │ │
+│ │                 │     (3): Linear(in_features=256, out_features=256, bias=True)              │ │
+│ │                 │     (4): LayerNorm((256,), eps=1e-05, elementwise_affine=True)             │ │
+│ │                 │     (5): ReLU()                                                            │ │
+│ │                 │   )                                                                        │ │
+│ │                 │   (rnn): GRUCell(268, 256)                                                 │ │
+│ │                 │   (prior_net): Linear(in_features=256, out_features=512, bias=True)        │ │
+│ │                 │   (posterior_net): Linear(in_features=512, out_features=512, bias=True)    │ │
+│ │                 │   (obs_decoder): Sequential(                                               │ │
+│ │                 │     (0): Linear(in_features=768, out_features=256, bias=True)              │ │
+│ │                 │     (1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)             │ │
+│ │                 │     (2): ReLU()                                                            │ │
+│ │                 │     (3): Linear(in_features=256, out_features=256, bias=True)              │ │
+│ │                 │     (4): LayerNorm((256,), eps=1e-05, elementwise_affine=True)             │ │
+│ │                 │     (5): ReLU()                                                            │ │
+│ │                 │     (6): Linear(in_features=256, out_features=89, bias=True)               │ │
+│ │                 │   )                                                                        │ │
+│ │                 │   (reward_predictor): Sequential(                                          │ │
+│ │                 │     (0): Linear(in_features=768, out_features=128, bias=True)              │ │
+│ │                 │     (1): ReLU()                                                            │ │
+│ │                 │     (2): Linear(in_features=128, out_features=1, bias=True)                │ │
+│ │                 │   )                                                                        │ │
+│ │                   )                                                                          │ │
+│ │                   (actor): Actor(                                                            │ │
+│ │                 │   (net): Sequential(                                                       │ │
+│ │                 │     (0): Linear(in_features=768, out_features=256, bias=True)              │ │
+│ │                 │     (1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)             │ │
+│ │                 │     (2): ReLU()                                                            │ │
+│ │                 │     (3): Linear(in_features=256, out_features=256, bias=True)              │ │
+│ │                 │     (4): LayerNorm((256,), eps=1e-05, elementwise_affine=True)             │ │
+│ │                 │     (5): ReLU()                                                            │ │
+│ │                 │     (6): Linear(in_features=256, out_features=256, bias=True)              │ │
+│ │                 │     (7): LayerNorm((256,), eps=1e-05, elementwise_affine=True)             │ │
+│ │                 │     (8): ReLU()                                                            │ │
+│ │                 │     (9): Linear(in_features=256, out_features=12, bias=True)               │ │
+│ │                 │   )                                                                        │ │
+│ │                   )                                                                          │ │
+│ │                   (critic): Critic(                                                          │ │
+│ │                 │   (net): Sequential(                                                       │ │
+│ │                 │     (0): Linear(in_features=768, out_features=256, bias=True)              │ │
+│ │                 │     (1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)             │ │
+│ │                 │     (2): ReLU()                                                            │ │
+│ │                 │     (3): Linear(in_features=256, out_features=256, bias=True)              │ │
+│ │                 │     (4): LayerNorm((256,), eps=1e-05, elementwise_affine=True)             │ │
+│ │                 │     (5): ReLU()                                                            │ │
+│ │                 │     (6): Linear(in_features=256, out_features=256, bias=True)              │ │
+│ │                 │     (7): LayerNorm((256,), eps=1e-05, elementwise_affine=True)             │ │
+│ │                 │     (8): ReLU()                                                            │ │
+│ │                 │     (9): Linear(in_features=256, out_features=1, bias=True)                │ │
+│ │                 │   )                                                                        │ │
+│ │                   )                                                                          │ │
+│ │                   (target_critic): Critic(                                                   │ │
+│ │                 │   (net): Sequential(                                                       │ │
+│ │                 │     (0): Linear(in_features=768, out_features=256, bias=True)              │ │
+│ │                 │     (1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)             │ │
+│ │                 │     (2): ReLU()                                                            │ │
+│ │                 │     (3): Linear(in_features=256, out_features=256, bias=True)              │ │
+│ │                 │     (4): LayerNorm((256,), eps=1e-05, elementwise_affine=True)             │ │
+│ │                 │     (5): ReLU()                                                            │ │
+│ │                 │     (6): Linear(in_features=256, out_features=256, bias=True)              │ │
+│ │                 │     (7): LayerNorm((256,), eps=1e-05, elementwise_affine=True)             │ │
+│ │                 │     (8): ReLU()                                                            │ │
+│ │                 │     (9): Linear(in_features=256, out_features=1, bias=True)                │ │
+│ │                 │   )                                                                        │ │
+│ │                   )                                                                          │ │
+│ │                 )                                                                            │ │
+│ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
+│                                                                                                  │
+│ /usr/local/lib/python3.12/dist-packages/sai_rl/sai_client.py:1113 in submit                      │
+│                                                                                                  │
+│   1110 │   │   │   │   "Cannot use python to submit to an open source competition. Please submi  │
+│   1111 │   │   │   )                                                                             │
+│   1112 │   │                                                                                     │
+│ ❱ 1113 │   │   with self._console.status("Submitting model to the competition...") as status:    │
+│   1114 │   │   │   env = make_env(task=self._get_task(0), console=self._console, competition_id  │
+│   1115 │   │   │                                                                                 │
+│   1116 │   │   │   model_manager = ModelManager(                                                 │
+│                                                                                                  │
+│ ╭─────────────────────────────── locals ────────────────────────────────╮                        │
+│ │  algorithm = None                                                     │                        │
+│ │   metadata = None                                                     │                        │
+│ │      model = <__main__.SAICompatibleWrapper object at 0x7b0f9fd777d0> │                        │
+│ │ model_type = 'pytorch'                                                │                        │
+│ │       name = 'Vedanta_DreamerV3'                                      │                        │
+│ │       self = <sai_rl.sai_client.SAIClient object at 0x7b0fcdc19460>   │                        │
+│ │        tag = 'default'                                                │                        │
+│ │   use_onnx = False                                                    │                        │
+│ ╰───────────────────────────────────────────────────────────────────────╯                        │
+│                                                                                                  │
+│ /usr/local/lib/python3.12/dist-packages/sai_rl/sai_console.py:79 in __enter__                    │
+│                                                                                                  │
+│    76 │   │   return self._status.start()                                                        │
+│    77 │                                                                                          │
+│    78 │   def __enter__(self):                                                                   │
+│ ❱  79 │   │   self._status.__enter__()                                                           │
+│    80 │   │   return self                                                                        │
+│    81 │                                                                                          │
+│    82 │   def __exit__(self, exc_type, exc_val, exc_tb):                                         │
+│                                                                                                  │
+│ ╭──────────────────────────── locals ────────────────────────────╮                               │
+│ │ self = <sai_rl.sai_console.SAIStatus object at 0x7b0f96b61b50> │                               │
+│ ╰────────────────────────────────────────────────────────────────╯                               │
+│                                                                                                  │
+│ /usr/local/lib/python3.12/dist-packages/rich/status.py:97 in __enter__                           │
+│                                                                                                  │
+│    94 │   │   return self.renderable                                                             │
+│    95 │                                                                                          │
+│    96 │   def __enter__(self) -> "Status":                                                       │
+│ ❱  97 │   │   self.start()                                                                       │
+│    98 │   │   return self                                                                        │
+│    99 │                                                                                          │
+│   100 │   def __exit__(                                                                          │
+│                                                                                                  │
+│ ╭─────────────────────── locals ───────────────────────╮                                         │
+│ │ self = <rich.status.Status object at 0x7b0fa01b0080> │                                         │
+│ ╰──────────────────────────────────────────────────────╯                                         │
+│                                                                                                  │
+│ /usr/local/lib/python3.12/dist-packages/rich/status.py:87 in start                               │
+│                                                                                                  │
+│    84 │                                                                                          │
+│    85 │   def start(self) -> None:                                                               │
+│    86 │   │   """Start the status animation."""                                                  │
+│ ❱  87 │   │   self._live.start()                                                                 │
+│    88 │                                                                                          │
+│    89 │   def stop(self) -> None:                                                                │
+│    90 │   │   """Stop the spinner animation."""                                                  │
+│                                                                                                  │
+│ ╭─────────────────────── locals ───────────────────────╮                                         │
+│ │ self = <rich.status.Status object at 0x7b0fa01b0080> │                                         │
+│ ╰──────────────────────────────────────────────────────╯                                         │
+│                                                                                                  │
+│ /usr/local/lib/python3.12/dist-packages/rich/live.py:113 in start                                │
+│                                                                                                  │
+│   110 │   │   with self._lock:                                                                   │
+│   111 │   │   │   if self._started:                                                              │
+│   112 │   │   │   │   return                                                                     │
+│ ❱ 113 │   │   │   self.console.set_live(self)                                                    │
+│   114 │   │   │   self._started = True                                                           │
+│   115 │   │   │   if self._screen:                                                               │
+│   116 │   │   │   │   self._alt_screen = self.console.set_alt_screen(True)                       │
+│                                                                                                  │
+│ ╭────────────────────── locals ───────────────────────╮                                          │
+│ │ refresh = False                                     │                                          │
+│ │    self = <rich.live.Live object at 0x7b0f9751d970> │                                          │
+│ ╰─────────────────────────────────────────────────────╯                                          │
+│                                                                                                  │
+│ /usr/local/lib/python3.12/dist-packages/rich/console.py:835 in set_live                          │
+│                                                                                                  │
+│    832 │   │   """                                                                               │
+│    833 │   │   with self._lock:                                                                  │
+│    834 │   │   │   if self._live is not None:                                                    │
+│ ❱  835 │   │   │   │   raise errors.LiveError("Only one live display may be active at once")     │
+│    836 │   │   │   self._live = live                                                             │
+│    837 │                                                                                         │
+│    838 │   def clear_live(self) -> None:                                                         │
+│                                                                                                  │
+╭──────────────────────────────── Evaluation Progress (Batch 1/9) ─────────────────────────────────╮
+│            ┏━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━┳━━━━━━┳━━━━━━━━━━━┓            │
+│            ┃ Steps ┃ Finished Envs ┃ Completed ┃ Avg Score ┃ FPS ┃ Time ┃ Remaining ┃            │
+│            ┡━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━╇━━━━━━╇━━━━━━━━━━━┩            │
+│            │   0   │     0/12      │   0.0%    │   0.00    │ 0.0 │ 0.7s │  599.3s   │            │
+│            └───────┴───────────────┴───────────┴───────────┴─────┴──────┴───────────┘            │
+╰─────────────────────────────────────────── 0/100 envs ───────────────────────────────────────────╯/content/booster_soccer_showdown# 

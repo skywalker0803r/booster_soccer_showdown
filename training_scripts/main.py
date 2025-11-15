@@ -330,6 +330,12 @@ model = SAICompatibleWrapper(trained_model)
 #sai.watch(model, action_function, Preprocessor)
 
 ## Benchmark the model locally
-sai.benchmark(model, action_function, Preprocessor, model_type='pytorch')
+print("=== Starting Local Benchmark ===")
+benchmark_result = sai.benchmark(model, action_function, Preprocessor, model_type='pytorch')
+print(f"Benchmark completed with score: {benchmark_result}")
 
+## Submit to leaderboard
+print("=== Submitting to Leaderboard ===")
+import time
+time.sleep(2)  # Give console time to clean up
 sai.submit("Vedanta_DreamerV3", model, action_function, Preprocessor, model_type='pytorch')
