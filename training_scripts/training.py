@@ -201,7 +201,6 @@ def training_loop(
         model.critic_target.load_state_dict(best_model_state['critic_target_state_dict'])
         
         # Save best model to disk as backup
-        import torch
         torch.save(best_model_state, 'best_model_checkpoint.pth')
         print(f"   Best model saved to: best_model_checkpoint.pth")
     else:

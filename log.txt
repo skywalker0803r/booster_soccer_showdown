@@ -1,6 +1,14 @@
-=== Episode 1100 Analysis ===
-Average Shaped Reward: 28.4427
-Average Original Reward: -2.4884
-Shaping Effectiveness Ratio: -11.43
-Recent Episode - Shaped: 28.9266, Original: -2.4884
-🎉  PROGRESS: Getting non-zero original rewards!
+/content/booster_soccer_showdown/training_scripts/training.py:87 in training_loop                │
+│                                                                                                  │
+│    84 │   │   │   preprocessor.reset_episode()                                                   │
+│    85 │   │                                                                                      │
+│    86 │   │   while not done and total_steps < timesteps:                                        │
+│ ❱  87 │   │   │   state = torch.from_numpy(np.expand_dims(s, axis=0))                            │
+│    88 │   │   │   policy = model(state).detach().numpy()                                         │
+│    89 │   │   │                                                                                  │
+│    90 │   │   │   if action_function: 
+
+
+UnboundLocalError: cannot access local variable 'torch' where it is not associated with a value
+Training Progress:   0%|                                                        | 0/1000000 [00:00<?, ?steps/s]
+/content/booster_soccer_showdown# 
