@@ -5,6 +5,7 @@ from sai_rl import SAIClient
 
 from ddpg import DDPG_FF
 from training import training_loop
+from reward_shaping import enhanced_preprocessor_with_shaping
 
 ## Initialize the SAI client
 sai = SAIClient(comp_id="booster-soccer-showdown",api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv")
@@ -89,13 +90,13 @@ class Preprocessor():
 
         return obs
 
-## Create the model - Enhanced version
+## Create the model - Enhanced version for sparse rewards
 model = DDPG_FF(
     n_features=89,  # type: ignore
     action_space=env.action_space,  # type: ignore
     neurons=[256, 128, 64],  # Much larger network for better representation
     activation_function=F.relu,
-    learning_rate=0.0003,  # Slightly higher learning rate for faster convergence
+    learning_rate=0.0001,  # Lower learning rate for sparse reward stability
 )
 
 ## Define an action function
@@ -111,13 +112,18 @@ def action_function(policy):
     )
 
 
-## Train the model - Extended training
-training_loop(env, model, action_function, Preprocessor, timesteps=1000000)
+## Create enhanced preprocessor with reward shaping
+EnhancedPreprocessor = enhanced_preprocessor_with_shaping(Preprocessor)
+
+## Train the model - Competition-level training with reward shaping
+print("=== Training with Enhanced DDPG + Reward Shaping ===")
+training_loop(env, model, action_function, EnhancedPreprocessor, timesteps=1000000)
 
 ## Watch
 #sai.watch(model, action_function, Preprocessor)
 
-## Benchmark the model locally
+## Benchmark the model locally (use original preprocessor for evaluation)
 sai.benchmark(model, action_function, Preprocessor)
 
-sai.submit("Vedanta_Enhanced_DDPG", model, action_function, Preprocessor)
+## Submit to leaderboard
+sai.submit("Vedanta_RewardShaping_DDPG", model, action_function, Preprocessor)

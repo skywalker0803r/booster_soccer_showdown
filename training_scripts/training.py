@@ -31,11 +31,16 @@ class ReplayBuffer:
 
 
 def add_noise(action, noise_scale=0.1, episode_count=0, total_episodes=1000):
-    # Decay noise over time for better convergence
-    decay_factor = max(0.1, 1.0 - episode_count / total_episodes)
+    # For sparse reward environments, maintain higher exploration longer
+    decay_factor = max(0.2, 1.0 - episode_count / (total_episodes * 1.5))  # Slower decay
     effective_noise = noise_scale * decay_factor
-    noise = np.random.normal(0, effective_noise, size=action.shape)
-    return np.clip(action + noise, -1, 1)
+    
+    # Add structured exploration for soccer - vary leg coordination
+    structured_noise = np.random.normal(0, effective_noise * 0.5, size=action.shape)
+    random_noise = np.random.normal(0, effective_noise * 0.5, size=action.shape)
+    
+    total_noise = structured_noise + random_noise
+    return np.clip(action + total_noise, -1, 1)
 
 
 def training_loop(
@@ -49,6 +54,9 @@ def training_loop(
     preprocessor = preprocess_class()
     batch_size = 128  # Larger batch size for more stable gradients
     update_frequency = 2  # More frequent updates for faster learning
+    
+    # Check if preprocessor supports reward shaping
+    use_reward_shaping = hasattr(preprocessor, 'shape_reward')
 
     total_steps = 0
     episode_count = 0
@@ -61,6 +69,10 @@ def training_loop(
         s = preprocessor.modify_state(s, info).squeeze()
         episode_reward = 0
         episode_steps = 0
+        
+        # Reset reward shaper if available
+        if use_reward_shaping and hasattr(preprocessor, 'reset_episode'):
+            preprocessor.reset_episode()
 
         while not done and total_steps < timesteps:
             state = torch.from_numpy(np.expand_dims(s, axis=0))
@@ -68,8 +80,8 @@ def training_loop(
 
             if action_function:
                 action = action_function(policy)[0].squeeze()
-                # Use decaying noise for better exploration-exploitation balance
-                action = add_noise(action, noise_scale=0.2, episode_count=episode_count, total_episodes=timesteps//20)
+                # Use higher noise for sparse reward environment
+                action = add_noise(action, noise_scale=0.4, episode_count=episode_count, total_episodes=timesteps//20)
             else:
                 action = model.select_action(s)[0].squeeze()
 
@@ -77,11 +89,17 @@ def training_loop(
             new_s = preprocessor.modify_state(new_s, info).squeeze()
 
             done = terminated or truncated
+            
+            # Apply reward shaping if available
+            if use_reward_shaping:
+                shaped_r = preprocessor.shape_reward(new_s, info, r, done)
+            else:
+                shaped_r = r
 
-            episode_reward += r
+            episode_reward += shaped_r
             episode_steps += 1
 
-            replay_buffer.add(s, action, r, new_s, done)
+            replay_buffer.add(s, action, shaped_r, new_s, done)
             s = new_s
 
             total_steps += 1
@@ -99,6 +117,14 @@ def training_loop(
                     dones.reshape(-1, 1),
                     1,
                 )
+
+                # Monitor progress for sparse rewards
+                if total_steps % 10000 == 0 and total_steps > 0:
+                    avg_episode_reward = episode_reward if episode_steps > 0 else -999
+                    if avg_episode_reward > -2.0:
+                        print(f"\n  Progress: Step {total_steps}, Episode reward: {avg_episode_reward:.3f}")
+                    elif total_steps % 50000 == 0:
+                        print(f"\n  Learning check: Step {total_steps}, Episode reward: {avg_episode_reward:.3f}")
 
                 pbar.set_description(
                     f"Episode {episode_count} | Reward: {episode_reward:.2f} | Critic: {critic_loss:.4f} | Actor: {actor_loss:.4f}"
