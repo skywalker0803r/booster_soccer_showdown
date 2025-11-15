@@ -60,6 +60,8 @@ def training_loop(
 
     total_steps = 0
     episode_count = 0
+    total_reward = 0
+    total_original_reward = 0  # Track original reward separately
 
     pbar = tqdm(total=timesteps, desc="Training Progress", unit="steps")
 
@@ -68,6 +70,7 @@ def training_loop(
         s, info = env.reset()
         s = preprocessor.modify_state(s, info).squeeze()
         episode_reward = 0
+        episode_original_reward = 0  # Track original reward for this episode
         episode_steps = 0
         
         # Reset reward shaper if available
@@ -97,6 +100,7 @@ def training_loop(
                 shaped_r = r
 
             episode_reward += shaped_r
+            episode_original_reward += r  # Always track original
             episode_steps += 1
 
             replay_buffer.add(s, action, shaped_r, new_s, done)
@@ -126,11 +130,33 @@ def training_loop(
                     elif total_steps % 50000 == 0:
                         print(f"\n  Learning check: Step {total_steps}, Episode reward: {avg_episode_reward:.3f}")
 
-                pbar.set_description(
-                    f"Episode {episode_count} | Reward: {episode_reward:.2f} | Critic: {critic_loss:.4f} | Actor: {actor_loss:.4f}"
-                )
+                # Enhanced description with both rewards
+                if use_reward_shaping:
+                    pbar.set_description(
+                        f"Ep {episode_count} | Shaped: {episode_reward:.2f} | Original: {episode_original_reward:.2f} | C: {critic_loss:.4f} | A: {actor_loss:.4f}"
+                    )
+                else:
+                    pbar.set_description(
+                        f"Episode {episode_count} | Reward: {episode_reward:.2f} | Critic: {critic_loss:.4f} | Actor: {actor_loss:.4f}"
+                    )
 
         episode_count += 1
+        total_reward += episode_reward
+        total_original_reward += episode_original_reward
+        
+        # Periodic detailed logging for correlation analysis
+        if episode_count % 100 == 0:
+            avg_shaped = total_reward / episode_count
+            avg_original = total_original_reward / episode_count
+            correlation_ratio = avg_shaped / avg_original if avg_original != 0 else 0
+            print(f"\n=== Episode {episode_count} Analysis ===")
+            print(f"Average Shaped Reward: {avg_shaped:.4f}")
+            print(f"Average Original Reward: {avg_original:.4f}")
+            print(f"Shaping Effectiveness Ratio: {correlation_ratio:.2f}")
+            print(f"Recent Episode - Shaped: {episode_reward:.4f}, Original: {episode_original_reward:.4f}")
+            if abs(episode_original_reward) > 0.1:  # If we're getting meaningful original rewards
+                print(f"🎉 PROGRESS: Getting non-zero original rewards!")
+            print("=" * 40)
 
     pbar.close()
     env.close()
