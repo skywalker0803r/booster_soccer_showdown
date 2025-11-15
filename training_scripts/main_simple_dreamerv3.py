@@ -8,7 +8,7 @@ from sai_rl import SAIClient
 from simple_dreamerv3 import SimpleDreamerV3
 
 ## Initialize the SAI client
-sai = SAIClient(comp_id="booster-soccer-showdown",api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv")
+sai = SAIClient(comp_id="booster-soccer-showdown", api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv")
 
 ## Make the environment
 env = sai.make_env()
@@ -90,10 +90,11 @@ class Preprocessor():
 
         return obs
 
+
 class SequenceBuffer:
     """Buffer to store sequences for DreamerV3 training"""
     
-    def __init__(self, max_size=1000, sequence_length=25):
+    def __init__(self, max_size=50000, sequence_length=50):
         self.max_size = max_size
         self.sequence_length = sequence_length
         self.buffer = deque(maxlen=max_size)
@@ -124,6 +125,7 @@ class SequenceBuffer:
             episode_length = len(episode['observations'])
             if episode_length < self.sequence_length:
                 # Pad short episodes
+                start_idx = 0
                 seq_len = episode_length
                 
                 obs_seq = episode['observations']
@@ -158,46 +160,35 @@ class SequenceBuffer:
                 torch.FloatTensor(np.array(batch_actions)),
                 torch.FloatTensor(np.array(batch_rewards)))
 
-## Create the SimpleDreamerV3 model
-print("Creating SimpleDreamerV3 model...")
-model = SimpleDreamerV3(
-    obs_dim=89,  # preprocessed observation dimension
-    action_dim=12,  # robot joint actions
-    hidden_dim=256,  # Smaller for faster training
-    stoch_dim=32,
-    discrete_dim=16
-)
-
-## Define an action function
-def action_function(policy):
-    expected_bounds = [-1, 1]
-    action_percent = (policy - expected_bounds[0]) / (
-        expected_bounds[1] - expected_bounds[0]
-    )
-    bounded_percent = np.minimum(np.maximum(action_percent, 0), 1)
-    return (
-        env.action_space.low
-        + (env.action_space.high - env.action_space.low) * bounded_percent
-    )
-
 
 def dreamerv3_training_loop():
     """Training loop for SimpleDreamerV3"""
     
     print("=== Starting DreamerV3 Training ===")
     
+    # Initialize model
+    model = SimpleDreamerV3(
+        obs_dim=89,  # preprocessed observation dimension
+        action_dim=12,  # robot joint actions
+        hidden_dim=256,  # Smaller for faster training
+        stoch_dim=32,
+        discrete_dim=16
+    )
+    
     preprocessor = Preprocessor()
     sequence_buffer = SequenceBuffer(max_size=1000, sequence_length=25)
     
     # Training parameters
-    num_episodes = 600
+    num_episodes = 800
     max_episode_length = 1000
     batch_size = 8
-    start_training_episodes = 10
-    train_frequency = 5
+    sequence_length = 25
+    start_training_episodes = 10  # Start training after collecting some data
+    train_frequency = 5  # Train every N episodes
     
     print(f"Training for {num_episodes} episodes...")
     
+    total_steps = 0
     best_reward = float('-inf')
     
     for episode in range(num_episodes):
@@ -222,7 +213,7 @@ def dreamerv3_training_loop():
                 action, agent_state = model.select_action(obs, agent_state)
                 
                 # Add exploration noise
-                if episode < num_episodes * 0.7:
+                if episode < num_episodes * 0.7:  # Reduce exploration over time
                     noise_scale = 0.3 * (1.0 - episode / (num_episodes * 0.7))
                     action += np.random.normal(0, noise_scale, size=action.shape)
                     action = np.clip(action, -1, 1)
@@ -239,6 +230,7 @@ def dreamerv3_training_loop():
             episode_actions.append(action)
             episode_rewards.append(reward)
             episode_reward += reward
+            total_steps += 1
             
             obs = next_obs
             
@@ -249,19 +241,28 @@ def dreamerv3_training_loop():
         if len(episode_actions) > 0:
             sequence_buffer.add_episode(episode_observations[:-1], episode_actions, episode_rewards)
         
-        if episode % 20 == 0:
-            print(f"Episode {episode}: Reward = {episode_reward:.3f}, Steps = {len(episode_actions)}")
+        print(f"Episode {episode}: Reward = {episode_reward:.3f}, Steps = {len(episode_actions)}, Buffer = {len(sequence_buffer.buffer)}")
         
         # Update best reward
         if episode_reward > best_reward:
             best_reward = episode_reward
-            if episode % 20 == 0:
-                print(f"  New best reward: {best_reward:.3f}")
+            print(f"  New best reward: {best_reward:.3f}")
         
         # Training step
         if len(sequence_buffer.buffer) >= start_training_episodes and episode % train_frequency == 0:
-            # Training steps
-            num_train_steps = 8
+            print(f"  Training model...")
+            
+            # Multiple training steps per episode
+            num_train_steps = 10
+            total_losses = {
+                'world_model_loss': 0,
+                'reconstruction_loss': 0,
+                'reward_loss': 0,
+                'kl_loss': 0,
+                'actor_loss': 0,
+                'critic_loss': 0
+            }
+            
             for train_step in range(num_train_steps):
                 # Sample sequences
                 obs_seq, action_seq, reward_seq = sequence_buffer.sample_sequences(batch_size)
@@ -269,9 +270,21 @@ def dreamerv3_training_loop():
                 if obs_seq is not None:
                     # Training step
                     losses = model.train_step(obs_seq, action_seq, reward_seq)
+                    
+                    for key, value in losses.items():
+                        total_losses[key] += value
             
-            if episode % 50 == 0:
-                print(f"  Latest training losses: WM={losses['world_model_loss']:.3f}, Actor={losses['actor_loss']:.3f}, Critic={losses['critic_loss']:.3f}")
+            # Average losses
+            for key in total_losses:
+                total_losses[key] /= num_train_steps
+            
+            print(f"  Training losses:")
+            print(f"    World Model: {total_losses['world_model_loss']:.4f}")
+            print(f"    Reconstruction: {total_losses['reconstruction_loss']:.4f}")
+            print(f"    Reward: {total_losses['reward_loss']:.4f}")
+            print(f"    KL: {total_losses['kl_loss']:.4f}")
+            print(f"    Actor: {total_losses['actor_loss']:.4f}")
+            print(f"    Critic: {total_losses['critic_loss']:.4f}")
         
         # Save model periodically
         if episode % 100 == 0 and episode > 0:
@@ -283,13 +296,30 @@ def dreamerv3_training_loop():
     
     return model
 
-## Train the model
+
+## Create and train the model
+print("Creating SimpleDreamerV3 model...")
 model = dreamerv3_training_loop()
 
-## Watch
-#sai.watch(model, action_function, Preprocessor)
+## Define an action function
+def action_function(policy):
+    expected_bounds = [-1, 1]
+    action_percent = (policy - expected_bounds[0]) / (
+        expected_bounds[1] - expected_bounds[0]
+    )
+    bounded_percent = np.minimum(np.maximum(action_percent, 0), 1)
+    return (
+        env.action_space.low
+        + (env.action_space.high - env.action_space.low) * bounded_percent
+    )
+
+print("=== Starting Evaluation ===")
 
 ## Benchmark the model locally
 sai.benchmark(model, action_function, Preprocessor)
 
-sai.submit("Vedanta", model, action_function, Preprocessor)
+## Submit to leaderboard
+print("=== Submitting to Leaderboard ===")
+sai.submit("Vedanta_SimpleDreamerV3", model, action_function, Preprocessor)
+
+print("=== Complete ===")
