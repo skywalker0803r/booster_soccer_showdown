@@ -62,6 +62,12 @@ def training_loop(
     episode_count = 0
     total_reward = 0
     total_original_reward = 0  # Track original reward separately
+    
+    # Best model tracking
+    best_original_reward = float('-inf')
+    best_model_state = None
+    episodes_since_best = 0
+    best_episode = 0
 
     pbar = tqdm(total=timesteps, desc="Training Progress", unit="steps")
 
@@ -143,6 +149,26 @@ def training_loop(
         episode_count += 1
         total_reward += episode_reward
         total_original_reward += episode_original_reward
+        episodes_since_best += 1
+        
+        # Track best model based on original reward (what SAI will actually evaluate)
+        if episode_original_reward > best_original_reward:
+            best_original_reward = episode_original_reward
+            best_model_state = {
+                'actor_state_dict': model.actor.state_dict(),
+                'critic_state_dict': model.critic.state_dict(),
+                'actor_target_state_dict': model.actor_target.state_dict(),
+                'critic_target_state_dict': model.critic_target.state_dict(),
+                'episode': episode_count,
+                'original_reward': episode_original_reward,
+                'shaped_reward': episode_reward
+            }
+            episodes_since_best = 0
+            best_episode = episode_count
+            print(f"\n🏆 NEW BEST MODEL! Episode {episode_count}")
+            print(f"   Original Reward: {episode_original_reward:.4f}")
+            print(f"   Shaped Reward: {episode_reward:.4f}")
+            print(f"   Saving best model...")
         
         # Periodic detailed logging for correlation analysis
         if episode_count % 100 == 0:
@@ -154,9 +180,32 @@ def training_loop(
             print(f"Average Original Reward: {avg_original:.4f}")
             print(f"Shaping Effectiveness Ratio: {correlation_ratio:.2f}")
             print(f"Recent Episode - Shaped: {episode_reward:.4f}, Original: {episode_original_reward:.4f}")
+            print(f"Best Model: Episode {best_episode}, Original Reward: {best_original_reward:.4f}")
+            print(f"Episodes since best: {episodes_since_best}")
             if abs(episode_original_reward) > 0.1:  # If we're getting meaningful original rewards
                 print(f"🎉 PROGRESS: Getting non-zero original rewards!")
             print("=" * 40)
 
     pbar.close()
+    
+    # Restore best model for submission
+    if best_model_state is not None:
+        print(f"\n🎯 RESTORING BEST MODEL for submission:")
+        print(f"   From Episode: {best_model_state['episode']}")
+        print(f"   Original Reward: {best_model_state['original_reward']:.4f}")
+        print(f"   Shaped Reward: {best_model_state['shaped_reward']:.4f}")
+        
+        model.actor.load_state_dict(best_model_state['actor_state_dict'])
+        model.critic.load_state_dict(best_model_state['critic_state_dict'])
+        model.actor_target.load_state_dict(best_model_state['actor_target_state_dict'])
+        model.critic_target.load_state_dict(best_model_state['critic_target_state_dict'])
+        
+        # Save best model to disk as backup
+        import torch
+        torch.save(best_model_state, 'best_model_checkpoint.pth')
+        print(f"   Best model saved to: best_model_checkpoint.pth")
+    else:
+        print(f"\n⚠️  WARNING: No best model found, using final model")
+        print(f"   Final episode reward: {episode_original_reward:.4f}")
+    
     env.close()
