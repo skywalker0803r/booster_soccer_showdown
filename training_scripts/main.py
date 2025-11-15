@@ -330,6 +330,6 @@ model = SAICompatibleWrapper(trained_model)
 #sai.watch(model, action_function, Preprocessor)
 
 ## Benchmark the model locally
-sai.benchmark(model, action_function, Preprocessor)
+sai.benchmark(model, action_function, Preprocessor, model_type='pytorch')
 
-sai.submit("Vedanta_DreamerV3", model, action_function, Preprocessor)
+sai.submit("Vedanta_DreamerV3", model, action_function, Preprocessor, model_type='pytorch')
