@@ -25,15 +25,19 @@ class SoccerRewardShaper:
         """
         shaped_reward = 0.0
         
-        # Extract useful information
-        ball_pos = info.get("ball_xpos_rel_robot", np.zeros(3))
+        # Extract useful information (handle both 1D and 2D arrays)
+        ball_pos = info.get("ball_xpos_rel_robot", np.zeros((1, 3)))
+        if len(ball_pos.shape) > 1:
+            ball_pos = ball_pos[0]  # Take first row if 2D
         ball_dist = np.linalg.norm(ball_pos)
         
-        goal_pos = info.get("goal_team_1_rel_robot", np.zeros(3))  # Opponent goal
+        goal_pos = info.get("goal_team_1_rel_robot", np.zeros((1, 3)))  # Opponent goal
+        if len(goal_pos.shape) > 1:
+            goal_pos = goal_pos[0]  # Take first row if 2D
         goal_dist = np.linalg.norm(goal_pos)
         
-        robot_quat = info.get("robot_quat", np.array([0, 0, 0, 1]))
-        robot_stability = abs(robot_quat[2])  # Z-axis orientation, closer to 0 is more upright
+        robot_quat = info.get("robot_quat", np.array([[0, 0, 0, 1]]))
+        robot_stability = abs(robot_quat[0][2])  # Z-axis orientation, closer to 0 is more upright
         
         # 1. Reward for approaching the ball (fundamental soccer skill)
         if self.prev_ball_dist is not None:
@@ -56,7 +60,9 @@ class SoccerRewardShaper:
             shaped_reward += 0.05
             
         # 5. Goal-oriented behavior (if ball is moving toward goal)
-        ball_vel = info.get("ball_velp_rel_robot", np.zeros(3))
+        ball_vel = info.get("ball_velp_rel_robot", np.zeros((1, 3)))
+        if len(ball_vel.shape) > 1:
+            ball_vel = ball_vel[0]
         if np.linalg.norm(ball_vel) > 0.1:  # Ball is moving
             goal_direction = goal_pos / (np.linalg.norm(goal_pos) + 1e-8)
             ball_vel_normalized = ball_vel / (np.linalg.norm(ball_vel) + 1e-8)
@@ -65,7 +71,9 @@ class SoccerRewardShaper:
                 shaped_reward += goal_alignment * 0.2
         
         # 6. Exploration bonus for new positions
-        robot_pos = info.get("robot_velocimeter", np.zeros(3))
+        robot_pos = info.get("robot_velocimeter", np.zeros((1, 3)))
+        if len(robot_pos.shape) > 1:
+            robot_pos = robot_pos[0]
         movement_bonus = min(np.linalg.norm(robot_pos) * 0.01, 0.05)  # Reward movement, cap at 0.05
         shaped_reward += movement_bonus
         
