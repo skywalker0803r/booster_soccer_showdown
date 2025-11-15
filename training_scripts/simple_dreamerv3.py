@@ -292,18 +292,17 @@ class SimpleDreamerV3(nn.Module):
         
         return total_loss, reconstruction_loss, reward_loss, kl_loss
     
-    def compute_actor_critic_loss(self, init_states):
-        """Compute actor-critic loss using imagined trajectories"""
-        batch_size = init_states['deter'].shape[0]
-        
+    def compute_actor_loss(self, init_states):
+        """Compute actor loss using imagined trajectories"""
         # Imagine trajectories
         imag_states, imag_actions = self.imagine_sequence(init_states, self.actor, self.horizon)
         
-        # Compute values for imagined states
+        # Compute values for imagined states (detached to avoid gradient conflicts)
         values = []
-        for state in imag_states:
-            value = self.critic(state)
-            values.append(value)
+        with torch.no_grad():
+            for state in imag_states:
+                value = self.critic(state)
+                values.append(value)
         
         # Compute rewards for imagined trajectories
         rewards = []
@@ -314,16 +313,41 @@ class SimpleDreamerV3(nn.Module):
         # Compute returns using lambda returns
         returns = self._compute_lambda_returns(rewards, values, self.gamma, lambda_=0.95)
         
+        # Actor loss (policy gradient)
+        advantages = returns[:-1] - torch.stack(values[:-1], dim=0).squeeze(-1)
+        actor_loss = -(advantages.detach() * torch.stack([a.sum(dim=-1) for a in imag_actions], dim=0)).mean()
+        
+        return actor_loss
+    
+    def compute_critic_loss(self, init_states):
+        """Compute critic loss using imagined trajectories"""
+        # Imagine trajectories (detached to avoid gradient conflicts)
+        with torch.no_grad():
+            imag_states, imag_actions = self.imagine_sequence(init_states, self.actor, self.horizon)
+        
+        # Compute values for imagined states
+        values = []
+        for state in imag_states:
+            value = self.critic(state)
+            values.append(value)
+        
+        # Compute rewards for imagined trajectories
+        rewards = []
+        for i in range(len(imag_states) - 1):
+            with torch.no_grad():
+                reward = self.rssm.predict_reward(imag_states[i])
+            rewards.append(reward)
+        
+        # Compute returns using lambda returns
+        with torch.no_grad():
+            returns = self._compute_lambda_returns(rewards, [v.detach() for v in values], self.gamma, lambda_=0.95)
+        
         # Critic loss
         critic_targets = returns[:-1]  # Exclude last value
         critic_preds = torch.stack(values[:-1], dim=0).squeeze(-1)
-        critic_loss = F.mse_loss(critic_preds, critic_targets.detach())
+        critic_loss = F.mse_loss(critic_preds, critic_targets)
         
-        # Actor loss (policy gradient)
-        advantages = returns[:-1] - critic_preds.detach()
-        actor_loss = -(advantages * torch.stack([a.sum(dim=-1) for a in imag_actions], dim=0)).mean()
-        
-        return actor_loss, critic_loss
+        return critic_loss
     
     def _compute_lambda_returns(self, rewards, values, gamma, lambda_=0.95):
         """Compute lambda returns for policy learning"""
@@ -389,26 +413,28 @@ class SimpleDreamerV3(nn.Module):
         torch.nn.utils.clip_grad_norm_(self.rssm.parameters(), 100.0)
         self.world_model_optimizer.step()
         
-        # Get states for policy learning (detached from world model gradients)
+        # Get states for policy learning (completely detached from world model gradients)
         with torch.no_grad():
             states = self.encode_sequence(obs_seq, action_seq)
             # Use random states for policy learning
             batch_size = obs_seq.shape[0]
             random_idx = torch.randint(0, len(states), (batch_size,))
             init_states = {
-                'deter': torch.stack([states[idx]['deter'][i] for i, idx in enumerate(random_idx)]),
-                'stoch': torch.stack([states[idx]['stoch'][i] for i, idx in enumerate(random_idx)])
+                'deter': torch.stack([states[idx]['deter'][i] for i, idx in enumerate(random_idx)]).detach(),
+                'stoch': torch.stack([states[idx]['stoch'][i] for i, idx in enumerate(random_idx)]).detach()
             }
         
+        # Separate actor and critic updates to avoid graph conflicts
         # Actor update
         self.actor_optimizer.zero_grad()
-        actor_loss, critic_loss = self.compute_actor_critic_loss(init_states)
+        actor_loss = self.compute_actor_loss(init_states)
         actor_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.actor.parameters(), 100.0)
         self.actor_optimizer.step()
         
-        # Critic update
+        # Critic update  
         self.critic_optimizer.zero_grad()
+        critic_loss = self.compute_critic_loss(init_states)
         critic_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 100.0)
         self.critic_optimizer.step()
