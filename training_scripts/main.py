@@ -91,7 +91,7 @@ class Preprocessor():
 
 ## Create the model
 model = DDPG_FF(
-    n_features=87,  # type: ignore
+    n_features=89,  # type: ignore
     action_space=env.action_space,  # type: ignore
     neurons=[24, 12, 6],
     activation_function=F.relu,
