@@ -1,3 +1,15 @@
-AttributeError: 'DDPG_FF' object has no attribute 'actor_target'
-Ep 0 | Shaped: -6.65 | Original: -2.49 | C: 0.0001 | A: -0.0824:   0%| | 284/1000000 [00:01<1:43:24, 161.13step
-/content/booster_soccer_showdown# 
+🎉  PROGRESS: Getting non-zero original rewards!
+========================================
+Ep 804 | Shaped: -0.85 | Original: 0.00 | C: 0.0000 | A: 1.4043:  21%|▏| 209998/1000000 [24:57<1:56:40, 112.84s
+  Progress: Step 210000, Episode reward: -0.859
+Ep 841 | Shaped: -0.64 | Original: 0.00 | C: 0.0001 | A: 1.5065:  22%|▏| 219998/1000000 [26:17<1:48:45, 119.53s
+  Progress: Step 220000, Episode reward: -0.676
+Ep 899 | Shaped: -3.10 | Original: 0.00 | C: 0.0000 | A: 1.4752:  24%|▏| 235678/1000000 [28:22<1:39:42, 127.77s
+=== Episode 900 Analysis ===
+Average Shaped Reward: -5.8065
+Average Original Reward: -2.4886
+Shaping Effectiveness Ratio: 2.33
+Recent Episode - Shaped: -5.6106, Original: -2.4886
+Best Model: Episode 677, Original Reward: -2.4880
+Episodes since best: 223
+🎉  PROGRESS: Getting non-zero original rewards!
