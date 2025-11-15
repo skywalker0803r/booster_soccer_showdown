@@ -89,13 +89,13 @@ class Preprocessor():
 
         return obs
 
-## Create the model
+## Create the model - Enhanced version
 model = DDPG_FF(
     n_features=89,  # type: ignore
     action_space=env.action_space,  # type: ignore
-    neurons=[24, 12, 6],
+    neurons=[256, 128, 64],  # Much larger network for better representation
     activation_function=F.relu,
-    learning_rate=0.0001,
+    learning_rate=0.0003,  # Slightly higher learning rate for faster convergence
 )
 
 ## Define an action function
@@ -111,8 +111,8 @@ def action_function(policy):
     )
 
 
-## Train the model
-training_loop(env, model, action_function, Preprocessor)
+## Train the model - Extended training
+training_loop(env, model, action_function, Preprocessor, timesteps=2000)
 
 ## Watch
 #sai.watch(model, action_function, Preprocessor)
@@ -120,4 +120,4 @@ training_loop(env, model, action_function, Preprocessor)
 ## Benchmark the model locally
 sai.benchmark(model, action_function, Preprocessor)
 
-sai.submit("Vedanta", model, action_function, Preprocessor)
+sai.submit("Vedanta_Enhanced_DDPG", model, action_function, Preprocessor)

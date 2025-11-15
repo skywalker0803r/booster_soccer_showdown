@@ -30,8 +30,11 @@ class ReplayBuffer:
         return len(self.buffer)
 
 
-def add_noise(action, noise_scale=0.1):
-    noise = np.random.normal(0, noise_scale, size=action.shape)
+def add_noise(action, noise_scale=0.1, episode_count=0, total_episodes=1000):
+    # Decay noise over time for better convergence
+    decay_factor = max(0.1, 1.0 - episode_count / total_episodes)
+    effective_noise = noise_scale * decay_factor
+    noise = np.random.normal(0, effective_noise, size=action.shape)
     return np.clip(action + noise, -1, 1)
 
 
@@ -42,10 +45,10 @@ def training_loop(
     preprocess_class: Optional[Callable] = None,
     timesteps=1000,
 ):
-    replay_buffer = ReplayBuffer(max_size=100000)
+    replay_buffer = ReplayBuffer(max_size=200000)  # Larger buffer for more diverse experiences
     preprocessor = preprocess_class()
-    batch_size = 64
-    update_frequency = 4
+    batch_size = 128  # Larger batch size for more stable gradients
+    update_frequency = 2  # More frequent updates for faster learning
 
     total_steps = 0
     episode_count = 0
@@ -65,7 +68,8 @@ def training_loop(
 
             if action_function:
                 action = action_function(policy)[0].squeeze()
-                action = add_noise(action, noise_scale=0.1)
+                # Use decaying noise for better exploration-exploitation balance
+                action = add_noise(action, noise_scale=0.2, episode_count=episode_count, total_episodes=timesteps//20)
             else:
                 action = model.select_action(s)[0].squeeze()
 

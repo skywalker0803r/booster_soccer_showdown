@@ -52,7 +52,7 @@ class DDPG_FF(torch.nn.Module):
         self.action_space = action_space
         self.learning_rate = learning_rate
         self.gamma = 0.99
-        self.tau = 0.001
+        self.tau = 0.005  # Faster target network updates for better stability
 
         shared_inputs = [neurons, activation_function]
         self.actor = NeuralNetwork(
