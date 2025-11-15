@@ -7,7 +7,7 @@ from ddpg import DDPG_FF
 from training import training_loop
 
 ## Initialize the SAI client
-sai = SAIClient(comp_id="lower-t1-penalty-kick-goalie")
+sai = SAIClient(comp_id="booster-soccer-showdown")
 
 ## Make the environment
 env = sai.make_env()
@@ -115,7 +115,9 @@ def action_function(policy):
 training_loop(env, model, action_function, Preprocessor)
 
 ## Watch
-sai.watch(model, action_function, Preprocessor)
+#sai.watch(model, action_function, Preprocessor)
 
 ## Benchmark the model locally
 sai.benchmark(model, action_function, Preprocessor)
+
+sai.submit("Vedanta", model, action_function, Preprocessor)
