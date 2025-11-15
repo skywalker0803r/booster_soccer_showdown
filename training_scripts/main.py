@@ -5,7 +5,7 @@ from sai_rl import SAIClient
 
 from ddpg import DDPG_FF
 from training import training_loop
-from reward_shaping import enhanced_preprocessor_with_shaping
+from aligned_reward_shaping import aligned_enhanced_preprocessor
 
 ## Initialize the SAI client
 sai = SAIClient(comp_id="booster-soccer-showdown",api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv")
@@ -112,12 +112,12 @@ def action_function(policy):
     )
 
 
-## Create enhanced preprocessor with reward shaping
-EnhancedPreprocessor = enhanced_preprocessor_with_shaping(Preprocessor)
+## Create aligned enhanced preprocessor with conservative reward shaping
+EnhancedPreprocessor = aligned_enhanced_preprocessor(Preprocessor)
 
-## Train the model - Competition-level training with reward shaping
-print("=== Training with Enhanced DDPG + Reward Shaping ===")
-training_loop(env, model, action_function, EnhancedPreprocessor, timesteps=500000)
+## Train the model - Competition-level training with aligned reward shaping
+print("=== Training with Enhanced DDPG + Aligned Reward Shaping ===")
+training_loop(env, model, action_function, EnhancedPreprocessor, timesteps=1000000)
 
 ## Watch
 #sai.watch(model, action_function, Preprocessor)
@@ -126,4 +126,4 @@ training_loop(env, model, action_function, EnhancedPreprocessor, timesteps=50000
 sai.benchmark(model, action_function, Preprocessor)
 
 ## Submit to leaderboard
-sai.submit("Vedanta_RewardShaping_DDPG", model, action_function, Preprocessor)
+sai.submit("Vedanta_Aligned_DDPG", model, action_function, Preprocessor)

@@ -1,13 +1,6 @@
-Episode 174 | Reward: 15.59 | Critic: 0.0039 | Actor: -8.7152:  50%|▍| 49998/10
-  Progress: Step 50000, Episode reward: 15.804
-Episode 210 | Reward: 13.37 | Critic: 0.0067 | Actor: -9.3028:  60%|▌| 59998/10
-  Progress: Step 60000, Episode reward: 13.597
-Episode 245 | Reward: 19.92 | Critic: 0.0268 | Actor: -9.3222:  70%|▋| 69998/10
-  Progress: Step 70000, Episode reward: 20.221
-Episode 279 | Reward: 18.01 | Critic: 0.0082 | Actor: -9.0851:  80%|▊| 79999/10
-  Progress: Step 80000, Episode reward: 18.300
-Episode 313 | Reward: 0.05 | Critic: 0.0011 | Actor: -9.7883:  90%|▉| 89998/100
-  Progress: Step 90000, Episode reward: 0.055
-Episode 347 | Reward: 24.25 | Critic: 0.0138 | Actor: -9.6063: 100%|▉| 99998/10
-  Progress: Step 100000, Episode reward: 24.587
-Episode 347 | Reward: 24.59 | Critic: 0.0050 | Actor: -9.8403: 100%|█| 100000/1
+=== Episode 1100 Analysis ===
+Average Shaped Reward: 28.4427
+Average Original Reward: -2.4884
+Shaping Effectiveness Ratio: -11.43
+Recent Episode - Shaped: 28.9266, Original: -2.4884
+🎉  PROGRESS: Getting non-zero original rewards!
