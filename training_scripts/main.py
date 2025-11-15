@@ -117,7 +117,7 @@ EnhancedPreprocessor = enhanced_preprocessor_with_shaping(Preprocessor)
 
 ## Train the model - Competition-level training with reward shaping
 print("=== Training with Enhanced DDPG + Reward Shaping ===")
-training_loop(env, model, action_function, EnhancedPreprocessor, timesteps=1000000)
+training_loop(env, model, action_function, EnhancedPreprocessor, timesteps=100000)
 
 ## Watch
 #sai.watch(model, action_function, Preprocessor)
