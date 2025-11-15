@@ -1,6 +1,6 @@
 # 下載代碼庫
-git clone https://github.com/skywalker0803r/booster_soccer_showdown.git
-cd booster_soccer_showdown
+#git clone https://github.com/skywalker0803r/booster_soccer_showdown.git
+#cd booster_soccer_showdown
 
 # 安裝 conda（使用 Mambaforge：輕量且快速）
 # -----------------------------------------------
