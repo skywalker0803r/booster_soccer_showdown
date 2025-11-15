@@ -157,8 +157,8 @@ def training_loop(
             best_model_state = {
                 'actor_state_dict': model.actor.state_dict(),
                 'critic_state_dict': model.critic.state_dict(),
-                'actor_target_state_dict': model.actor_target.state_dict(),
-                'critic_target_state_dict': model.critic_target.state_dict(),
+                'target_actor_state_dict': model.target_actor.state_dict(),
+                'target_critic_state_dict': model.target_critic.state_dict(),
                 'episode': episode_count,
                 'original_reward': episode_original_reward,
                 'shaped_reward': episode_reward
@@ -197,8 +197,8 @@ def training_loop(
         
         model.actor.load_state_dict(best_model_state['actor_state_dict'])
         model.critic.load_state_dict(best_model_state['critic_state_dict'])
-        model.actor_target.load_state_dict(best_model_state['actor_target_state_dict'])
-        model.critic_target.load_state_dict(best_model_state['critic_target_state_dict'])
+        model.target_actor.load_state_dict(best_model_state['target_actor_state_dict'])
+        model.target_critic.load_state_dict(best_model_state['target_critic_state_dict'])
         
         # Save best model to disk as backup
         torch.save(best_model_state, 'best_model_checkpoint.pth')
