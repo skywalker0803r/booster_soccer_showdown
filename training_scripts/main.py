@@ -286,7 +286,45 @@ def dreamerv3_training_loop():
     return model
 
 ## Train the model
-model = dreamerv3_training_loop()
+trained_model = dreamerv3_training_loop()
+
+# Create SAI-compatible wrapper
+class SAICompatibleWrapper:
+    def __init__(self, dreamer_model):
+        self.dreamer_model = dreamer_model
+        self.state = None
+        self.preprocessor = Preprocessor()
+    
+    def __call__(self, obs_tensor):
+        # Convert to numpy
+        if hasattr(obs_tensor, 'detach'):
+            obs = obs_tensor.detach().cpu().numpy()
+        else:
+            obs = obs_tensor
+        
+        # Handle batch dimension
+        if len(obs.shape) == 1:
+            obs = obs[np.newaxis, :]
+        
+        # Reset state for each new sequence (SAI evaluation pattern)
+        if self.state is None:
+            self.state = None
+        
+        # Get action
+        action, self.state = self.dreamer_model.select_action(obs[0], self.state)
+        
+        # Return as tensor
+        return torch.FloatTensor(action).unsqueeze(0)
+    
+    def select_action(self, obs):
+        """DDPG-style interface"""
+        if hasattr(obs, 'detach'):
+            obs = obs.detach().cpu().numpy()
+        action, _ = self.dreamer_model.select_action(obs)
+        return action
+
+# Wrap the model
+model = SAICompatibleWrapper(trained_model)
 
 ## Watch
 #sai.watch(model, action_function, Preprocessor)
