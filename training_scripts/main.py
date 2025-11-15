@@ -1,11 +1,10 @@
-import torch
 import torch.nn.functional as F
 import numpy as np
-from collections import deque
-import random
 
 from sai_rl import SAIClient
-from simple_dreamerv3 import SimpleDreamerV3
+
+from ddpg import DDPG_FF
+from training import training_loop
 
 ## Initialize the SAI client
 sai = SAIClient(comp_id="booster-soccer-showdown",api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv")
@@ -90,290 +89,35 @@ class Preprocessor():
 
         return obs
 
-class SequenceBuffer:
-    """Buffer to store sequences for DreamerV3 training"""
-    
-    def __init__(self, max_size=1000, sequence_length=25):
-        self.max_size = max_size
-        self.sequence_length = sequence_length
-        self.buffer = deque(maxlen=max_size)
-        
-    def add_episode(self, observations, actions, rewards):
-        """Add a complete episode to buffer"""
-        episode = {
-            'observations': np.array(observations),
-            'actions': np.array(actions),
-            'rewards': np.array(rewards)
-        }
-        self.buffer.append(episode)
-        
-    def sample_sequences(self, batch_size):
-        """Sample random sequences for training"""
-        if len(self.buffer) == 0:
-            return None, None, None
-            
-        batch_obs = []
-        batch_actions = []
-        batch_rewards = []
-        
-        for _ in range(batch_size):
-            # Sample random episode
-            episode = random.choice(self.buffer)
-            
-            # Sample random sequence from episode
-            episode_length = len(episode['observations'])
-            if episode_length < self.sequence_length:
-                # Pad short episodes
-                seq_len = episode_length
-                
-                obs_seq = episode['observations']
-                act_seq = episode['actions']
-                rew_seq = episode['rewards']
-                
-                # Pad with last observation/action
-                if seq_len < self.sequence_length:
-                    pad_len = self.sequence_length - seq_len
-                    obs_pad = np.repeat(obs_seq[-1:], pad_len, axis=0)
-                    act_pad = np.repeat(act_seq[-1:], pad_len, axis=0)
-                    rew_pad = np.zeros(pad_len)
-                    
-                    obs_seq = np.concatenate([obs_seq, obs_pad], axis=0)
-                    act_seq = np.concatenate([act_seq, act_pad], axis=0)
-                    rew_seq = np.concatenate([rew_seq, rew_pad], axis=0)
-                    
-            else:
-                # Sample random subsequence
-                start_idx = random.randint(0, episode_length - self.sequence_length)
-                end_idx = start_idx + self.sequence_length
-                
-                obs_seq = episode['observations'][start_idx:end_idx]
-                act_seq = episode['actions'][start_idx:end_idx]
-                rew_seq = episode['rewards'][start_idx:end_idx]
-            
-            batch_obs.append(obs_seq)
-            batch_actions.append(act_seq)
-            batch_rewards.append(rew_seq)
-        
-        return (torch.FloatTensor(np.array(batch_obs)),
-                torch.FloatTensor(np.array(batch_actions)),
-                torch.FloatTensor(np.array(batch_rewards)))
-
-## Create the SimpleDreamerV3 model
-print("Creating SimpleDreamerV3 model...")
-model = SimpleDreamerV3(
-    obs_dim=89,  # preprocessed observation dimension
-    action_dim=12,  # robot joint actions
-    hidden_dim=256,  # Smaller for faster training
-    stoch_dim=32,
-    discrete_dim=16
+## Create the model
+model = DDPG_FF(
+    n_features=89,  # type: ignore
+    action_space=env.action_space,  # type: ignore
+    neurons=[24, 12, 6],
+    activation_function=F.relu,
+    learning_rate=0.0001,
 )
 
 ## Define an action function
 def action_function(policy):
-    # DreamerV3 already outputs actions in [-1, 1] range
-    # We need to map them to the environment's action space
-    # Clip to ensure we're within [-1, 1]
-    clipped_policy = np.clip(policy, -1, 1)
-    
-    # Map from [-1, 1] to [action_space.low, action_space.high]
-    action_percent = (clipped_policy + 1) / 2  # Convert [-1, 1] to [0, 1]
+    expected_bounds = [-1, 1]
+    action_percent = (policy - expected_bounds[0]) / (
+        expected_bounds[1] - expected_bounds[0]
+    )
+    bounded_percent = np.minimum(np.maximum(action_percent, 0), 1)
     return (
         env.action_space.low
-        + (env.action_space.high - env.action_space.low) * action_percent
+        + (env.action_space.high - env.action_space.low) * bounded_percent
     )
 
 
-def dreamerv3_training_loop():
-    """Training loop for SimpleDreamerV3"""
-    
-    print("=== Starting DreamerV3 Training ===")
-    
-    preprocessor = Preprocessor()
-    sequence_buffer = SequenceBuffer(max_size=1000, sequence_length=25)
-    
-    # Training parameters
-    num_episodes = 600
-    max_episode_length = 1000
-    batch_size = 8
-    start_training_episodes = 10
-    train_frequency = 5
-    
-    print(f"Training for {num_episodes} episodes...")
-    
-    best_reward = float('-inf')
-    
-    for episode in range(num_episodes):
-        # Collect episode
-        obs, info = env.reset()
-        obs = preprocessor.modify_state(obs, info).squeeze()
-        
-        episode_observations = [obs]
-        episode_actions = []
-        episode_rewards = []
-        episode_reward = 0
-        
-        # Agent state for consistent action selection
-        agent_state = None
-        
-        for step in range(max_episode_length):
-            # Select action
-            if len(sequence_buffer.buffer) < start_training_episodes:
-                # Random actions during initial data collection
-                action = np.random.uniform(-1, 1, size=12)
-            else:
-                action, agent_state = model.select_action(obs, agent_state)
-                
-                # Add exploration noise
-                if episode < num_episodes * 0.7:
-                    noise_scale = 0.3 * (1.0 - episode / (num_episodes * 0.7))
-                    action += np.random.normal(0, noise_scale, size=action.shape)
-                    action = np.clip(action, -1, 1)
-            
-            # Convert normalized action to environment action
-            env_action = env.action_space.low + (env.action_space.high - env.action_space.low) * (action + 1) / 2
-            
-            # Step environment
-            next_obs, reward, terminated, truncated, next_info = env.step(env_action)
-            next_obs = preprocessor.modify_state(next_obs, next_info).squeeze()
-            
-            # Store transition
-            episode_observations.append(next_obs)
-            episode_actions.append(action)
-            episode_rewards.append(reward)
-            episode_reward += reward
-            
-            obs = next_obs
-            
-            if terminated or truncated:
-                break
-        
-        # Add episode to buffer
-        if len(episode_actions) > 0:
-            sequence_buffer.add_episode(episode_observations[:-1], episode_actions, episode_rewards)
-        
-        if episode % 20 == 0:
-            print(f"Episode {episode}: Reward = {episode_reward:.3f}, Steps = {len(episode_actions)}")
-        
-        # Update best reward
-        if episode_reward > best_reward:
-            best_reward = episode_reward
-            if episode % 20 == 0:
-                print(f"  New best reward: {best_reward:.3f}")
-        
-        # Training step
-        if len(sequence_buffer.buffer) >= start_training_episodes and episode % train_frequency == 0:
-            # Training steps
-            num_train_steps = 8
-            for train_step in range(num_train_steps):
-                # Sample sequences
-                obs_seq, action_seq, reward_seq = sequence_buffer.sample_sequences(batch_size)
-                
-                if obs_seq is not None:
-                    # Training step
-                    losses = model.train_step(obs_seq, action_seq, reward_seq)
-            
-            if episode % 50 == 0:
-                print(f"  Latest training losses: WM={losses['world_model_loss']:.3f}, Actor={losses['actor_loss']:.3f}, Critic={losses['critic_loss']:.3f}")
-        
-        # Save model periodically
-        if episode % 100 == 0 and episode > 0:
-            torch.save(model.state_dict(), f'dreamerv3_checkpoint_{episode}.pth')
-            print(f"  Saved checkpoint at episode {episode}")
-    
-    print("=== Training Complete ===")
-    print(f"Best reward achieved: {best_reward:.3f}")
-    
-    return model
-
 ## Train the model
-trained_model = dreamerv3_training_loop()
-
-# Create SAI-compatible wrapper
-class SAICompatibleWrapper:
-    def __init__(self, dreamer_model):
-        self.dreamer_model = dreamer_model
-        self.dreamer_state = None
-        self.preprocessor = Preprocessor()
-        self.step_count = 0
-    
-    def __call__(self, obs_tensor):
-        try:
-            # Convert to numpy
-            if hasattr(obs_tensor, 'detach'):
-                obs = obs_tensor.detach().cpu().numpy()
-            else:
-                obs = np.array(obs_tensor)
-            
-            # Ensure it's the right shape
-            if len(obs.shape) == 1:
-                obs = obs.reshape(1, -1)
-            
-            # Take first sample if batch
-            obs_single = obs[0] if obs.shape[0] > 0 else obs.flatten()
-            
-            # Ensure we have 89 features
-            if len(obs_single) != 89:
-                if len(obs_single) > 89:
-                    obs_single = obs_single[:89]
-                else:
-                    # Pad with zeros if too short
-                    padded = np.zeros(89)
-                    padded[:len(obs_single)] = obs_single
-                    obs_single = padded
-            
-            # Get action using simplified interface
-            with torch.no_grad():
-                # Reset state periodically to avoid accumulation issues
-                if self.step_count % 1000 == 0:
-                    self.dreamer_state = None
-                
-                action, self.dreamer_state = self.dreamer_model.select_action(obs_single, self.dreamer_state)
-                self.step_count += 1
-            
-            # Ensure action is correct shape and in valid range
-            action = np.clip(action, -1.0, 1.0)
-            
-            # Return as tensor with batch dimension
-            return torch.FloatTensor(action).unsqueeze(0)
-            
-        except Exception as e:
-            print(f"Error in SAICompatibleWrapper: {e}")
-            # Return safe default action
-            return torch.zeros(1, 12)
-    
-    def select_action(self, obs):
-        """DDPG-style interface"""
-        try:
-            if hasattr(obs, 'detach'):
-                obs = obs.detach().cpu().numpy()
-            
-            if len(obs) != 89:
-                if len(obs) > 89:
-                    obs = obs[:89]
-                else:
-                    padded = np.zeros(89)
-                    padded[:len(obs)] = obs
-                    obs = padded
-            
-            action, _ = self.dreamer_model.select_action(obs, None)
-            return np.clip(action, -1.0, 1.0)
-        except Exception as e:
-            print(f"Error in select_action: {e}")
-            return np.zeros(12)
-
-# Wrap the model
-model = SAICompatibleWrapper(trained_model)
+training_loop(env, model, action_function, Preprocessor)
 
 ## Watch
 #sai.watch(model, action_function, Preprocessor)
 
 ## Benchmark the model locally
-print("=== Starting Local Benchmark ===")
-benchmark_result = sai.benchmark(model, action_function, Preprocessor, model_type='pytorch')
-print(f"Benchmark completed with score: {benchmark_result}")
+sai.benchmark(model, action_function, Preprocessor)
 
-## Submit to leaderboard
-print("=== Submitting to Leaderboard ===")
-import time
-time.sleep(2)  # Give console time to clean up
-sai.submit("Vedanta_DreamerV3", model, action_function, Preprocessor, model_type='pytorch')
+sai.submit("Vedanta", model, action_function, Preprocessor)
