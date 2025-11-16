@@ -1,221 +1,82 @@
 /content/booster_soccer_showdown# git pull
-remote: Enumerating objects: 12, done.
-remote: Counting objects: 100% (12/12), done.
-remote: Compressing objects: 100% (3/3), done.
-remote: Total 7 (delta 4), reused 7 (delta 4), pack-reused 0 (from 0)
-Unpacking objects: 100% (7/7), 4.34 KiB | 1.45 MiB/s, done.
+remote: Enumerating objects: 9, done.
+remote: Counting objects: 100% (9/9), done.
+remote: Compressing objects: 100% (4/4), done.
+remote: Total 6 (delta 2), reused 6 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 10.99 KiB | 1.37 MiB/s, done.
 From https://github.com/skywalker0803r/booster_soccer_showdown
-   112d2a5..f01fc29  main       -> origin/main
-Updating 112d2a5..f01fc29
+   f01fc29..617275e  main       -> origin/main
+Updating f01fc29..617275e
 Fast-forward
- log.txt                                    | 163 ++++++++++++++++++++++++++++++++++++-----------------------------------------------
- training_scripts/debug_sai_rewards.py      | 109 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
- training_scripts/episode_reward_wrapper.py |  25 +++++++++----
- training_scripts/quick_fix_test.py         |   7 ++++
- 4 files changed, 205 insertions(+), 99 deletions(-)
- create mode 100644 training_scripts/debug_sai_rewards.py
-/content/booster_soccer_showdown# python training_scripts/quick_fix_test.py 
-🚀  Quick Test: Episode-Level Reward Fixing
+ log.txt                                       | 143 ++++++++++++++++++++++++-
+ training_scripts/analyze_original_training.py | 188 ++++++++++++++++++++++++++++++++
+ training_scripts/success_focused_training.py  | 467 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 796 insertions(+), 2 deletions(-)
+ create mode 100644 training_scripts/analyze_original_training.py
+ create mode 100644 training_scripts/success_focused_training.py
+/content/booster_soccer_showdown# python training_scripts/analyze_original_training.py 
+🔍  Analysis of Original Training Data
 ============================================================
-╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
-│                                                                                                  │
-│                                                                                                  │
-│                                   ########      ###     ###########                              │
-│                                 #+#    #+#   #+# #+#       #+#                                   │
-│                                +#+         +#+   +#+      +#+                                    │
-│                               +########+ +#########+     +#+                                     │
-│                                     +#+ +#+     +#+     +#+                                      │
-│                             #+#    #+# #+#     #+#     #+#                                       │
-│                             ########  ###     ### ###########                                    │
-│                                                                                                  │
-│                                                                                         v0.1.35  │
-│                                                                              © 2025 ArenaX Labs  │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-✓ Successfully imported sai-mujoco package.
-╭─ Competition Tasks ──────────────────────────────────────────────────────────────────────────────╮
-│                                                                                                  │
-│       Task    Environment                                      Score Weight           Episodes   │
-│          0    Penalty Kick with Goalie (Lower T1)                       1.0                100   │
-│               (LowerT1GoaliePenaltyKick-v0)                                                      │
-│          1    Penalty Kick with Obstacles (Lower T1)                    1.0                100   │
-│               (LowerT1ObstaclePenaltyKick-v0)                                                    │
-│          2    Kick to Target (Lower T1)                                 1.0                100   │
-│               (LowerT1KickToTarget-v0)                                                           │
-│                                                                                                  │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-
-🎯  Episode 1
+📊  Original Training Analysis:
 ------------------------------
-Episode 1 Results:
-   Steps: 200
-   Original (estimated): 0.000
-   Fixed: 0.000
-   Improvement: +0.000
+episode_783:
+  Total reward:  -26.987
+  Steps: 154
+  Reward/step: -0.17524
+  🤔  Mixed penalties (step + other)
 
-🎯  Episode 2
-------------------------------
-Episode 2 Results:
-   Steps: 200
-   Original (estimated): 0.000
-   Fixed: 0.000
-   Improvement: +0.000
+episode_784:
+  Total reward:  -50.692
+  Steps: 239
+  Reward/step: -0.21210
+  ✅  Looks like pure -0.3 step penalty (Task 3)
 
-🎯  Episode 3
-------------------------------
-Episode 3 Results:
-   Steps: 200
-   Original (estimated): 0.000
-   Fixed: 0.000
-   Improvement: +0.000
+episode_785:
+  Total reward:  -16.439
+  Steps: 182
+  Reward/step: -0.09032
+  ⚠️ Unexpected pattern
 
-🎯  Episode 4
-------------------------------
-Episode 4 Results:
-   Steps: 200
-   Original (estimated): 0.000
-   Fixed: 0.000
-   Improvement: +0.000
+episode_786:
+  Total reward:  -19.950
+  Steps: 191
+  Reward/step: -0.10445
+  🤔  Mixed penalties (step + other)
 
-🎯  Episode 5
-------------------------------
-Episode 5 Results:
-   Steps: 200
-   Original (estimated): 0.000
-   Fixed: 0.000
-   Improvement: +0.000
+📈  Key Insights:
+  Best episode reward: +25.418 (POSITIVE!)
+  Worst episode reward: -123.774
+  Final average: -30.828
+
+🔧  Step Penalty Reduction Impact:
+----------------------------------------
+Current (mixed)     :  -30.828 (Actual training result)
+Pure -1.0 step      : -190.000 (If pure step penalty)
+Pure -0.3 step      :  -57.000 (If Task 3 step penalty)
+Reduced -0.01 step  :    3.100 (Our fix + some positive)
+
+💡  Real Problem Analysis:
+1. ✅  Agent IS learning (max reward +25.418!)
+2. ✅  Some episodes are successful
+3. ❌  Too many failed episodes bringing average down
+4. ❌  Need to improve success rate, not just reduce penalties
+
+🎯  New Strategy:
+Instead of fixing step penalty, we should:
+1. 🎯  Improve action quality to avoid failures
+2. 📈  Add dense rewards to guide learning
+3. 🚀  Focus on increasing success rate
+4. ⚖️ Balance exploration vs exploitation
 
 ============================================================
-🏆  SUMMARY:
-   Total original: 0.000
-   Total fixed: 0.000
-   Total improvement: +0.000
-   Average episode length: 200.0
-   ❌  FAILED: No improvement, check logic
-
-😞  Need to debug the episode reward fixing logic
-/content/booster_soccer_showdown# python training_scripts/debug_sai_rewards.py 
-🔍  Deep SAI Reward System Analysis
+🚀  RECOMMENDED NEXT STEPS:
 ============================================================
-╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
-│                                                                                                  │
-│                                                                                                  │
-│                                   ########      ###     ###########                              │
-│                                 #+#    #+#   #+# #+#       #+#                                   │
-│                                +#+         +#+   +#+      +#+                                    │
-│                               +########+ +#########+     +#+                                     │
-│                                     +#+ +#+     +#+     +#+                                      │
-│                             #+#    #+# #+#     #+#     #+#                                       │
-│                             ########  ###     ### ###########                                    │
-│                                                                                                  │
-│                                                                                         v0.1.35  │
-│                                                                              © 2025 ArenaX Labs  │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+1. 📊  Your agent IS learning (max +25.418 proves it works!)
+2. 🎯  Focus on improving success rate
+3. 📈  Use dense rewards to guide learning
+4. ⚖️ Reduce action noise/improve stability
+5. 🚀  Train longer with better guidance
 
-✓ Successfully imported sai-mujoco package.
-╭─ Competition Tasks ──────────────────────────────────────────────────────────────────────────────╮
-│                                                                                                  │
-│       Task    Environment                                      Score Weight           Episodes   │
-│          0    Penalty Kick with Goalie (Lower T1)                       1.0                100   │
-│               (LowerT1GoaliePenaltyKick-v0)                                                      │
-│          1    Penalty Kick with Obstacles (Lower T1)                    1.0                100   │
-│               (LowerT1ObstaclePenaltyKick-v0)                                                    │
-│          2    Kick to Target (Lower T1)                                 1.0                100   │
-│               (LowerT1KickToTarget-v0)                                                           │
-│                                                                                                  │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-📊 Environment Info:
-   Action space: Box([-45. -45. -30. -65. -24. -15. -45. -45. -30. -65. -24. -15.], [45. 45. 30. 65. 24. 15. 45. 45. 30. 65. 24. 15.], (12,), float32)
-   Observation space: Box(-inf, inf, (45,), float32)
-
-🎯 Testing 50 step episode:
-----------------------------------------
-   Step   0: reward=   0.000, term=False, trunc=False
-   Step   1: reward=   0.000, term=False, trunc=False
-   Step   2: reward=   0.000, term=False, trunc=False
-   Step   3: reward=   0.000, term=False, trunc=False
-   Step   4: reward=   0.000, term=False, trunc=False
-   Step  45: reward=   0.000, term=False, trunc=False
-   Step  46: reward=   0.000, term=False, trunc=False
-   Step  47: reward=   0.000, term=False, trunc=False
-   Step  48: reward=   0.000, term=False, trunc=False
-   Step  49: reward=   0.000, term=False, trunc=False
-   📈  Results:
-      Total steps: 50
-      Total reward: 0.000
-      Average reward/step: 0.000000
-      Non-zero rewards: 0
-      Reward range: 0.000 to 0.000
-      ✅  No significant penalties detected
-
-🎯 Testing 100 step episode:
-----------------------------------------
-   Step   0: reward=   0.000, term=False, trunc=False
-   Step   1: reward=   0.000, term=False, trunc=False
-   Step   2: reward=   0.000, term=False, trunc=False
-   Step   3: reward=   0.000, term=False, trunc=False
-   Step   4: reward=   0.000, term=False, trunc=False
-   Step  95: reward=   0.000, term=False, trunc=False
-   Step  96: reward=   0.000, term=False, trunc=False
-   Step  97: reward=   0.000, term=False, trunc=False
-   Step  98: reward=   0.000, term=False, trunc=False
-   Step  99: reward=   0.000, term=False, trunc=False
-   📈  Results:
-      Total steps: 100
-      Total reward: 0.000
-      Average reward/step: 0.000000
-      Non-zero rewards: 0
-      Reward range: 0.000 to 0.000
-      ✅  No significant penalties detected
-
-🎯  Testing 200 step episode:
-----------------------------------------
-   Step   0: reward=   0.000, term=False, trunc=False
-   Step   1: reward=   0.000, term=False, trunc=False
-   Step   2: reward=   0.000, term=False, trunc=False
-   Step   3: reward=   0.000, term=False, trunc=False
-   Step   4: reward=   0.000, term=False, trunc=False
-   Step 195: reward=   0.000, term=False, trunc=False
-   Step 196: reward=   0.000, term=False, trunc=False
-   Step 197: reward=   0.000, term=False, trunc=False
-   Step 198: reward=   0.000, term=False, trunc=False
-   Step 199: reward=   0.000, term=False, trunc=False
-   📈  Results:
-      Total steps: 200
-      Total reward: 0.000
-      Average reward/step: 0.000000
-      Non-zero rewards: 0
-      Reward range: 0.000 to 0.000
-      ✅  No significant penalties detected
-
-🎯  Testing 400 step episode:
-----------------------------------------
-   Step   0: reward=   0.000, term=False, trunc=False
-   Step   1: reward=   0.000, term=False, trunc=False
-   Step   2: reward=   0.000, term=False, trunc=False
-   Step   3: reward=   0.000, term=False, trunc=False
-   Step   4: reward=   0.000, term=False, trunc=False
-   Step 277: reward=  -2.488, term=True, trunc=False
-   → Episode ended early at step 277
-     Terminated: True, Truncated: False
-   📈  Results:
-      Total steps: 278
-      Total reward: -2.488
-      Average reward/step: -0.008951
-      Non-zero rewards: 1
-      Reward range: -2.488 to 0.000
-      🤔  Unexpected reward pattern
-
-🎯  Testing Environment Termination Conditions:
---------------------------------------------------
-Trying extreme actions to trigger termination...
-   😞  No termination triggered even with extreme actions
-
-💡  Key Findings:
-1. Check if rewards are only given at episode end
-2. Look for reward accumulation patterns
-3. Understand termination conditions
-4. Compare training vs evaluation modes
+The step penalty is NOT the main problem!
+The real issue is inconsistent performance.
 /content/booster_soccer_showdown# 

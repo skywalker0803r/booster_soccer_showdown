@@ -288,8 +288,8 @@ def success_focused_training():
         discrete_dim=16
     ).to(device)
     
-    # Improved sequence buffer from previous training
-    from improved_dreamerv3 import ImprovedSequenceBuffer
+    # Import sequence buffer from the correct location
+    from main_improved_dreamerv3 import ImprovedSequenceBuffer
     sequence_buffer = ImprovedSequenceBuffer(max_size=2000, sequence_length=50)
     
     # Optimized training parameters for success
