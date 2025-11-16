@@ -1,3 +1,19 @@
 SimpleDreamerV3 GPU Training - Fixed Version
 ============================================
 Ready for training...
+TypeError: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first.
+
+The above exception was the direct cause of the following exception:
+
+╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
+│ /content/booster_soccer_showdown/training_scripts/main_simple_dreamerv3.py:382 in <module>       │
+│                                                                                                  │
+│   379 print("=== Starting Evaluation ===")                                                       │
+│   380                                                                                            │
+│   381 ## Benchmark the model locally                                                             │
+│ ❱ 382 sai.benchmark(model, action_function, Preprocessor)                                        │
+│   383                                                                                            │
+│   384 ## Submit to leaderboard                                                                   │
+│   385 print("=== Submitting to Leaderboard ===")                                                 │
+│                                                                                                  │
+│ ╭─────────────────────────────────────────── locals ────────────────────────────
