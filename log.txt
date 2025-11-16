@@ -1,213 +1,212 @@
-🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-   Up vector: [0.000, 0.000, 1.000]
-📈  Ball progress! New best: 2.060m, reward: +0.500
-📈  Ball progress! New best: 2.050m, reward: +0.103
-Episode 171 steps: Original=  -2.492, Shaped=   4.768, Total=   2.276, Best_ball_dist=2.050
-Ep  185: R=   6.029, L=171, Avg=   6.014, Success=162 ( 87.1%)
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-   Up vector: [0.000, 0.000, 1.000]
-📈  Ball progress! New best: 2.109m, reward: +0.101
-📈  Ball progress! New best: 2.099m, reward: +0.102
-📈  Ball progress! New best: 2.089m, reward: +0.100
-📈  Ball progress! New best: 2.078m, reward: +0.103
-📈  Ball progress! New best: 2.067m, reward: +0.109
-📈  Ball progress! New best: 2.057m, reward: +0.109
-📈  Ball progress! New best: 2.046m, reward: +0.102
-Episode 209 steps: Original=  -2.492, Shaped=   7.161, Total=   4.669, Best_ball_dist=2.046
-Ep  186: R=  10.805, L=209, Avg=   6.012, Success=163 ( 87.2%)
-  🔄  Training...
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-   Up vector: [0.000, 0.000, 1.000]
-📈  Ball progress! New best: 2.109m, reward: +0.104
-📈  Ball progress! New best: 2.098m, reward: +0.102
-Episode 267 steps: Original=  -2.490, Shaped=   4.586, Total=   2.096, Best_ball_dist=2.098
-Ep  187: R=   5.733, L=267, Avg=   6.061, Success=164 ( 87.2%)
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-   Up vector: [0.000, 0.000, 1.000]
-📈  Ball progress! New best: 2.109m, reward: +0.103
-📈  Ball progress! New best: 2.098m, reward: +0.102
-📈  Ball progress! New best: 2.088m, reward: +0.105
-📈  Ball progress! New best: 2.077m, reward: +0.105
-📈  Ball progress! New best: 2.065m, reward: +0.124
-📈  Ball progress! New best: 2.055m, reward: +0.103
-📈  Ball progress! New best: 2.045m, reward: +0.101
-📈  Ball progress! New best: 2.034m, reward: +0.104
-📈  Ball progress! New best: 2.023m, reward: +0.113
-📈  Ball progress! New best: 2.012m, reward: +0.110
-📈  Ball progress! New best: 2.002m, reward: +0.104
-📈  Ball progress! New best: 1.991m, reward: +0.106
-Episode 266 steps: Original=  -2.491, Shaped=   8.600, Total=   6.109, Best_ball_dist=1.991
-Ep  188: R=  13.579, L=266, Avg=   6.280, Success=165 ( 87.3%)
+🚀 Environment-Agnostic Training
+Problem: Training environment ≠ Evaluation environment
+Solution: Train on original environment with smart exploration
+
+🎯 ENVIRONMENT-AGNOSTIC DREAMERV3 TRAINING
+============================================================
+🔍 Key insight: Training-evaluation environment mismatch!
+🎯 New approach: Train on original environment
+💡 Strategy: Better exploration + action quality
+🚀 Using device: cuda
+📊 TensorBoard: runs/EnvironmentAgnosticDreamerV3_20251116_191312
+✅ Smart exploration wrapper (no shaped rewards)
+🎯 Training configuration:
+   Episodes: 2000
+   Original environment only
+   Focus: Stable exploration
+Ep    0: R=  -2.488, L=278, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+  🎉 New best reward: -2.488
+Ep    1: R=  -2.488, L=269, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+  🎉 New best reward: -2.488
+Ep    2: R=  -2.488, L=271, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep    3: R=  -2.488, L=278, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+  🎉 New best reward: -2.488
+Ep    4: R=  -2.488, L=290, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep    5: R=  -2.488, L=276, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep    6: R=  -2.488, L=275, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep    7: R=  -2.488, L=266, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep    8: R=  -2.488, L=302, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+  🎉 New best reward: -2.488
+Ep    9: R=  -2.488, L=269, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   10: R=  -2.488, L=265, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   11: R=  -2.488, L=280, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   12: R=  -2.488, L=264, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   13: R=  -2.488, L=291, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   14: R=  -2.488, L=266, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   15: R=  -2.488, L=274, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   16: R=  -2.488, L=289, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   17: R=  -2.489, L=270, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   18: R=  -2.489, L=279, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   19: R=  -2.488, L=280, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   20: R=  -2.488, L=278, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   21: R=  -2.488, L=273, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   22: R=  -2.488, L=277, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   23: R=  -2.488, L=263, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   24: R=  -2.489, L=277, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   25: R=  -2.489, L=286, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   26: R=  -2.488, L=270, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   27: R=  -2.488, L=276, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   28: R=  -2.488, L=282, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   29: R=  -2.488, L=273, Avg=  -2.488, Success=  0 (  0.0%), Scale=0.3
+Ep   30: R=  -2.492, L=205, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   31: R=  -2.490, L=239, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   32: R=  -2.490, L=286, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+  🔄  Training model...
+Ep   33: R=  -2.492, L=177, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   34: R=  -2.491, L=245, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   35: R=  -2.492, L=199, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   36: R=  -2.490, L=272, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+  🔄  Training model...
+Ep   37: R=  -2.489, L=230, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   38: R=  -2.489, L=230, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   39: R=  -2.490, L=228, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   40: R=  -2.492, L=153, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+  🔄  Training model...
+Ep   41: R=  -2.489, L=235, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   42: R=  -2.490, L=260, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   43: R=  -2.489, L=299, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   44: R=  -2.489, L=242, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+  🔄  Training model...
+Ep   45: R=  -2.489, L=256, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   46: R=  -2.492, L=174, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   47: R=  -2.489, L=227, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   48: R=  -2.490, L=222, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+  🔄  Training model...
+Ep   49: R=  -2.490, L=237, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   50: R=  -2.492, L=178, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
+Ep   51: R=  -2.491, L=314, Avg=  -2.489, Success=  0 (  0.0%), Scale=0.3
 
 
-跑一陣子之後
-
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-   Up vector: [0.000, 0.000, 1.000]
-Episode 261 steps: Original=  -2.493, Shaped=   1.560, Total=  -0.933, Best_ball_dist=2.119
-Ep  479: R=  -0.323, L=261, Avg=  -1.642, Success=309 ( 64.4%)
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-   Up vector: [0.000, 0.000, 1.000]
-Episode 274 steps: Original=  -2.493, Shaped=  -2.975, Total=  -5.468, Best_ball_dist=2.119
-Ep  480: R=  -9.393, L=274, Avg=  -1.783, Success=309 ( 64.2%)
-  🔄  Training...
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-   Up vector: [0.000, 0.000, 1.000]
-Episode 296 steps: Original=  -2.491, Shaped=   1.360, Total=  -1.131, Best_ball_dist=2.119
-Ep  481: R=  -0.721, L=296, Avg=  -1.720, Success=309 ( 64.1%)
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-   Up vector: [0.000, 0.000, 1.000]
-📈  Ball progress! New best: 2.109m, reward: +0.101
-📈  Ball progress! New best: 2.099m, reward: +0.102
-📈  Ball progress! New best: 2.088m, reward: +0.107
-📈  Ball progress! New best: 2.078m, reward: +0.104
-📈  Ball progress! New best: 2.067m, reward: +0.104
-📈  Ball progress! New best: 2.057m, reward: +0.104
-📈  Ball progress! New best: 2.046m, reward: +0.106
-📈  Ball progress! New best: 2.036m, reward: +0.105
-📈  Ball progress! New best: 2.026m, reward: +0.101
-Episode 174 steps: Original=  -2.489, Shaped=   2.703, Total=   0.214, Best_ball_dist=2.026
-Ep  482: R=   1.967, L=174, Avg=  -1.789, Success=310 ( 64.2%)
-
-再跑一陣子之後
-
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-   Up vector: [0.000, 0.000, 1.000]
-📈  Ball progress! New best: 2.109m, reward: +0.102
-Episode 177 steps: Original=  -2.492, Shaped=   1.937, Total=  -0.555, Best_ball_dist=2.109
-Ep  986: R=   0.431, L=177, Avg=  -3.689, Success=479 ( 48.5%)
-  🔄  Training...
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-   Up vector: [0.000, 0.000, 1.000]
-Episode 206 steps: Original=  -2.493, Shaped=  -2.160, Total=  -4.653, Best_ball_dist=2.119
-Ep  987: R=  -7.763, L=206, Avg=  -3.708, Success=479 ( 48.5%)
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-   Up vector: [0.000, 0.000, 1.000]
-Episode 160 steps: Original=  -2.492, Shaped=   2.860, Total=   0.368, Best_ball_dist=2.119
-Ep  988: R=   2.223, L=160, Avg=  -3.689, Success=480 ( 48.5%)
-  🔄  Training...
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-   Up vector: [0.000, 0.000, 1.000]
-Episode 195 steps: Original=  -2.493, Shaped=  -1.005, Total=  -3.498, Best_ball_dist=2.119
-Ep  989: R=  -5.453, L=195, Avg=  -3.702, Success=480 ( 48.5%)
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-   Up vector: [0.000, 0.000, 1.000]
-📈  Ball progress! New best: 2.109m, reward: +0.101
-Episode 206 steps: Original=  -2.493, Shaped=  -0.784, Total=  -3.277, Best_ball_dist=2.109
-Ep  990: R=  -5.010, L=206, Avg=  -3.699, Success=480 ( 48.4%)
-
-成功提交
-
-✓ Successfully loaded model.
-
-╭─ "Vedanta_SuccessFocused_DreamerV3" Submission Details ──────────────────────────────────────────╮
-│                                                                                                  │
-│  Competition ID:      cmp_xnSCxcJXQclQ                                                           │
-│  Competition Name:    Booster Soccer Showdown                                                    │
-│  Model Type:          pytorch                                                                    │
-│  Preprocess Function:  Custom                                                                    │
-│  Action Function:  Custom                                                                        │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-/content/booster_soccer_showdown/training_scripts/sai_compatible_dreamerv3.py:35: TracerWarning: Converting a tensor to a Python boolean might 
-cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This
-means that the trace might not generalize to other inputs!
-  if x.shape[-1] != self.dreamer.obs_dim:
-/usr/local/lib/python3.12/dist-packages/torch/jit/_trace.py:1310: TracerWarning: Trace had nondeterministic nodes. Did you forget call .eval() 
-on your model? Nodes:
-        %482 : Long(32, 1, strides=[1, 1], requires_grad=0, device=cpu) = aten::multinomial(%probs_2d, %479, %480, %481) # 
-/usr/local/lib/python3.12/dist-packages/torch/distributions/categorical.py:143:0
-This may cause errors in trace checking. To disable trace checking, pass check_trace=False to torch.jit.trace()
-  _check_trace(
-/usr/local/lib/python3.12/dist-packages/torch/jit/_trace.py:1310: TracerWarning: Output nr 1. of the traced function does not match the 
-corresponding output of the Python function. Detailed error:
-Tensor-likes are not close!
-
-Mismatched elements: 12 / 12 (100.0%)
-Greatest absolute difference: 0.883422926068306 at index (0, 0) (up to 1e-05 allowed)
-Greatest relative difference: 6.010034451865461 at index (0, 5) (up to 1e-05 allowed)
-  _check_trace(
-✓ Model submitted successfully.
-🎉 DONE! Expected improvements:
-   - Higher success rate
-   - More consistent positive rewards
-   - Better stability and ball interaction
-   - Score should improve significantly!
-/content/booster_soccer_showdown# 
+Ep  421: R=  -2.489, L=208, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  422: R=  -2.492, L=266, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  423: R=  -2.492, L=199, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  424: R=  -2.492, L=200, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+  🔄  Training model...
+Ep  425: R=  -2.492, L=188, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  426: R=  -2.492, L=172, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  427: R=  -2.492, L=161, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  428: R=  -2.492, L=136, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+  🔄  Training model...
+Ep  429: R=  -2.490, L=209, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  430: R=  -2.491, L=194, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  431: R=  -2.491, L=213, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  432: R=  -2.492, L=151, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+  🔄  Training model...
+Ep  433: R=  -2.491, L=187, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  434: R=  -2.492, L=139, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  435: R=  -2.492, L=162, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  436: R=  -2.491, L=214, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+  🔄  Training model...
+Ep  437: R=  -2.492, L=313, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  438: R=  -2.492, L=227, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  439: R=  -2.492, L=198, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  440: R=  -2.492, L=167, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+  🔄  Training model...
+Ep  441: R=  -2.491, L=269, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  442: R=  -2.492, L=204, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  443: R=  -2.492, L=163, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  444: R=  -2.490, L=238, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+  🔄  Training model...
+Ep  445: R=  -2.492, L=188, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  446: R=  -2.491, L=204, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  447: R=  -2.492, L=165, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
+Ep  448: R=  -2.490, L=219, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.5
 
 
-╭─ Model ──────────────────────────────────────────────────────────────────────╮
-│                                                                              │
-│  Type:          pytorch                                                      │
-│  Environment:    LowerT1GoaliePenaltyKick-v0                                 │
-│  Preprocess Function:  Custom                                                │
-│  Action Function:  Custom                                                    │
-│                                                                              │
-╰──────────────────────────────────────────────────────────────────────────────╯
-✓ Successfully loaded model.
+Ep  553: R=  -2.490, L=236, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  554: R=  -2.492, L=168, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  555: R=  -2.492, L=152, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  556: R=  -2.492, L=215, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+  🔄  Training model...
+Ep  557: R=  -2.492, L=228, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  558: R=  -2.492, L=194, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  559: R=  -2.492, L=159, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  560: R=  -2.492, L=169, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+  🔄  Training model...
+Ep  561: R=  -2.492, L=358, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  562: R=  -2.492, L=177, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  563: R=  -2.492, L=167, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  564: R=  -2.492, L=158, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+  🔄  Training model...
+Ep  565: R=  -2.492, L=126, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  566: R=  -2.492, L=133, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  567: R=  -2.492, L=188, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  568: R=  -2.492, L=132, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+  🔄  Training model...
+Ep  569: R=  -2.489, L=208, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  570: R=  -2.492, L=131, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  571: R=  -2.492, L=164, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  572: R=  -2.492, L=181, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+  🔄  Training model...
+Ep  573: R=  -2.492, L=224, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  574: R=  -2.492, L=211, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  575: R=  -2.488, L=354, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
+Ep  576: R=  -2.491, L=204, Avg=  -2.491, Success=  0 (  0.0%), Scale=0.7
 
-╭────────────────────── Evaluation Progress (Batch 7/7) ───────────────────────╮
-│ ┏━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━┳━━━━━━┳━━━━━━━━━━━┓ │
-│ ┃ Steps ┃ Finished Envs ┃ Completed ┃ Avg Score ┃  FPS  ┃ Time ┃ Remaining ┃ │
-│ ┡━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━╇━━━━━━╇━━━━━━━━━━━┩ │
-│ │  826  │      4/4      │  100.0%   │   -2.49   │ 691.4 │ 1.2s │   0.0s    │ │
-│ └───────┴───────────────┴───────────┴───────────┴───────┴──────┴───────────┘ │
-╰──────────────────────────────── 28/100 envs ─────────────────────────────────╯
-✓ Evaluation completed successfully
+Ep  658: R=  -2.497, L=570, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  659: R=  -2.492, L=205, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  660: R=  -2.490, L=336, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+  🔄  Training model...
+Ep  661: R=  -2.491, L=216, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  662: R=  -2.492, L=201, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  663: R=  -2.492, L=225, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  664: R=  -2.492, L=129, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+  🔄  Training model...
+Ep  665: R=  -2.491, L=265, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  666: R=  -2.492, L=164, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  667: R=  -2.492, L=370, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  668: R=  -2.490, L=219, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+  🔄  Training model...
+Ep  669: R=  -2.490, L=242, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  670: R=  -2.492, L=161, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  671: R=  -2.492, L=173, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  672: R=  -2.492, L=160, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+  🔄  Training model...
+Ep  673: R=  -2.492, L=173, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  674: R=  -2.492, L=157, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  675: R=  -2.492, L=168, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  676: R=  -2.492, L=150, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+  🔄  Training model...
+Ep  677: R=  -2.492, L=188, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  678: R=  -2.492, L=201, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  679: R=  -2.492, L=186, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  680: R=  -2.492, L=163, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+  🔄  Training model...
+Ep  681: R=  -2.490, L=221, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  682: R=  -2.492, L=150, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  683: R=  -2.492, L=200, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+Ep  684: R=  -2.492, L=185, Avg=  -2.492, Success=  0 (  0.0%), Scale=0.7
+  🔄  Training model...
 
-╭─ Model ──────────────────────────────────────────────────────────────────────╮
-│                                                                              │
-│  Type:          pytorch                                                      │
-│  Environment:    LowerT1ObstaclePenaltyKick-v0                               │
-│  Preprocess Function:  Custom                                                │
-│  Action Function:  Custom                                                    │
-│                                                                              │
-╰──────────────────────────────────────────────────────────────────────────────╯
-✓ Successfully loaded model.
+其實我有觀察到R很難上升 可是L有時候會到400多是不是可以先最大化L然後
+再根據官方評估標準docs\Evaluation.MD在先保證L最大化的情況下
+讓他更可能達到docs\Evaluation.MD說的那些分數
+就是說更容易探索到docs\Evaluation.MD說的那些分數
+這樣才能做到根據reward引導Agent學習的效果
+不然感覺他的R一直都是-2.49無法進步
 
-╭────────────────────── Evaluation Progress (Batch 7/7) ───────────────────────╮
-│ ┏━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━┳━━━━━━┳━━━━━━━━━━━┓ │
-│ ┃ Steps ┃ Finished Envs ┃ Completed ┃ Avg Score ┃  FPS  ┃ Time ┃ Remaining ┃ │
-│ ┡━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━╇━━━━━━╇━━━━━━━━━━━┩ │
-│ │  866  │      4/4      │  100.0%   │   -2.49   │ 635.9 │ 1.4s │   0.0s    │ │
-│ └───────┴───────────────┴───────────┴───────────┴───────┴──────┴───────────┘ │
-╰──────────────────────────────── 28/100 envs ─────────────────────────────────╯
-✓ Evaluation completed successfully
+然後我記得DreamerV3
+6. 实验与结论
+论文在多个基准测试（Benchmark）上对 DreamerV3 进行了评估，包括：
+
+Atari: 57 个经典 Atari 游戏。
+ProcGen: 16 个程序生成的游戏。
+DMLab: 30 个 3D 环境。
+Atari100k: 26 个 Atari 游戏，仅有少量数据。
+Proprio Control: 18 个连续控制任务，具有本体感受输入。
+Visual Control: 20 个连续控制任务，仅有图像输入。
+BSuite: 23 个环境，用于测试信用分配、鲁棒性等。
+Minecraft: 一个开放世界游戏，目标是从零开始收集钻石。
+实验结果表明：
+
+DreamerV3 在所有基准测试中，均显著优于 PPO 和其他专家算法。
+DreamerV3 是第一个在 Minecraft 中从零开始、无需人类数据或课程就能够收集钻石的算法。
+DreamerV3 具有很强的鲁棒性，对模型大小和训练预算不敏感，可以通过增加模型大小或训练时间来提升性能。
+世界模型的重建损失对 DreamerV3 的性能至关重要。
+这些结果有力地证明了 DreamerV3 的通用性和有效性。
+應該是訓練得起來才對
+
+還是說我講的這些純屬擔心太多 繼續訓練下去到Ep 1000 2000 3000甚至10000 AI就會自然頓悟了 ?
+給我一些建議吧 然後不要我說啥就說啥 你也要查資料 看我的代碼 獨立思考 
 
 
-
-╭─ Model ──────────────────────────────────────────────────────────────────────╮
-│                                                                              │
-│  Type:          pytorch                                                      │
-│  Environment:    LowerT1KickToTarget-v0                                      │
-│  Preprocess Function:  Custom                                                │
-│  Action Function:  Custom                                                    │
-│                                                                              │
-╰──────────────────────────────────────────────────────────────────────────────╯
-✓ Successfully loaded model.
-
-╭────────────────────── Evaluation Progress (Batch 7/7) ───────────────────────╮
-│ ┏━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━┳━━━━━━┳━━━━━━━━━━━┓ │
-│ ┃ Steps ┃ Finished Envs ┃ Completed ┃ Avg Score ┃  FPS  ┃ Time ┃ Remaining ┃ │
-│ ┡━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━╇━━━━━━╇━━━━━━━━━━━┩ │
-│ │  922  │      4/4      │  100.0%   │   -0.30   │ 750.5 │ 1.2s │   0.0s    │ │
-│ └───────┴───────────────┴───────────┴───────────┴───────┴──────┴───────────┘ │
-╰──────────────────────────────── 28/100 envs ─────────────────────────────────╯
-
-最終分數
--1.76
-
-怎麼辦該繼續跑嗎? 還是哪裡有明顯錯誤
-然後我的tensorboard紀錄在:runs\SuccessFocusedDreamerV3_20251116_181020\events.out.tfevents.1763316620.d81aada5ac10.42357.0
-大神救救我
