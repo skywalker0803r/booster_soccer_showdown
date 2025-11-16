@@ -374,7 +374,8 @@ class SimpleDreamerV3(nn.Module):
     def select_action(self, obs, state=None):
         """Select action for a single observation"""
         with torch.no_grad():
-            obs_tensor = torch.FloatTensor(obs).unsqueeze(0)
+            device = next(self.parameters()).device
+            obs_tensor = torch.FloatTensor(obs).unsqueeze(0).to(device)
             
             if state is None:
                 # Initialize state for first observation

@@ -169,6 +169,13 @@ def dreamerv3_training_loop():
     
     print("=== Starting DreamerV3 Training ===")
     
+    # Check for GPU availability
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"🔥 Using device: {device}")
+    if device.type == "cuda":
+        print(f"   GPU Name: {torch.cuda.get_device_name(0)}")
+        print(f"   GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
+    
     # Initialize TensorBoard writer
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_dir = f"runs/SimpleDreamerV3_{timestamp}"
@@ -176,14 +183,14 @@ def dreamerv3_training_loop():
     print(f"📊 TensorBoard logs will be saved to: {log_dir}")
     print(f"🚀 To view logs, run: tensorboard --logdir=runs --port=6006")
     
-    # Initialize model
+    # Initialize model and move to device
     model = SimpleDreamerV3(
         obs_dim=89,  # preprocessed observation dimension
         action_dim=12,  # robot joint actions
         hidden_dim=256,  # Smaller for faster training
         stoch_dim=32,
         discrete_dim=16
-    )
+    ).to(device)
     
     preprocessor = Preprocessor()
     sequence_buffer = SequenceBuffer(max_size=1000, sequence_length=25)
@@ -302,6 +309,11 @@ def dreamerv3_training_loop():
                 obs_seq, action_seq, reward_seq = sequence_buffer.sample_sequences(batch_size)
                 
                 if obs_seq is not None:
+                    # Move tensors to device
+                    obs_seq = obs_seq.to(device)
+                    action_seq = action_seq.to(device)
+                    reward_seq = reward_seq.to(device)
+                    
                     # Training step
                     losses = model.train_step(obs_seq, action_seq, reward_seq)
                     
