@@ -1,84 +1,14 @@
-│ ╭─────────────────────────────────────────── locals ───────────────────────────────────────────╮ │
-│ │              algorithm = None                                                                │ │
-│ │                console = <sai_rl.sai_console.SAIConsole object at 0x7918bd0de450>            │ │
-│ │ custom_function_inputs = {                                                                   │ │
-│ │                          │   'env':                                                          │ │
-│ │                          <CustomEvaluationWrapper<TimeLimit<OrderEnforcing<PassiveEnvChecke… │ │
-│ │                          │   'verbose': True,                                                │ │
-│ │                          │   'console': <sai_rl.sai_console.SAIConsole object at             │ │
-│ │                          0x7918bd0de450>,                                                    │ │
-│ │                          │   'status': <sai_rl.sai_console.SAIStatus object at               │ │
-│ │                          0x7918a2180920>                                                     │ │
-│ │                          }                                                                   │ │
-│ │           download_dir = PosixPath('/root/.sai/temp')                                        │ │
-│ │                    env = <CustomEvaluationWrapper<TimeLimit<OrderEnforcing<PassiveEnvChecke… │ │
-│ │                  model = <__main__.CPUModelWrapper object at 0x7918a23f3470>                 │ │
-│ │             model_type = 'pytorch'                                                           │ │
-│ │     preprocessor_class = <__main__.Preprocessor object at 0x7918a2355c70>                    │ │
-│ │                   self = <sai_rl.model.model_manager.ModelManager object at 0x7918ba7b1580>  │ │
-│ │                 status = <sai_rl.sai_console.SAIStatus object at 0x7918a2180920>             │ │
-│ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
+TypeError: 'Preprocessor' object is not callable
+
+The above exception was the direct cause of the following exception:
+
+╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
+│ /content/booster_soccer_showdown/training_scripts/main_simple_dreamerv3.py:429 in <module>       │
 │                                                                                                  │
-│ /usr/local/lib/python3.12/dist-packages/sai_rl/model/custom/preprocessing_manager.py:19 in       │
-│ __init__                                                                                         │
-│                                                                                                  │
-│   16 │   │   console: Optional[SAIConsole] = None,                                               │
-│   17 │   │   status: Optional[SAIStatus] = None,                                                 │
-│   18 │   ):                                                                                      │
-│ ❱ 19 │   │   super().__init__(                                                                   │
-│   20 │   │   │   preprocessor_class,                                                             │
-│   21 │   │   │   "preprocessing",                                                                │
-│   22 │   │   │   "class",                                                                        │
-│                                                                                                  │
-│ ╭─────────────────────────────────────────── locals ───────────────────────────────────────────╮ │
-│ │            console = <sai_rl.sai_console.SAIConsole object at 0x7918bd0de450>                │ │
-│ │                env = <CustomEvaluationWrapper<TimeLimit<OrderEnforcing<PassiveEnvChecker<Go… │ │
-│ │ preprocessor_class = <__main__.Preprocessor object at 0x7918a2355c70>                        │ │
-│ │               self = <sai_rl.model.custom.preprocessing_manager.PreprocessingManager object  │ │
-│ │                      at 0x7918ba7b1190>                                                      │ │
-│ │             status = <sai_rl.sai_console.SAIStatus object at 0x7918a2180920>                 │ │
-│ │            verbose = True                                                                    │ │
-│ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
-│                                                                                                  │
-│ /usr/local/lib/python3.12/dist-packages/sai_rl/model/custom/custom_code_manager.py:44 in         │
-│ __init__                                                                                         │
-│                                                                                                  │
-│    41 │   │   if status:                                                                         │
-│    42 │   │   │   status.update(f"Loading {name} {code_type}...")                                │
-│    43 │   │                                                                                      │
-│ ❱  44 │   │   self.load(code, status)                                                            │
-│    45 │                                                                                          │
-│    46 │   def _print(self):                                                                      │
-│    47 │   │   if not self._code_source:                                                          │
-│                                                                                                  │
-│ ╭─────────────────────────────────────────── locals ───────────────────────────────────────────╮ │
-│ │      code = <__main__.Preprocessor object at 0x7918a2355c70>                                 │ │
-│ │ code_type = 'class'                                                                          │ │
-│ │   console = <sai_rl.sai_console.SAIConsole object at 0x7918bd0de450>                         │ │
-│ │       env = <CustomEvaluationWrapper<TimeLimit<OrderEnforcing<PassiveEnvChecker<GoaliePenal… │ │
-│ │      name = 'preprocessing'                                                                  │ │
-│ │      self = <sai_rl.model.custom.preprocessing_manager.PreprocessingManager object at        │ │
-│ │             0x7918ba7b1190>                                                                  │ │
-│ │    status = <sai_rl.sai_console.SAIStatus object at 0x7918a2180920>                          │ │
-│ │   verbose = True                                                                             │ │
-│ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
-│                                                                                                  │
-│ /usr/local/lib/python3.12/dist-packages/sai_rl/model/custom/custom_code_manager.py:161 in load   │
-│                                                                                                  │
-│   158 │   │   │   custom_code_source = inspect.getsource(custom_code)                            │
-│   159 │   │   │   self._load_from_code(custom_code_source)                                       │
-│   160 │   │   else:                                                                              │
-│ ❱ 161 │   │   │   raise CustomCodeError(f"Unsupported {self.name} type: {type(custom_code)}")    │
-│   162 │   │                                                                                      │
-│   163 │   │   if self.verbose:                                                                   │
-│   164 │   │   │   self._print()                                                                  │
-│                                                                                                  │
-│ ╭─────────────────────────────────────────── locals ───────────────────────────────────────────╮ │
-│ │ custom_code = <__main__.Preprocessor object at 0x7918a2355c70>                               │ │
-│ │        self = <sai_rl.model.custom.preprocessing_manager.PreprocessingManager object at      │ │
-│ │               0x7918ba7b1190>                                                                │ │
-│ │      status = <sai_rl.sai_console.SAIStatus object at 0x7918a2180920>                        │ │
-│ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-CustomCodeError: Unsupported preprocessing class type: <class '__main__.Preprocessor'>
-/content/booster_soccer_showdown# 0;276;0c
+│   426 print("=== Starting Evaluation ===")                                                       │
+│   427                                                                                            │
+│   428 ## Benchmark the model locally with CPU wrapper                                            │
+│ ❱ 429 sai.benchmark(cpu_model, action_function, Preprocessor, model_type="pytorch")              │
+│   430                                                                                            │
+│   431 ## Submit to leaderboard                                                                   │
+│   432 print("=== Submitting to Leaderboard ===")   
