@@ -1,14 +1,14 @@
-TypeError: 'Preprocessor' object is not callable
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x178 and 89x256)
 
 The above exception was the direct cause of the following exception:
 
 ╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
-│ /content/booster_soccer_showdown/training_scripts/main_simple_dreamerv3.py:429 in <module>       │
+│ /content/booster_soccer_showdown/training_scripts/main_simple_dreamerv3.py:428 in <module>       │
 │                                                                                                  │
-│   426 print("=== Starting Evaluation ===")                                                       │
-│   427                                                                                            │
-│   428 ## Benchmark the model locally with CPU wrapper                                            │
-│ ❱ 429 sai.benchmark(cpu_model, action_function=action_function, preprocessor_class=Preprocesso   │
-│   430                                                                                            │
-│   431 ## Submit to leaderboard                                                                   │
-│   432 print("=== Submitting to Leaderboard ===")  
+│   425 print("=== Starting Evaluation ===")                                                       │
+│   426                                                                                            │
+│   427 ## Benchmark the model locally with CPU wrapper                                            │
+│ ❱ 428 sai.benchmark(cpu_model, action_function=action_function, preprocessor_class=Preprocesso   │
+│   429                                                                                            │
+│   430 ## Submit to leaderboard                                                                   │
+│   431 print("=== Submitting to Leaderboard ===")   

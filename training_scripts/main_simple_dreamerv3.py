@@ -364,34 +364,24 @@ def dreamerv3_training_loop():
 print("Creating SimpleDreamerV3 model...")
 model, preprocessor = dreamerv3_training_loop()
 
-## Create a CPU-safe model wrapper
+# Create a simple CPU-safe model wrapper that works with SAI preprocessing
 class CPUModelWrapper:
-    def __init__(self, model, preprocessor):
+    def __init__(self, model):
         self.model = model
-        self.preprocessor = preprocessor
     
     def __call__(self, obs):
-        """Make model output CPU-safe for SAI evaluation"""
+        """SAI will handle preprocessing, we just need CPU-safe model output"""
         with torch.no_grad():
             # Ensure obs is numpy array
             if isinstance(obs, torch.Tensor):
                 obs = obs.cpu().numpy()
             
-            # Apply preprocessing to match training data format
-            # SAI provides obs and info, but we need to simulate info for our preprocessor
-            # For SAI evaluation, we'll need to handle this differently
-            # For now, let's assume obs is already processed or skip preprocessing
-            processed_obs = obs
-            
-            # Ensure processed_obs is flat numpy array
-            if isinstance(processed_obs, torch.Tensor):
-                processed_obs = processed_obs.cpu().numpy()
-            
-            if len(processed_obs.shape) > 1:
-                processed_obs = processed_obs.flatten()
+            # Flatten if needed
+            if len(obs.shape) > 1:
+                obs = obs.flatten()
             
             # Get action from model
-            action, _ = self.model.select_action(processed_obs)
+            action, _ = self.model.select_action(obs)
             
             # Ensure output is numpy array
             if isinstance(action, torch.Tensor):
@@ -403,8 +393,8 @@ class CPUModelWrapper:
             
             return action
 
-# Create CPU-safe wrapper with preprocessor
-cpu_model = CPUModelWrapper(model, preprocessor)
+# Create CPU-safe wrapper
+cpu_model = CPUModelWrapper(model)
 
 ## Define an action function
 def action_function(policy):
