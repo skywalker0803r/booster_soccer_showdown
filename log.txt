@@ -1,4 +1,4 @@
-TypeError: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first.
+NameError: name 'torch' is not defined
 
 The above exception was the direct cause of the following exception:
 
@@ -11,4 +11,4 @@ The above exception was the direct cause of the following exception:
 │ ❱ 418 sai.benchmark(model, action_function=action_function, preprocessor_class=Preprocessor, m   │
 │   419                                                                                            │
 │   420 ## Submit to leaderboard                                                                   │
-│   421 print("=== Submitting to Leaderboard ===")   
+│   421 print("=== Submitting to Leaderboard ===") 

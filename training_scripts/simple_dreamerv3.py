@@ -458,10 +458,12 @@ class SimpleDreamerV3(nn.Module):
             obs_tensor = obs_tensor.unsqueeze(0)
         
         # Ensure obs_tensor is on CPU for select_action
-        if obs_tensor.is_cuda:
+        if hasattr(obs_tensor, 'is_cuda') and obs_tensor.is_cuda:
             obs_numpy = obs_tensor[0].cpu().numpy()
-        else:
+        elif isinstance(obs_tensor, torch.Tensor):
             obs_numpy = obs_tensor[0].numpy()
+        else:
+            obs_numpy = obs_tensor[0] if hasattr(obs_tensor, '__getitem__') else obs_tensor
             
         action, _ = self.select_action(obs_numpy)
         
