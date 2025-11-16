@@ -3,6 +3,9 @@ import torch.nn.functional as F
 import numpy as np
 from collections import deque
 import random
+from torch.utils.tensorboard import SummaryWriter
+import os
+from datetime import datetime
 
 from sai_rl import SAIClient
 from simple_dreamerv3 import SimpleDreamerV3
@@ -166,6 +169,13 @@ def dreamerv3_training_loop():
     
     print("=== Starting DreamerV3 Training ===")
     
+    # Initialize TensorBoard writer
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_dir = f"runs/SimpleDreamerV3_{timestamp}"
+    writer = SummaryWriter(log_dir)
+    print(f"📊 TensorBoard logs will be saved to: {log_dir}")
+    print(f"🚀 To view logs, run: tensorboard --logdir=runs --port=6006")
+    
     # Initialize model
     model = SimpleDreamerV3(
         obs_dim=89,  # preprocessed observation dimension
@@ -191,6 +201,11 @@ def dreamerv3_training_loop():
     total_steps = 0
     best_reward = float('-inf')
     
+    # Running averages for monitoring
+    reward_window = deque(maxlen=100)
+    episode_length_window = deque(maxlen=100)
+    exploration_rate = 0.0
+    
     for episode in range(num_episodes):
         # Collect episode
         obs, info = env.reset()
@@ -214,9 +229,11 @@ def dreamerv3_training_loop():
                 
                 # Add exploration noise
                 if episode < num_episodes * 0.7:  # Reduce exploration over time
-                    noise_scale = 0.3 * (1.0 - episode / (num_episodes * 0.7))
-                    action += np.random.normal(0, noise_scale, size=action.shape)
+                    exploration_rate = 0.3 * (1.0 - episode / (num_episodes * 0.7))
+                    action += np.random.normal(0, exploration_rate, size=action.shape)
                     action = np.clip(action, -1, 1)
+                else:
+                    exploration_rate = 0.0
             
             # Convert normalized action to environment action
             env_action = env.action_space.low + (env.action_space.high - env.action_space.low) * (action + 1) / 2
@@ -241,11 +258,28 @@ def dreamerv3_training_loop():
         if len(episode_actions) > 0:
             sequence_buffer.add_episode(episode_observations[:-1], episode_actions, episode_rewards)
         
+        # Update running averages
+        reward_window.append(episode_reward)
+        episode_length_window.append(len(episode_actions))
+        
+        # Log to TensorBoard
+        writer.add_scalar('Episode/Reward', episode_reward, episode)
+        writer.add_scalar('Episode/Length', len(episode_actions), episode)
+        writer.add_scalar('Episode/TotalSteps', total_steps, episode)
+        writer.add_scalar('Episode/BufferSize', len(sequence_buffer.buffer), episode)
+        writer.add_scalar('Episode/ExplorationRate', exploration_rate, episode)
+        
+        # Log running averages
+        if len(reward_window) > 0:
+            writer.add_scalar('Average/Reward_100ep', np.mean(reward_window), episode)
+            writer.add_scalar('Average/EpisodeLength_100ep', np.mean(episode_length_window), episode)
+        
         print(f"Episode {episode}: Reward = {episode_reward:.3f}, Steps = {len(episode_actions)}, Buffer = {len(sequence_buffer.buffer)}")
         
         # Update best reward
         if episode_reward > best_reward:
             best_reward = episode_reward
+            writer.add_scalar('Episode/BestReward', best_reward, episode)
             print(f"  New best reward: {best_reward:.3f}")
         
         # Training step
@@ -278,6 +312,18 @@ def dreamerv3_training_loop():
             for key in total_losses:
                 total_losses[key] /= num_train_steps
             
+            # Log training losses to TensorBoard
+            writer.add_scalar('Loss/WorldModel', total_losses['world_model_loss'], episode)
+            writer.add_scalar('Loss/Reconstruction', total_losses['reconstruction_loss'], episode)
+            writer.add_scalar('Loss/Reward', total_losses['reward_loss'], episode)
+            writer.add_scalar('Loss/KL_Divergence', total_losses['kl_loss'], episode)
+            writer.add_scalar('Loss/Actor', total_losses['actor_loss'], episode)
+            writer.add_scalar('Loss/Critic', total_losses['critic_loss'], episode)
+            
+            # Log total loss
+            total_loss = sum(total_losses.values())
+            writer.add_scalar('Loss/Total', total_loss, episode)
+            
             print(f"  Training losses:")
             print(f"    World Model: {total_losses['world_model_loss']:.4f}")
             print(f"    Reconstruction: {total_losses['reconstruction_loss']:.4f}")
@@ -285,6 +331,7 @@ def dreamerv3_training_loop():
             print(f"    KL: {total_losses['kl_loss']:.4f}")
             print(f"    Actor: {total_losses['actor_loss']:.4f}")
             print(f"    Critic: {total_losses['critic_loss']:.4f}")
+            print(f"    Total: {total_loss:.4f}")
         
         # Save model periodically
         if episode % 100 == 0 and episode > 0:
@@ -293,6 +340,10 @@ def dreamerv3_training_loop():
     
     print("=== Training Complete ===")
     print(f"Best reward achieved: {best_reward:.3f}")
+    
+    # Close TensorBoard writer
+    writer.close()
+    print(f"📊 TensorBoard logs saved to: {log_dir}")
     
     return model
 

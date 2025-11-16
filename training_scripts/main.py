@@ -117,7 +117,7 @@ EnhancedPreprocessor = aligned_enhanced_preprocessor(Preprocessor)
 
 ## Train the model - Competition-level training with aligned reward shaping
 print("=== Training with Enhanced DDPG + Aligned Reward Shaping ===")
-training_loop(env, model, action_function, EnhancedPreprocessor, timesteps=1000000)
+training_loop(env, model, action_function, EnhancedPreprocessor, timesteps=300000)
 
 ## Watch
 #sai.watch(model, action_function, Preprocessor)
