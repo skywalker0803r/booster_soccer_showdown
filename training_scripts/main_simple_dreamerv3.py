@@ -9,6 +9,7 @@ from datetime import datetime
 
 from sai_rl import SAIClient
 from simple_dreamerv3 import SimpleDreamerV3
+from sai_compatible_dreamerv3 import SAICompatibleDreamerV3
 
 ## Initialize the SAI client
 sai = SAIClient(comp_id="booster-soccer-showdown", api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv")
@@ -378,11 +379,18 @@ def action_function(policy):
 
 print("=== Starting Evaluation ===")
 
-## Benchmark the model locally - exactly like your main.py
-sai.benchmark(model, action_function, Preprocessor)
+# 創建SAI兼容的包裝器 - 確保完全CPU兼容
+print("Creating SAI-compatible model wrapper...")
+sai_model = SAICompatibleDreamerV3(model)
+
+print("Model successfully wrapped for SAI compatibility.")
+print(f"Model device: {next(sai_model.parameters()).device}")
+
+## Benchmark the model locally - 使用SAI兼容包裝器
+sai.benchmark(sai_model, action_function, Preprocessor)
 
 ## Submit to leaderboard
 print("=== Submitting to Leaderboard ===")
-sai.submit("Vedanta_SimpleDreamerV3", model, action_function, Preprocessor)
+sai.submit("Vedanta_SimpleDreamerV3", sai_model, action_function, Preprocessor)
 
 print("=== Complete ===")
