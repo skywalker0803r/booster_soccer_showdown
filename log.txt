@@ -8,7 +8,7 @@ The above exception was the direct cause of the following exception:
 │   426 print("=== Starting Evaluation ===")                                                       │
 │   427                                                                                            │
 │   428 ## Benchmark the model locally with CPU wrapper                                            │
-│ ❱ 429 sai.benchmark(cpu_model, action_function, Preprocessor, model_type="pytorch")              │
+│ ❱ 429 sai.benchmark(cpu_model, action_function=action_function, preprocessor_class=Preprocesso   │
 │   430                                                                                            │
 │   431 ## Submit to leaderboard                                                                   │
-│   432 print("=== Submitting to Leaderboard ===")   
+│   432 print("=== Submitting to Leaderboard ===")  

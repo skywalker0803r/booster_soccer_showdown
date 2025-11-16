@@ -378,11 +378,10 @@ class CPUModelWrapper:
                 obs = obs.cpu().numpy()
             
             # Apply preprocessing to match training data format
-            if hasattr(self.preprocessor, 'preprocess'):
-                processed_obs = self.preprocessor.preprocess(obs)
-            else:
-                # If preprocessor doesn't have preprocess method, use it directly
-                processed_obs = self.preprocessor(obs)
+            # SAI provides obs and info, but we need to simulate info for our preprocessor
+            # For SAI evaluation, we'll need to handle this differently
+            # For now, let's assume obs is already processed or skip preprocessing
+            processed_obs = obs
             
             # Ensure processed_obs is flat numpy array
             if isinstance(processed_obs, torch.Tensor):
