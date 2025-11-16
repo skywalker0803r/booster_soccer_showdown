@@ -46,6 +46,13 @@ def quick_test_episode_fixing():
             if terminated or truncated:
                 # Calculate what original reward would have been
                 episode_reward_original = -1.0 * steps  # Just step penalty for comparison
+                
+                # Print detailed step info for last episode
+                if episode == 4:  # Last episode
+                    print(f"     Final step info:")
+                    print(f"       Raw reward: {reward:.3f}")
+                    print(f"       Terminated: {terminated}")
+                    print(f"       Truncated: {truncated}")
                 break
                 
             obs = next_obs

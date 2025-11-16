@@ -115,15 +115,26 @@ class EpisodeRewardEnvironmentWrapper:
         # Add step-level shaped rewards (these accumulate)
         step_shaped_reward = self.reward_fixer.add_step_reward(obs, info)
         
-        # Fix final episode reward if episode ended
-        if terminated or truncated:
-            fixed_reward = self.reward_fixer.fix_episode_reward(reward, terminated, truncated)
-            print(f"📊 Episode Complete: Original={reward:.3f} → Fixed={fixed_reward:.3f}")
-        else:
-            # During episode, return small step rewards instead of 0
-            fixed_reward = step_shaped_reward  # Give immediate feedback
+        # Check if episode should end based on step count or environment signals
+        episode_should_end = (terminated or truncated or 
+                             self.reward_fixer.episode_step_count >= 800)  # Max episode length
         
-        return obs, fixed_reward, terminated, truncated, info
+        if episode_should_end:
+            # Apply episode-level reward fixing
+            if reward == 0.0 and self.reward_fixer.episode_step_count > 50:
+                # Environment didn't give episode reward, estimate it
+                estimated_reward = -1.0 * self.reward_fixer.episode_step_count  # Pure step penalty
+                fixed_reward = self.reward_fixer.fix_episode_reward(estimated_reward, True, False)
+                print(f"📊 Episode Complete (forced): Estimated={estimated_reward:.3f} → Fixed={fixed_reward:.3f}")
+            else:
+                # Environment gave actual episode reward
+                fixed_reward = self.reward_fixer.fix_episode_reward(reward, terminated, truncated)
+                print(f"📊 Episode Complete: Original={reward:.3f} → Fixed={fixed_reward:.3f}")
+        else:
+            # During episode, return immediate step rewards for training feedback
+            fixed_reward = step_shaped_reward
+        
+        return obs, fixed_reward, episode_should_end or terminated, truncated, info
     
     def __getattr__(self, name):
         # Delegate other attributes to the original environment
