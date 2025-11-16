@@ -149,12 +149,23 @@ class SuccessFocusedWrapper:
         if len(robot_quat.shape) > 1:
             robot_quat = robot_quat[0]
         
-        # Robust robot upright calculation with debug
+        # Corrected robot upright calculation using proper quaternion math
         try:
-            robot_upright = 1.0 - abs(robot_quat[2])  # 1.0 = perfectly upright
-            robot_upright = max(0.0, min(1.0, robot_upright))  # Clamp to [0,1]
+            # Method 1: Use quaternion to compute up vector
+            qx, qy, qz, qw = robot_quat[0], robot_quat[1], robot_quat[2], robot_quat[3]
+            
+            # Transform up vector [0,0,1] by quaternion to get robot's up direction  
+            up_x = 2 * (qx*qz + qw*qy)
+            up_y = 2 * (qy*qz - qw*qx)
+            up_z = 1 - 2 * (qx*qx + qy*qy)
+            
+            # Dot product with world up vector [0,0,1]
+            robot_upright = max(0.0, up_z)  # How much robot points up
+            
             if self.episode_step == 1:  # Debug on first step
                 print(f"🤖 Robot upright: {robot_upright:.3f}, quat: {robot_quat}")
+                print(f"   Up vector: [{up_x:.3f}, {up_y:.3f}, {up_z:.3f}]")
+                
         except Exception as e:
             print(f"❌ Robot upright error: {e}")
             robot_upright = 0.5  # Default moderate upright

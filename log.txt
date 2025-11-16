@@ -1,34 +1,31 @@
-🎯  Training configuration:
-   Episodes: 1000
-   Max length: 600
-   Focus: Success rate improvement
-Episode 215 steps: Original=  -2.492, Shaped=  -9.750, Total= -12.242, Best_ball_dist=inf
-Ep    0: R= -22.942, L=215, Avg= -22.942, Success=  0 (  0.0%)
-  🎉  New best reward: -22.942
-Episode 239 steps: Original=  -2.491, Shaped= -10.950, Total= -13.441, Best_ball_dist=inf
-Ep    1: R= -25.341, L=239, Avg= -24.142, Success=  0 (  0.0%)
-Episode 219 steps: Original=  -2.492, Shaped=  -9.950, Total= -12.442, Best_ball_dist=inf
-Ep    2: R= -23.342, L=219, Avg= -23.875, Success=  0 (  0.0%)
-Episode 275 steps: Original=  -2.491, Shaped= -12.750, Total= -15.241, Best_ball_dist=inf
-Ep    3: R= -28.941, L=275, Avg= -25.141, Success=  0 (  0.0%)
-Episode 235 steps: Original=  -2.492, Shaped= -10.750, Total= -13.242, Best_ball_dist=inf
-Ep    4: R= -24.942, L=235, Avg= -25.102, Success=  0 (  0.0%)
-Episode 195 steps: Original=  -2.492, Shaped=  -8.750, Total= -11.242, Best_ball_dist=inf
-Ep    5: R= -20.942, L=195, Avg= -24.408, Success=  0 (  0.0%)
-  🎉  New best reward: -20.942
-Episode 204 steps: Original=  -2.491, Shaped=  -9.200, Total= -11.691, Best_ball_dist=inf
-Ep    6: R= -21.841, L=204, Avg= -24.042, Success=  0 (  0.0%)
-Episode 216 steps: Original=  -2.491, Shaped=  -9.800, Total= -12.291, Best_ball_dist=inf
-Ep    7: R= -23.041, L=216, Avg= -23.917, Success=  0 (  0.0%)
-Episode 282 steps: Original=  -2.492, Shaped= -13.100, Total= -15.592, Best_ball_dist=inf
-Ep    8: R= -29.642, L=282, Avg= -24.553, Success=  0 (  0.0%)
-Episode 182 steps: Original=  -2.492, Shaped=  -8.100, Total= -10.592, Best_ball_dist=inf
-Ep    9: R= -19.642, L=182, Avg= -24.062, Success=  0 (  0.0%)
-  🎉  New best reward: -19.642
-Episode 224 steps: Original=  -2.489, Shaped= -10.200, Total= -12.689, Best_ball_dist=inf
-Ep   10: R= -23.839, L=224, Avg= -24.041, Success=  0 (  0.0%)
-Episode 186 steps: Original=  -2.492, Shaped=  -8.300, Total= -10.792, Best_ball_dist=inf
-Ep   11: R= -20.042, L=186, Avg= -23.708, Success=  0 (  0.0%)
-Episode 209 steps: Original=  -2.490, Shaped=  -9.450, Total= -11.940, Best_ball_dist=inf
-Ep   12: R= -22.340, L=209, Avg= -23.603, Success=  0 (  0.0%)
-Episode 198 steps: Original=  -2.492, Shaped=  -8.900, Total= -11.392, Best_ball_dist=inf
+Ep  111: R= -19.142, L=177, Avg= -22.186, Success=  0 (  0.0%)
+🎾  FORCED ball distance init: 2.119m
+🤖  Robot upright: 0.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+Episode 162 steps: Original=  -2.492, Shaped=  -7.100, Total=  -9.592, Best_ball_dist=2.119
+Ep  112: R= -17.642, L=162, Avg= -22.140, Success=  0 (  0.0%)
+  🔄  Training...
+🎾  FORCED ball distance init: 2.119m
+🤖  Robot upright: 0.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+Episode 258 steps: Original=  -2.493, Shaped= -11.900, Total= -14.393, Best_ball_dist=2.119
+Ep  113: R= -27.243, L=258, Avg= -22.234, Success=  0 (  0.0%)
+🎾  FORCED ball distance init: 2.119m
+🤖  Robot upright: 0.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+Episode 130 steps: Original=  -2.492, Shaped=  -6.500, Total=  -8.992, Best_ball_dist=2.119
+Ep  114: R= -15.442, L=130, Avg= -22.140, Success=  0 (  0.0%)
+  🔄  Training...
+🎾  FORCED ball distance init: 2.119m
+🤖  Robot upright: 0.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+Episode 141 steps: Original=  -2.492, Shaped=  -7.050, Total=  -9.542, Best_ball_dist=2.119
+Ep  115: R= -16.542, L=141, Avg= -22.136, Success=  0 (  0.0%)
+🎾  FORCED ball distance init: 2.119m
+🤖  Robot upright: 0.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+Episode 159 steps: Original=  -2.492, Shaped=  -6.950, Total=  -9.442, Best_ball_dist=2.119
+Ep  116: R= -17.342, L=159, Avg= -22.053, Success=  0 (  0.0%)
+  🔄  Training...
+🎾  FORCED ball distance init: 2.119m
+🤖  Robot upright: 0.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+Episode 242 steps: Original=  -2.492, Shaped= -11.100, Total= -13.592, Best_ball_dist=2.119
+Ep  117: R= -25.642, L=242, Avg= -22.140, Success=  0 (  0.0%)
+🎾  FORCED ball distance init: 2.119m
+🤖  Robot upright: 0.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+Episode 217 steps: Original=  -2.488, Shaped=  -9.850, Total= -12.338, Best_ball_dist=2.119
