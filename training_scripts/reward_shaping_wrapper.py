@@ -57,10 +57,17 @@ class SmartRewardShaper:
         
         # ===== FIX THE CORE PROBLEM: STEP PENALTY =====
         
-        # 1. DRAMATICALLY REDUCE STEP PENALTY
-        # Instead of -1.0 per step, use much smaller penalty
-        step_reward = -self.step_penalty_scale  # Default: -0.01 instead of -1.0
-        shaped_reward += step_reward
+        # 1. COMPLETELY REPLACE STEP PENALTY
+        # If original reward is negative and looks like step penalty, replace it
+        if original_reward <= 0 and abs(original_reward + 1.0) < 0.1:  # Likely -1.0 step penalty
+            # REPLACE the -1.0 step penalty with much smaller penalty
+            shaped_reward = -self.step_penalty_scale  # -0.01 instead of -1.0
+        elif original_reward <= 0 and abs(original_reward) < 0.1:  # Small negative or zero
+            # Just add small step penalty for zero rewards
+            shaped_reward = original_reward - self.step_penalty_scale
+        else:
+            # Keep original reward if it's positive or significantly different
+            shaped_reward = original_reward
         
         # 2. HEAVY PENALTY FOR EARLY TERMINATION DUE TO FALLING
         if terminated and self.episode_length < 50:  # Very early termination

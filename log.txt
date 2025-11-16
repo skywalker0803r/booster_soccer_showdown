@@ -1,3 +1,52 @@
+Step 8: Original reward: 0.000, Shaped reward: -0.200
+Step 9: Original reward: 0.000, Shaped reward: -0.200
+Episode  783: Reward =  -26.987, Steps = 154, Avg100 =  -34.524, Buffer =  784
+  🔄  Training model (buffer size: 784)...
+    World Model Loss: 3.1895
+    Reconstruction:   0.1845
+    Reward:          0.0050
+    KL:              3.0000
+    Actor:           -0.1265
+    Critic:          0.0371
+    ✅  Reconstruction loss looking good!
+Step 0: Original reward: 0.000, Shaped reward: 0.000
+Step 1: Original reward: 0.000, Shaped reward: 0.000
+Step 2: Original reward: 0.000, Shaped reward: 0.000
+Step 3: Original reward: 0.000, Shaped reward: 0.000
+Step 4: Original reward: 0.000, Shaped reward: 0.000
+Step 5: Original reward: 0.000, Shaped reward: -0.200
+Step 6: Original reward: 0.000, Shaped reward: -0.200
+Step 7: Original reward: 0.000, Shaped reward: -0.200
+Step 8: Original reward: 0.000, Shaped reward: -0.200
+Step 9: Original reward: 0.000, Shaped reward: -0.200
+Episode  784: Reward =  -50.692, Steps = 239, Avg100 =  -34.871, Buffer =  785
+Step 0: Original reward: 0.000, Shaped reward: 0.024
+Step 1: Original reward: 0.000, Shaped reward: 0.044
+Step 2: Original reward: 0.000, Shaped reward: 0.051
+Step 3: Original reward: 0.000, Shaped reward: 0.000
+Step 4: Original reward: 0.000, Shaped reward: 0.000
+Step 5: Original reward: 0.000, Shaped reward: -0.200
+Step 6: Original reward: 0.000, Shaped reward: -0.200
+Step 7: Original reward: 0.000, Shaped reward: -0.200
+Step 8: Original reward: 0.000, Shaped reward: -0.200
+Step 9: Original reward: 0.000, Shaped reward: -0.200
+Episode  785: Reward =  -16.439, Steps = 182, Avg100 =  -34.769, Buffer =  786
+Step 0: Original reward: 0.000, Shaped reward: 0.000
+Step 1: Original reward: 0.000, Shaped reward: 0.000
+Step 2: Original reward: 0.000, Shaped reward: 0.000
+Step 3: Original reward: 0.000, Shaped reward: 0.000
+Step 4: Original reward: 0.000, Shaped reward: 0.000
+Step 5: Original reward: 0.000, Shaped reward: -0.200
+Step 6: Original reward: 0.000, Shaped reward: -0.200
+Step 7: Original reward: 0.000, Shaped reward: -0.200
+Step 8: Original reward: 0.000, Shaped reward: -0.200
+Step 9: Original reward: 0.000, Shaped reward: -0.200
+Episode  786: Reward =  -19.950, Steps = 191, Avg100 =  -34.601, Buffer =  787
+  🔄  Training model (buffer size: 787)...
+
+以上是訓練中途的log
+以下是訓練結束的log
+
 ✓ Model submitted successfully.
 ============================================================
 🎉  COMPLETE! Check the score improvement!
@@ -6,6 +55,49 @@ Expected improvements:
   - Positive episode rewards (step penalty fixed)
   - Better world model convergence
   - More natural robot movement
+/content/booster_soccer_showdown# 
 
-但是網站上出現
-Validation Error: Function 'action_function' not defined
+排行榜分數 -1.76
+
+表現
+任務1
+原地軟腿後倒
+
+任務2
+疑似有要走路但還是跌倒
+
+任務3
+原地軟腿跌倒
+
+tensorboard記錄檔:
+runs\ImprovedDreamerV3_20251116_162447\events.out.tfevents.1763310287.d81aada5ac10.14068.0
+
+請幫我分析一下謝謝您~
+
+
+📈 Reward Stats:
+   Final avg (last 100): -30.828
+   Min reward: -123.774
+   Max reward: 25.418
+📏 Episode Length Stats:
+   Final avg: 190.5 steps
+   Min length: 117.0
+   Max length: 587.0
+⚠️ Early Termination Rate: 0.0% (0.0/999)
+📊 Learning Progress:
+   Early avg: -38.993
+   Late avg: -30.399
+   Improvement: +8.594
+💾 Analysis saved to: runs\ImprovedDreamerV3_20251116_162447\training_analysis.png
+
+============================================================
+🔍 DIAGNOSTIC SUMMARY
+============================================================
+❌ PROBLEM: All recent rewards are very negative
+   → Step penalty likely not fixed correctly
+❌ PROBLEM: Average reward too low (-29.97)
+   → Core reward mechanism still broken
+❌ PROBLEM: World model loss not converging
+   → Architecture or training issues
+
+
