@@ -37,20 +37,28 @@ class SAICompatibleDreamerV3(nn.Module):
             x = x.view(-1, self.dreamer.obs_dim)
         
         with torch.no_grad():
-            # 簡化的前向傳播，直接使用編碼器和actor
+            # 簡化的前向傳播，使用RSSM編碼器和actor
             batch_size = x.shape[0]
             
+            # 初始化狀態
+            state = self.dreamer.rssm.init_state(batch_size)
+            
             # 編碼觀察
-            encoded = self.dreamer.encoder(x)
+            obs_embed = self.dreamer.rssm.encode_obs(x)
             
-            # 創建虛擬的隨機狀態用於actor
-            dummy_stoch = torch.zeros(batch_size, self.dreamer.stoch_dim)
+            # 獲取後驗狀態
+            posterior_input = torch.cat([state['deter'], obs_embed], dim=-1)
+            posterior_logits = self.dreamer.rssm.posterior_net(posterior_input)
+            stoch = self.dreamer.rssm.get_stochastic_state(posterior_logits)
             
-            # 組合狀態
-            actor_input = torch.cat([dummy_stoch, encoded], dim=-1)
+            # 創建完整狀態
+            full_state = {
+                'deter': state['deter'],
+                'stoch': stoch
+            }
             
             # 獲取動作
-            action = self.dreamer.actor(actor_input)
+            action = self.dreamer.actor(full_state)
             
             # 確保輸出是CPU上的tensor
             action = action.cpu()
