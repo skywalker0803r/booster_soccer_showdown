@@ -1,82 +1,30 @@
-/content/booster_soccer_showdown# git pull
-remote: Enumerating objects: 9, done.
-remote: Counting objects: 100% (9/9), done.
-remote: Compressing objects: 100% (4/4), done.
-remote: Total 6 (delta 2), reused 6 (delta 2), pack-reused 0 (from 0)
-Unpacking objects: 100% (6/6), 10.99 KiB | 1.37 MiB/s, done.
-From https://github.com/skywalker0803r/booster_soccer_showdown
-   f01fc29..617275e  main       -> origin/main
-Updating f01fc29..617275e
-Fast-forward
- log.txt                                       | 143 ++++++++++++++++++++++++-
- training_scripts/analyze_original_training.py | 188 ++++++++++++++++++++++++++++++++
- training_scripts/success_focused_training.py  | 467 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 796 insertions(+), 2 deletions(-)
- create mode 100644 training_scripts/analyze_original_training.py
- create mode 100644 training_scripts/success_focused_training.py
-/content/booster_soccer_showdown# python training_scripts/analyze_original_training.py 
-🔍  Analysis of Original Training Data
-============================================================
-📊  Original Training Analysis:
-------------------------------
-episode_783:
-  Total reward:  -26.987
-  Steps: 154
-  Reward/step: -0.17524
-  🤔  Mixed penalties (step + other)
-
-episode_784:
-  Total reward:  -50.692
-  Steps: 239
-  Reward/step: -0.21210
-  ✅  Looks like pure -0.3 step penalty (Task 3)
-
-episode_785:
-  Total reward:  -16.439
-  Steps: 182
-  Reward/step: -0.09032
-  ⚠️ Unexpected pattern
-
-episode_786:
-  Total reward:  -19.950
-  Steps: 191
-  Reward/step: -0.10445
-  🤔  Mixed penalties (step + other)
-
-📈  Key Insights:
-  Best episode reward: +25.418 (POSITIVE!)
-  Worst episode reward: -123.774
-  Final average: -30.828
-
-🔧  Step Penalty Reduction Impact:
-----------------------------------------
-Current (mixed)     :  -30.828 (Actual training result)
-Pure -1.0 step      : -190.000 (If pure step penalty)
-Pure -0.3 step      :  -57.000 (If Task 3 step penalty)
-Reduced -0.01 step  :    3.100 (Our fix + some positive)
-
-💡  Real Problem Analysis:
-1. ✅  Agent IS learning (max reward +25.418!)
-2. ✅  Some episodes are successful
-3. ❌  Too many failed episodes bringing average down
-4. ❌  Need to improve success rate, not just reduce penalties
-
-🎯  New Strategy:
-Instead of fixing step penalty, we should:
-1. 🎯  Improve action quality to avoid failures
-2. 📈  Add dense rewards to guide learning
-3. 🚀  Focus on increasing success rate
-4. ⚖️ Balance exploration vs exploitation
-
-============================================================
-🚀  RECOMMENDED NEXT STEPS:
-============================================================
-1. 📊  Your agent IS learning (max +25.418 proves it works!)
-2. 🎯  Focus on improving success rate
-3. 📈  Use dense rewards to guide learning
-4. ⚖️ Reduce action noise/improve stability
-5. 🚀  Train longer with better guidance
-
-The step penalty is NOT the main problem!
-The real issue is inconsistent performance.
-/content/booster_soccer_showdown# 
+Episode 194 steps: Original=  -2.489, Shaped=  -8.700, Total= -11.189, Best_ball_dist=inf
+Ep   51: R= -20.839, L=194, Avg= -22.464, Success=  0 (  0.0%)
+Episode 182 steps: Original=  -2.491, Shaped=  -8.100, Total= -10.591, Best_ball_dist=inf
+Ep   52: R= -19.641, L=182, Avg= -22.411, Success=  0 (  0.0%)
+  🔄  Training...
+Episode 193 steps: Original=  -2.492, Shaped=  -8.650, Total= -11.142, Best_ball_dist=inf
+Ep   53: R= -20.742, L=193, Avg= -22.380, Success=  0 (  0.0%)
+Episode 262 steps: Original=  -2.491, Shaped= -12.100, Total= -14.591, Best_ball_dist=inf
+Ep   54: R= -27.641, L=262, Avg= -22.476, Success=  0 (  0.0%)
+  🔄  Training...
+Episode 200 steps: Original=  -2.491, Shaped=  -9.000, Total= -11.491, Best_ball_dist=inf
+Ep   55: R= -21.441, L=200, Avg= -22.457, Success=  0 (  0.0%)
+Episode 192 steps: Original=  -2.491, Shaped=  -8.600, Total= -11.091, Best_ball_dist=inf
+Ep   56: R= -20.641, L=192, Avg= -22.425, Success=  0 (  0.0%)
+  🔄  Training...
+Episode 185 steps: Original=  -2.489, Shaped=  -8.250, Total= -10.739, Best_ball_dist=inf
+Ep   57: R= -19.939, L=185, Avg= -22.382, Success=  0 (  0.0%)
+Episode 291 steps: Original=  -2.492, Shaped= -13.550, Total= -16.042, Best_ball_dist=inf
+Ep   58: R= -30.542, L=291, Avg= -22.521, Success=  0 (  0.0%)
+  🔄  Training...
+Episode 132 steps: Original=  -2.492, Shaped=  -6.600, Total=  -9.092, Best_ball_dist=inf
+Ep   59: R= -15.642, L=132, Avg= -22.406, Success=  0 (  0.0%)
+  🎉  New best reward: -15.642
+Episode 226 steps: Original=  -2.492, Shaped= -10.300, Total= -12.792, Best_ball_dist=inf
+Ep   60: R= -24.042, L=226, Avg= -22.433, Success=  0 (  0.0%)
+  🔄  Training...
+Episode 213 steps: Original=  -2.492, Shaped=  -9.650, Total= -12.142, Best_ball_dist=inf
+Ep   61: R= -22.742, L=213, Avg= -22.438, Success=  0 (  0.0%)
+Episode 210 steps: Original=  -2.491, Shaped=  -9.500, Total= -11.991, Best_ball_dist=inf
+Ep   62: R= -22.441, L=210, Avg= -22.438, Success=  0 (  0.0%)
