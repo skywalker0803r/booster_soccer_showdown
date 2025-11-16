@@ -1,19 +1,2 @@
-│ │               │   )                                                                     │      │
-│ │                 )                                                                       │      │
-│ │               )                                                                         │      │
-│ ╰─────────────────────────────────────────────────────────────────────────────────────────╯      │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-AttributeError: 'SimpleDreamerV3' object has no attribute 'encoder'
-
-The above exception was the direct cause of the following exception:
-
-╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
-│ /content/booster_soccer_showdown/training_scripts/main_simple_dreamerv3.py:390 in <module>       │
-│                                                                                                  │
-│   387 print(f"Model device: {next(sai_model.parameters()).device}")                              │
-│   388                                                                                            │
-│   389 ## Benchmark the model locally - 使用SAI兼容包裝器                                         │
-│ ❱ 390 sai.benchmark(sai_model, action_function, Preprocessor)                                    │
-│   391                                                                                            │
-│   392 ## Submit to leaderboard                                                                   │
-│   393 print("=== Submitting to Leaderboard ===")  
+✓ Model submitted successfully.
+score -1.76
