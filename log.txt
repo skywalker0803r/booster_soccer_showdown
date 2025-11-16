@@ -1,31 +1,43 @@
-Ep  111: R= -19.142, L=177, Avg= -22.186, Success=  0 (  0.0%)
+🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+   Up vector: [0.000, 0.000, 1.000]
+📈  Ball progress! New best: 2.060m, reward: +0.500
+📈  Ball progress! New best: 2.050m, reward: +0.103
+Episode 171 steps: Original=  -2.492, Shaped=   4.768, Total=   2.276, Best_ball_dist=2.050
+Ep  185: R=   6.029, L=171, Avg=   6.014, Success=162 ( 87.1%)
 🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 0.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-Episode 162 steps: Original=  -2.492, Shaped=  -7.100, Total=  -9.592, Best_ball_dist=2.119
-Ep  112: R= -17.642, L=162, Avg= -22.140, Success=  0 (  0.0%)
+🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+   Up vector: [0.000, 0.000, 1.000]
+📈  Ball progress! New best: 2.109m, reward: +0.101
+📈  Ball progress! New best: 2.099m, reward: +0.102
+📈  Ball progress! New best: 2.089m, reward: +0.100
+📈  Ball progress! New best: 2.078m, reward: +0.103
+📈  Ball progress! New best: 2.067m, reward: +0.109
+📈  Ball progress! New best: 2.057m, reward: +0.109
+📈  Ball progress! New best: 2.046m, reward: +0.102
+Episode 209 steps: Original=  -2.492, Shaped=   7.161, Total=   4.669, Best_ball_dist=2.046
+Ep  186: R=  10.805, L=209, Avg=   6.012, Success=163 ( 87.2%)
   🔄  Training...
 🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 0.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-Episode 258 steps: Original=  -2.493, Shaped= -11.900, Total= -14.393, Best_ball_dist=2.119
-Ep  113: R= -27.243, L=258, Avg= -22.234, Success=  0 (  0.0%)
+🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+   Up vector: [0.000, 0.000, 1.000]
+📈  Ball progress! New best: 2.109m, reward: +0.104
+📈  Ball progress! New best: 2.098m, reward: +0.102
+Episode 267 steps: Original=  -2.490, Shaped=   4.586, Total=   2.096, Best_ball_dist=2.098
+Ep  187: R=   5.733, L=267, Avg=   6.061, Success=164 ( 87.2%)
 🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 0.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-Episode 130 steps: Original=  -2.492, Shaped=  -6.500, Total=  -8.992, Best_ball_dist=2.119
-Ep  114: R= -15.442, L=130, Avg= -22.140, Success=  0 (  0.0%)
-  🔄  Training...
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 0.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-Episode 141 steps: Original=  -2.492, Shaped=  -7.050, Total=  -9.542, Best_ball_dist=2.119
-Ep  115: R= -16.542, L=141, Avg= -22.136, Success=  0 (  0.0%)
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 0.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-Episode 159 steps: Original=  -2.492, Shaped=  -6.950, Total=  -9.442, Best_ball_dist=2.119
-Ep  116: R= -17.342, L=159, Avg= -22.053, Success=  0 (  0.0%)
-  🔄  Training...
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 0.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-Episode 242 steps: Original=  -2.492, Shaped= -11.100, Total= -13.592, Best_ball_dist=2.119
-Ep  117: R= -25.642, L=242, Avg= -22.140, Success=  0 (  0.0%)
-🎾  FORCED ball distance init: 2.119m
-🤖  Robot upright: 0.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
-Episode 217 steps: Original=  -2.488, Shaped=  -9.850, Total= -12.338, Best_ball_dist=2.119
+🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+   Up vector: [0.000, 0.000, 1.000]
+📈  Ball progress! New best: 2.109m, reward: +0.103
+📈  Ball progress! New best: 2.098m, reward: +0.102
+📈  Ball progress! New best: 2.088m, reward: +0.105
+📈  Ball progress! New best: 2.077m, reward: +0.105
+📈  Ball progress! New best: 2.065m, reward: +0.124
+📈  Ball progress! New best: 2.055m, reward: +0.103
+📈  Ball progress! New best: 2.045m, reward: +0.101
+📈  Ball progress! New best: 2.034m, reward: +0.104
+📈  Ball progress! New best: 2.023m, reward: +0.113
+📈  Ball progress! New best: 2.012m, reward: +0.110
+📈  Ball progress! New best: 2.002m, reward: +0.104
+📈  Ball progress! New best: 1.991m, reward: +0.106
+Episode 266 steps: Original=  -2.491, Shaped=   8.600, Total=   6.109, Best_ball_dist=1.991
+Ep  188: R=  13.579, L=266, Avg=   6.280, Success=165 ( 87.3%)
