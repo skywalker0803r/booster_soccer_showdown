@@ -194,15 +194,15 @@ def dreamerv3_training_loop():
     ).to(device)
     
     preprocessor = Preprocessor()
-    sequence_buffer = SequenceBuffer(max_size=1000, sequence_length=25)
+    sequence_buffer = SequenceBuffer(max_size=2000, sequence_length=50)  # 增加緩衝區大小和序列長度
     
-    # Training parameters
-    num_episodes = 80 #正式再調大例如800
+    # Training parameters - 正式比賽設置
+    num_episodes = 2000      # 正式比賽：充分訓練
     max_episode_length = 1000
-    batch_size = 8
-    sequence_length = 25
-    start_training_episodes = 10  # Start training after collecting some data
-    train_frequency = 5  # Train every N episodes
+    batch_size = 16          # 增加batch size：更穩定學習
+    sequence_length = 50     # 增加序列長度：更好時序記憶
+    start_training_episodes = 50   # 更多探索數據
+    train_frequency = 3      # 更頻繁訓練：加快收斂
     
     print(f"Training for {num_episodes} episodes...")
     
