@@ -1,1 +1,13 @@
-ModelError: Could not automatically determine model type. Please specify 'model_type' parameter explicitly.
+你好我在打一個強化學習機器人踢足球比賽
+相關文件在docs資料夾
+我主程序是training_scripts\main_simple_dreamerv3.py
+剛剛成功執行後提交了一次發現分數很差機器人原地自摔結束也不走路也不踢球
+依我分析是因為獎勵函數設計的問題
+其中step -1 
+讓機器人為了避免被扣分 早早自摔結束
+再來就是
+world_model_loss
+reconstruction_loss
+愈訓練沒發現收斂甚至愈來愈高
+請從代碼的角度詳查並幫我分析以上問題
+整理一個檢查報告給我
