@@ -399,8 +399,8 @@ def improved_dreamerv3_training_loop():
     return model, preprocessor
 
 
-## Define improved action function
-def improved_action_function(policy):
+## Define action function (SAI-compatible name)
+def action_function(policy):
     """Improved action function with better bounds handling"""
     expected_bounds = [-1, 1]
     action_percent = (policy - expected_bounds[0]) / (expected_bounds[1] - expected_bounds[0])
@@ -431,11 +431,11 @@ if __name__ == "__main__":
     
     # Benchmark locally
     print("🔍 Running local benchmark...")
-    sai.benchmark(sai_model, improved_action_function, Preprocessor)
+    sai.benchmark(sai_model, action_function, Preprocessor)
     
     # Submit to leaderboard
     print("🚀 Submitting to leaderboard...")
-    sai.submit("Vedanta_ImprovedDreamerV3_Fixed", sai_model, improved_action_function, Preprocessor)
+    sai.submit("Vedanta_ImprovedDreamerV3_Fixed", sai_model, action_function, Preprocessor)
     
     print("=" * 60)
     print("🎉 COMPLETE! Check the score improvement!")
