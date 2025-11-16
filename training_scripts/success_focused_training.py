@@ -171,11 +171,19 @@ class SuccessFocusedWrapper:
         
         # 2. Ball Approach Reward (MAIN OBJECTIVE)
         if robot_upright > 0.8:  # Only if stable
+            # Initialize best_ball_dist on first valid measurement
+            if self.best_ball_dist == float('inf'):
+                self.best_ball_dist = ball_dist
+                print(f"🎾 Initial ball distance: {ball_dist:.3f}m")
+            
             # Progress toward ball
             if ball_dist < self.best_ball_dist - 0.01:  # Made progress
                 progress_reward = min((self.best_ball_dist - ball_dist) * 10.0, 0.5)
                 shaping_reward += progress_reward
                 self.best_ball_dist = ball_dist
+                print(f"📈 Ball progress! New best: {ball_dist:.3f}m, reward: +{progress_reward:.3f}")
+            elif ball_dist > self.best_ball_dist + 0.05:  # Moving away significantly
+                self.best_ball_dist = ball_dist  # Update to current (moving away)
             
             # Distance-based rewards
             if ball_dist < 0.3:
