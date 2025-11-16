@@ -414,11 +414,11 @@ def action_function(policy):
 
 print("=== Starting Evaluation ===")
 
-## Benchmark the model locally with CPU wrapper
-sai.benchmark(cpu_model, action_function=action_function, preprocessor_class=Preprocessor, model_type="pytorch")
+## Benchmark the model locally - use original model, let SAI handle everything
+sai.benchmark(model, action_function=action_function, preprocessor_class=Preprocessor, model_type="pytorch")
 
 ## Submit to leaderboard
 print("=== Submitting to Leaderboard ===")
-sai.submit("Vedanta_SimpleDreamerV3", cpu_model, action_function=action_function, preprocessor_class=Preprocessor, model_type="pytorch")
+sai.submit("Vedanta_SimpleDreamerV3", model, action_function=action_function, preprocessor_class=Preprocessor, model_type="pytorch")
 
 print("=== Complete ===")
