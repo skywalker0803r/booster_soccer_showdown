@@ -403,7 +403,7 @@ class SimpleDreamerV3(nn.Module):
             # Get action from policy
             action = self.actor(state)
             
-        return action.squeeze(0).numpy(), state
+        return action.squeeze(0).cpu().numpy(), state
     
     def train_step(self, obs_seq, action_seq, reward_seq):
         """Single training step"""
@@ -457,5 +457,6 @@ class SimpleDreamerV3(nn.Module):
         if len(obs_tensor.shape) == 1:
             obs_tensor = obs_tensor.unsqueeze(0)
         
-        action, _ = self.select_action(obs_tensor[0].numpy())
-        return torch.FloatTensor(action).unsqueeze(0)
+        action, _ = self.select_action(obs_tensor[0].cpu().numpy())
+        device = next(self.parameters()).device
+        return torch.FloatTensor(action).unsqueeze(0).to(device)
