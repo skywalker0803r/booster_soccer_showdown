@@ -364,39 +364,7 @@ def dreamerv3_training_loop():
 print("Creating SimpleDreamerV3 model...")
 model, preprocessor = dreamerv3_training_loop()
 
-# Create a simple CPU-safe model wrapper that works with SAI preprocessing
-class CPUModelWrapper:
-    def __init__(self, model):
-        self.model = model
-    
-    def __call__(self, obs):
-        """SAI will handle preprocessing, we just need CPU-safe model output"""
-        with torch.no_grad():
-            # Ensure obs is numpy array
-            if isinstance(obs, torch.Tensor):
-                obs = obs.cpu().numpy()
-            
-            # Flatten if needed
-            if len(obs.shape) > 1:
-                obs = obs.flatten()
-            
-            # Get action from model
-            action, _ = self.model.select_action(obs)
-            
-            # Ensure output is numpy array
-            if isinstance(action, torch.Tensor):
-                action = action.cpu().numpy()
-            
-            # Ensure action has correct shape for SAI
-            if len(action.shape) > 1:
-                action = action.flatten()
-            
-            return action
-
-# Create CPU-safe wrapper
-cpu_model = CPUModelWrapper(model)
-
-## Define an action function
+## Define an action function - exactly like your main.py
 def action_function(policy):
     expected_bounds = [-1, 1]
     action_percent = (policy - expected_bounds[0]) / (
@@ -410,13 +378,10 @@ def action_function(policy):
 
 print("=== Starting Evaluation ===")
 
-# 完全按照你的main.py方式，直接使用原始模型，讓SAI系統自動處理
-# 移除所有複雜的包裝器
-
 ## Benchmark the model locally - exactly like your main.py
 sai.benchmark(model, action_function, Preprocessor)
 
-## Submit to leaderboard  
+## Submit to leaderboard
 print("=== Submitting to Leaderboard ===")
 sai.submit("Vedanta_SimpleDreamerV3", model, action_function, Preprocessor)
 

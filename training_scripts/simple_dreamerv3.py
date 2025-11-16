@@ -458,38 +458,46 @@ class SimpleDreamerV3(nn.Module):
             'critic_loss': critic_loss.item()
         }
     
-    def forward(self, obs_tensor):
-        """PyTorch-like forward for compatibility"""
-        try:
-            if len(obs_tensor.shape) == 1:
-                obs_tensor = obs_tensor.unsqueeze(0)
-        except:
-            # Handle case where obs_tensor might not have shape attribute
-            obs_tensor = torch.FloatTensor([obs_tensor]) if not isinstance(obs_tensor, torch.Tensor) else obs_tensor
+    def forward(self, x):
+        """Standard PyTorch forward method required by SAI"""
+        # Ensure input is tensor and on correct device
+        device = next(self.parameters()).device
+        if isinstance(x, np.ndarray):
+            x = torch.FloatTensor(x).to(device)
+        elif isinstance(x, torch.Tensor):
+            x = x.to(device)
         
-        # Ensure obs_tensor is on CPU for select_action
-        if hasattr(obs_tensor, 'is_cuda') and obs_tensor.is_cuda:
-            obs_numpy = obs_tensor[0].cpu().numpy()
-        elif isinstance(obs_tensor, torch.Tensor):
-            obs_numpy = obs_tensor[0].numpy()
-        else:
-            obs_numpy = obs_tensor[0] if hasattr(obs_tensor, '__getitem__') else obs_tensor
+        # Handle batch dimensions properly
+        batch_size = x.shape[0] if x.dim() > 1 else 1
+        if x.dim() == 1:
+            x = x.unsqueeze(0)
+        elif x.dim() > 2:
+            x = x.view(-1, self.obs_dim)
+        
+        with torch.no_grad():
+            # Simple forward pass for SAI compatibility
+            # Initialize state
+            state = self.rssm.init_state(batch_size)
             
-        action, _ = self.select_action(obs_numpy)
-        
-        # CRITICAL: Ensure action is ALWAYS a 12-dimensional numpy array
-        if not isinstance(action, np.ndarray):
-            action = np.array([action] * 12)  # If scalar, replicate to 12 dims
-        elif action.ndim == 0:
-            action = np.array([float(action)] * 12)  # If 0-dim array, expand to 12 dims
-        elif action.size != 12:
-            if action.size == 1:
-                action = np.array([float(action[0])] * 12)  # If 1 element, replicate
+            # Encode observation
+            obs_embed = self.rssm.encode_obs(x)
+            
+            # Get posterior state
+            posterior_input = torch.cat([state['deter'], obs_embed], dim=-1)
+            posterior_logits = self.rssm.posterior_net(posterior_input)
+            stoch = self.rssm.get_stochastic_state(posterior_logits)
+            
+            # Create full state
+            full_state = {
+                'deter': state['deter'],
+                'stoch': stoch
+            }
+            
+            # Get action from actor
+            action = self.actor(full_state)
+            
+            # Return tensor (squeeze if single input)
+            if batch_size == 1:
+                return action.squeeze(0)
             else:
-                action = np.resize(action, (12,))  # Resize to 12 dims
-        
-        # Final safety check
-        assert isinstance(action, np.ndarray), f"Action must be numpy array, got {type(action)}"
-        assert action.shape == (12,), f"Action must have shape (12,), got {action.shape}"
-        
-        return action
+                return action
