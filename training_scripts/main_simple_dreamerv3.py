@@ -398,10 +398,6 @@ cpu_model = CPUModelWrapper(model)
 
 ## Define an action function
 def action_function(policy):
-    # Convert CUDA tensor to numpy if needed
-    if isinstance(policy, torch.Tensor):
-        policy = policy.cpu().numpy()
-    
     expected_bounds = [-1, 1]
     action_percent = (policy - expected_bounds[0]) / (
         expected_bounds[1] - expected_bounds[0]
