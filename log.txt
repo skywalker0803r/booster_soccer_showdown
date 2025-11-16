@@ -41,3 +41,37 @@ Ep  187: R=   5.733, L=267, Avg=   6.061, Success=164 ( 87.2%)
 📈  Ball progress! New best: 1.991m, reward: +0.106
 Episode 266 steps: Original=  -2.491, Shaped=   8.600, Total=   6.109, Best_ball_dist=1.991
 Ep  188: R=  13.579, L=266, Avg=   6.280, Success=165 ( 87.3%)
+
+
+跑一陣子之後
+
+🎾  FORCED ball distance init: 2.119m
+🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+   Up vector: [0.000, 0.000, 1.000]
+Episode 261 steps: Original=  -2.493, Shaped=   1.560, Total=  -0.933, Best_ball_dist=2.119
+Ep  479: R=  -0.323, L=261, Avg=  -1.642, Success=309 ( 64.4%)
+🎾  FORCED ball distance init: 2.119m
+🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+   Up vector: [0.000, 0.000, 1.000]
+Episode 274 steps: Original=  -2.493, Shaped=  -2.975, Total=  -5.468, Best_ball_dist=2.119
+Ep  480: R=  -9.393, L=274, Avg=  -1.783, Success=309 ( 64.2%)
+  🔄  Training...
+🎾  FORCED ball distance init: 2.119m
+🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+   Up vector: [0.000, 0.000, 1.000]
+Episode 296 steps: Original=  -2.491, Shaped=   1.360, Total=  -1.131, Best_ball_dist=2.119
+Ep  481: R=  -0.721, L=296, Avg=  -1.720, Success=309 ( 64.1%)
+🎾  FORCED ball distance init: 2.119m
+🤖  Robot upright: 1.000, quat: [0.000000e+00 0.000000e+00 9.999997e-01 7.963267e-04]
+   Up vector: [0.000, 0.000, 1.000]
+📈  Ball progress! New best: 2.109m, reward: +0.101
+📈  Ball progress! New best: 2.099m, reward: +0.102
+📈  Ball progress! New best: 2.088m, reward: +0.107
+📈  Ball progress! New best: 2.078m, reward: +0.104
+📈  Ball progress! New best: 2.067m, reward: +0.104
+📈  Ball progress! New best: 2.057m, reward: +0.104
+📈  Ball progress! New best: 2.046m, reward: +0.106
+📈  Ball progress! New best: 2.036m, reward: +0.105
+📈  Ball progress! New best: 2.026m, reward: +0.101
+Episode 174 steps: Original=  -2.489, Shaped=   2.703, Total=   0.214, Best_ball_dist=2.026
+Ep  482: R=   1.967, L=174, Avg=  -1.789, Success=310 ( 64.2%)
