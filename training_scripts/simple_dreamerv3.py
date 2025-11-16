@@ -457,6 +457,13 @@ class SimpleDreamerV3(nn.Module):
         if len(obs_tensor.shape) == 1:
             obs_tensor = obs_tensor.unsqueeze(0)
         
-        action, _ = self.select_action(obs_tensor[0].cpu().numpy())
-        device = next(self.parameters()).device
-        return torch.FloatTensor(action).unsqueeze(0).to(device)
+        # Ensure obs_tensor is on CPU for select_action
+        if obs_tensor.is_cuda:
+            obs_numpy = obs_tensor[0].cpu().numpy()
+        else:
+            obs_numpy = obs_tensor[0].numpy()
+            
+        action, _ = self.select_action(obs_numpy)
+        
+        # Return as CPU numpy array for SAI compatibility
+        return action
