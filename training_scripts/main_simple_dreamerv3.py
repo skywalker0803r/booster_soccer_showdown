@@ -410,11 +410,50 @@ def action_function(policy):
 
 print("=== Starting Evaluation ===")
 
-## Benchmark the model locally - use original model, let SAI handle everything
-sai.benchmark(model, action_function=action_function, preprocessor_class=Preprocessor, model_type="pytorch")
+## Create a SAI-compatible wrapper model that inherits from nn.Module
+class SAICompatibleWrapper(torch.nn.Module):
+    def __init__(self, dreamer_model):
+        super().__init__()
+        self.dreamer = dreamer_model
+        
+    def forward(self, x):
+        """SAI-compatible forward pass"""
+        # Ensure input is on correct device
+        device = next(self.dreamer.parameters()).device
+        
+        if isinstance(x, np.ndarray):
+            x = torch.FloatTensor(x).to(device)
+        elif isinstance(x, torch.Tensor):
+            x = x.to(device)
+            
+        # Get action from dreamer model
+        with torch.no_grad():
+            if x.dim() == 1:
+                x = x.unsqueeze(0)
+            
+            # Convert to numpy for select_action
+            x_numpy = x.squeeze(0).cpu().numpy()
+            action, _ = self.dreamer.select_action(x_numpy)
+            
+            # Convert back to tensor and ensure correct shape
+            action_tensor = torch.FloatTensor(action).to(device)
+            if action_tensor.dim() == 0:
+                action_tensor = action_tensor.unsqueeze(0)
+            
+            # Ensure 12 dimensions
+            if action_tensor.shape[0] != 12:
+                action_tensor = torch.zeros(12, device=device)
+                
+        return action_tensor
 
-## Submit to leaderboard
+# Create SAI-compatible wrapper
+sai_model = SAICompatibleWrapper(model)
+
+## Benchmark the model locally - using standard PyTorch format like your main.py
+sai.benchmark(sai_model, action_function, Preprocessor)
+
+## Submit to leaderboard  
 print("=== Submitting to Leaderboard ===")
-sai.submit("Vedanta_SimpleDreamerV3", model, action_function=action_function, preprocessor_class=Preprocessor, model_type="pytorch")
+sai.submit("Vedanta_SimpleDreamerV3", sai_model, action_function, Preprocessor)
 
 print("=== Complete ===")
