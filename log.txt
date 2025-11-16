@@ -1,41 +1,14 @@
-│ ❱ 33 │   │   return self._code(policy)  # type: ignore                                           │
-│   34                                                                                             │
-│                                                                                                  │
-│ ╭─────────────────────────────────────────── locals ───────────────────────────────────────────╮ │
-│ │ policy = array([0.61094797, 0.7425767 , 0.26492357, 0.58945537, 0.73484546,                  │ │
-│ │          │      0.4291187 , 0.72614074, 0.47194585, 0.66264343, 0.7909111 ,                  │ │
-│ │          │      0.5139173 , 0.52004397], dtype=float32)                                      │ │
-│ │   self = <sai_rl.model.custom.action_manager.ActionFunctionManager object at 0x7b190c220530> │ │
-│ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
-│ in action_function:3                                                                             │
-│ ╭────────────────────────────────── locals ───────────────────────────────────╮                  │
-│ │ policy = array([0.61094797, 0.7425767 , 0.26492357, 0.58945537, 0.73484546, │                  │
-│ │          │      0.4291187 , 0.72614074, 0.47194585, 0.66264343, 0.7909111 , │                  │
-│ │          │      0.5139173 , 0.52004397], dtype=float32)                     │                  │
-│ ╰─────────────────────────────────────────────────────────────────────────────╯                  │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-NameError: name 'torch' is not defined
+TypeError: object of type 'numpy.float32' has no len()
 
 The above exception was the direct cause of the following exception:
 
 ╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
-│ /content/booster_soccer_showdown/training_scripts/main_simple_dreamerv3.py:418 in <module>       │
+│ /content/booster_soccer_showdown/training_scripts/main_simple_dreamerv3.py:414 in <module>       │
 │                                                                                                  │
-│   415 print("=== Starting Evaluation ===")                                                       │
-│   416                                                                                            │
-│   417 ## Benchmark the model locally - use original model, let SAI handle everything             │
-│ ❱ 418 sai.benchmark(model, action_function=action_function, preprocessor_class=Preprocessor, m   │
-│   419                                                                                            │
-│   420 ## Submit to leaderboard                                                                   │
-│   421 print("=== Submitting to Leaderboard ===")                                                 │
-│                                                                                                  │
-│ ╭─────────────────────────────────────────── locals ───────────────────────────────────────────╮ │
-│ │    cpu_model = <__main__.CPUModelWrapper object at 0x7b19307b1a90>                           │ │
-│ │          env = <CustomEvaluationWrapper<TimeLimit<OrderEnforcing<PassiveEnvChecker<GoaliePe… │ │
-│ │            F = <module 'torch.nn.functional' from                                            │ │
-│ │                '/usr/local/lib/python3.12/dist-packages/torch/nn/functional.py'>             │ │
-│ │        model = SimpleDreamerV3(                                                              │ │
-│ │                  (rssm): RSSMCore(                                                           │ │
-│ │                │   (obs_encoder): Sequential(                                                │ │
-│ │                │     (0): Linear(in_features=89, out_features=256, bias=True)                │ │
-│ │                │     (1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)  
+│   411 print("=== Starting Evaluation ===")                                                       │
+│   412                                                                                            │
+│   413 ## Benchmark the model locally - use original model, let SAI handle everything             │
+│ ❱ 414 sai.benchmark(model, action_function=action_function, preprocessor_class=Preprocessor, m   │
+│   415                                                                                            │
+│   416 ## Submit to leaderboard                                                                   │
+│   417 print("=== Submitting to Leaderboard ===") 

@@ -403,7 +403,13 @@ class SimpleDreamerV3(nn.Module):
             # Get action from policy
             action = self.actor(state)
             
-        return action.squeeze(0).cpu().numpy(), state
+        action_numpy = action.squeeze(0).cpu().numpy()
+        # Ensure action is always a 1D array of correct size
+        if action_numpy.ndim == 0:
+            action_numpy = np.array([action_numpy])
+        elif action_numpy.shape[0] != 12:
+            action_numpy = np.resize(action_numpy, (12,))
+        return action_numpy, state
     
     def train_step(self, obs_seq, action_seq, reward_seq):
         """Single training step"""
@@ -467,5 +473,14 @@ class SimpleDreamerV3(nn.Module):
             
         action, _ = self.select_action(obs_numpy)
         
-        # Return as CPU numpy array for SAI compatibility
+        # Ensure action is always a 1D array of correct size for SAI compatibility
+        if isinstance(action, np.ndarray):
+            if action.ndim == 0:
+                action = np.array([action])
+            elif action.ndim == 1 and action.shape[0] != 12:
+                action = np.resize(action, (12,))
+        elif isinstance(action, (float, np.float32, np.float64)):
+            # Handle scalar case
+            action = np.array([action])
+        
         return action
