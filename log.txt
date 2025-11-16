@@ -1,14 +1,15 @@
-RuntimeError: Tensors must have same number of dimensions: got 2 and 3
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x178 and 89x256)
 
 The above exception was the direct cause of the following exception:
 
 ╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
-│ /content/booster_soccer_showdown/training_scripts/main_simple_dreamerv3.py:414 in <module>       │
+│ /content/booster_soccer_showdown/training_scripts/main_simple_dreamerv3.py:422 in <module>       │
 │                                                                                                  │
-│   411 print("=== Starting Evaluation ===")                                                       │
-│   412                                                                                            │
-│   413 ## Benchmark the model locally with CPU wrapper                                            │
-│ ❱ 414 sai.benchmark(cpu_model, action_function, Preprocessor, model_type="pytorch")              │
-│   415                                                                                            │
-│   416 ## Submit to leaderboard                                                                   │
-│   417 print("=== Submitting to Leaderboard ===")  
+│   419 print("=== Starting Evaluation ===")                                                       │
+│   420                                                                                            │
+│   421 ## Benchmark the model locally with CPU wrapper                                            │
+│ ❱ 422 sai.benchmark(cpu_model, action_function, Preprocessor, model_type="pytorch")              │
+│   423                                                                                            │
+│   424 ## Submit to leaderboard                                                                   │
+│   425 print("=== Submitting to Leaderboard ===")  

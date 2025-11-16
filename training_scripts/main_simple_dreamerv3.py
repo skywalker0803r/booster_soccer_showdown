@@ -196,7 +196,7 @@ def dreamerv3_training_loop():
     sequence_buffer = SequenceBuffer(max_size=1000, sequence_length=25)
     
     # Training parameters
-    num_episodes = 800
+    num_episodes = 80 #正式再調大例如800
     max_episode_length = 1000
     batch_size = 8
     sequence_length = 25
@@ -357,35 +357,42 @@ def dreamerv3_training_loop():
     writer.close()
     print(f"📊 TensorBoard logs saved to: {log_dir}")
     
-    return model
+    return model, preprocessor
 
 
 ## Create and train the model
 print("Creating SimpleDreamerV3 model...")
-model = dreamerv3_training_loop()
+model, preprocessor = dreamerv3_training_loop()
 
 ## Create a CPU-safe model wrapper
 class CPUModelWrapper:
-    def __init__(self, model):
+    def __init__(self, model, preprocessor):
         self.model = model
+        self.preprocessor = preprocessor
     
     def __call__(self, obs):
         """Make model output CPU-safe for SAI evaluation"""
         with torch.no_grad():
-            # Ensure obs is numpy array with correct shape
+            # Ensure obs is numpy array
             if isinstance(obs, torch.Tensor):
                 obs = obs.cpu().numpy()
             
-            if isinstance(obs, np.ndarray):
-                # If obs has batch dimension, remove it for select_action
-                if len(obs.shape) > 1:
-                    obs = obs.flatten()
-                
-                # Get action from model (model handles device internally)
-                action, _ = self.model.select_action(obs)
+            # Apply preprocessing to match training data format
+            if hasattr(self.preprocessor, 'preprocess'):
+                processed_obs = self.preprocessor.preprocess(obs)
             else:
-                # Handle other input types
-                action, _ = self.model.select_action(np.array(obs).flatten())
+                # If preprocessor doesn't have preprocess method, use it directly
+                processed_obs = self.preprocessor(obs)
+            
+            # Ensure processed_obs is flat numpy array
+            if isinstance(processed_obs, torch.Tensor):
+                processed_obs = processed_obs.cpu().numpy()
+            
+            if len(processed_obs.shape) > 1:
+                processed_obs = processed_obs.flatten()
+            
+            # Get action from model
+            action, _ = self.model.select_action(processed_obs)
             
             # Ensure output is numpy array
             if isinstance(action, torch.Tensor):
@@ -397,8 +404,8 @@ class CPUModelWrapper:
             
             return action
 
-# Create CPU-safe wrapper
-cpu_model = CPUModelWrapper(model)
+# Create CPU-safe wrapper with preprocessor
+cpu_model = CPUModelWrapper(model, preprocessor)
 
 ## Define an action function
 def action_function(policy):
