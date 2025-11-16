@@ -460,12 +460,12 @@ class SimpleDreamerV3(nn.Module):
     
     def forward(self, x):
         """Standard PyTorch forward method required by SAI"""
-        # Ensure input is tensor and on correct device
+        # Ensure input is tensor and on correct device with correct dtype
         device = next(self.parameters()).device
         if isinstance(x, np.ndarray):
             x = torch.FloatTensor(x).to(device)
         elif isinstance(x, torch.Tensor):
-            x = x.to(device)
+            x = x.float().to(device)  # Convert to float32 if needed
         
         # Handle batch dimensions properly
         batch_size = x.shape[0] if x.dim() > 1 else 1
