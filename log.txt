@@ -1,102 +1,34 @@
-/content/booster_soccer_showdown# python training_scripts/debug_ball_distance.py 
-🔍  Debugging Ball Distance Issue
-==================================================
-╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
-│                                                                                                  │
-│                                                                                                  │
-│                                   ########      ###     ###########                              │
-│                                 #+#    #+#   #+# #+#       #+#                                   │
-│                                +#+         +#+   +#+      +#+                                    │
-│                               +########+ +#########+     +#+                                     │
-│                                     +#+ +#+     +#+     +#+                                      │
-│                             #+#    #+# #+#     #+#     #+#                                       │
-│                             ########  ###     ### ###########                                    │
-│                                                                                                  │
-│                                                                                         v0.1.35  │
-│                                                                              © 2025 ArenaX Labs  │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-✓ Successfully imported sai-mujoco package.
-╭─ Competition Tasks ──────────────────────────────────────────────────────────────────────────────╮
-│                                                                                                  │
-│       Task    Environment                                      Score Weight           Episodes   │
-│          0    Penalty Kick with Goalie (Lower T1)                       1.0                100   │
-│               (LowerT1GoaliePenaltyKick-v0)                                                      │
-│          1    Penalty Kick with Obstacles (Lower T1)                    1.0                100   │
-│               (LowerT1ObstaclePenaltyKick-v0)                                                    │
-│          2    Kick to Target (Lower T1)                                 1.0                100   │
-│               (LowerT1KickToTarget-v0)                                                           │
-│                                                                                                  │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-📊  Info keys available:
-   ball_velp_rel_robot: <class 'numpy.ndarray'>
-   ball_velr_rel_robot: <class 'numpy.ndarray'>
-   ball_xpos_rel_robot: <class 'numpy.ndarray'>
-   defender_xpos: <class 'numpy.ndarray'>
-   goal_depth: <class 'float'>
-   goal_height: <class 'float'>
-   goal_team_0_rel_ball: <class 'numpy.ndarray'>
-   goal_team_0_rel_robot: <class 'numpy.ndarray'>
-   goal_team_1_rel_ball: <class 'numpy.ndarray'>
-   goal_team_1_rel_robot: <class 'numpy.ndarray'>
-   goal_width: <class 'float'>
-   goalkeeper_team_0_velp_rel_robot: <class 'numpy.ndarray'>
-   goalkeeper_team_0_xpos_rel_robot: <class 'numpy.ndarray'>
-   goalkeeper_team_1_velp_rel_robot: <class 'numpy.ndarray'>
-   goalkeeper_team_1_xpos_rel_robot: <class 'numpy.ndarray'>
-   length: <class 'float'>
-   player_team: <class 'numpy.ndarray'>
-   robot_accelerometer: <class 'numpy.ndarray'>
-   robot_gyro: <class 'numpy.ndarray'>
-   robot_quat: <class 'numpy.ndarray'>
-   robot_velocimeter: <class 'numpy.ndarray'>
-   success: <class 'bool'>
-   target_velp_rel_robot: <class 'numpy.ndarray'>
-   target_xpos_rel_robot: <class 'numpy.ndarray'>
-   task_index: <class 'numpy.ndarray'>
-   width: <class 'float'>
-
-🎾  Ball-related info:
-   goal_team_0_rel_ball:
-      Type: <class 'numpy.ndarray'>
-      Shape: (3,)
-      Value: [-2.2  0.   0. ]
-      Distance: 2.200
-
-   goal_team_1_rel_ball:
-      Type: <class 'numpy.ndarray'>
-      Shape: (3,)
-      Value: [19.74  0.    0.  ]
-      Distance: 19.740
-
-   ball_xpos_rel_robot:
-      Type: <class 'numpy.ndarray'>
-      Shape: (3,)
-      Value: [-2.   0.  -0.7]
-      Distance: 2.119
-
-   ball_velp_rel_robot:
-      Type: <class 'numpy.ndarray'>
-      Shape: (3,)
-      Value: [0. 0. 0.]
-      Distance: 0.000
-
-   ball_velr_rel_robot:
-      Type: <class 'numpy.ndarray'>
-      Shape: (3,)
-      Value: [0. 0. 0.]
-      Distance: 0.000
-
-🔄  Testing ball position over 5 steps:
-   Step 0: [-2.   0.  -0.7]
-      → Distance: 2.119
-   Step 1: [-2.00000346e+00  6.38832214e-06 -6.99859796e-01]
-      → Distance: 2.119
-   Step 2: [-2.00000649e+00  1.58865498e-05 -6.99598742e-01]
-      → Distance: 2.119
-   Step 3: [-2.00000949e+00  2.29677858e-05 -6.99236423e-01]
-      → Distance: 2.119
-   Step 4: [-2.00001145e+00  2.53729109e-05 -6.98788416e-01]
-      → Distance: 2.119
-/content/booster_soccer_showdown# 
+🎯  Training configuration:
+   Episodes: 1000
+   Max length: 600
+   Focus: Success rate improvement
+Episode 215 steps: Original=  -2.492, Shaped=  -9.750, Total= -12.242, Best_ball_dist=inf
+Ep    0: R= -22.942, L=215, Avg= -22.942, Success=  0 (  0.0%)
+  🎉  New best reward: -22.942
+Episode 239 steps: Original=  -2.491, Shaped= -10.950, Total= -13.441, Best_ball_dist=inf
+Ep    1: R= -25.341, L=239, Avg= -24.142, Success=  0 (  0.0%)
+Episode 219 steps: Original=  -2.492, Shaped=  -9.950, Total= -12.442, Best_ball_dist=inf
+Ep    2: R= -23.342, L=219, Avg= -23.875, Success=  0 (  0.0%)
+Episode 275 steps: Original=  -2.491, Shaped= -12.750, Total= -15.241, Best_ball_dist=inf
+Ep    3: R= -28.941, L=275, Avg= -25.141, Success=  0 (  0.0%)
+Episode 235 steps: Original=  -2.492, Shaped= -10.750, Total= -13.242, Best_ball_dist=inf
+Ep    4: R= -24.942, L=235, Avg= -25.102, Success=  0 (  0.0%)
+Episode 195 steps: Original=  -2.492, Shaped=  -8.750, Total= -11.242, Best_ball_dist=inf
+Ep    5: R= -20.942, L=195, Avg= -24.408, Success=  0 (  0.0%)
+  🎉  New best reward: -20.942
+Episode 204 steps: Original=  -2.491, Shaped=  -9.200, Total= -11.691, Best_ball_dist=inf
+Ep    6: R= -21.841, L=204, Avg= -24.042, Success=  0 (  0.0%)
+Episode 216 steps: Original=  -2.491, Shaped=  -9.800, Total= -12.291, Best_ball_dist=inf
+Ep    7: R= -23.041, L=216, Avg= -23.917, Success=  0 (  0.0%)
+Episode 282 steps: Original=  -2.492, Shaped= -13.100, Total= -15.592, Best_ball_dist=inf
+Ep    8: R= -29.642, L=282, Avg= -24.553, Success=  0 (  0.0%)
+Episode 182 steps: Original=  -2.492, Shaped=  -8.100, Total= -10.592, Best_ball_dist=inf
+Ep    9: R= -19.642, L=182, Avg= -24.062, Success=  0 (  0.0%)
+  🎉  New best reward: -19.642
+Episode 224 steps: Original=  -2.489, Shaped= -10.200, Total= -12.689, Best_ball_dist=inf
+Ep   10: R= -23.839, L=224, Avg= -24.041, Success=  0 (  0.0%)
+Episode 186 steps: Original=  -2.492, Shaped=  -8.300, Total= -10.792, Best_ball_dist=inf
+Ep   11: R= -20.042, L=186, Avg= -23.708, Success=  0 (  0.0%)
+Episode 209 steps: Original=  -2.490, Shaped=  -9.450, Total= -11.940, Best_ball_dist=inf
+Ep   12: R= -22.340, L=209, Avg= -23.603, Success=  0 (  0.0%)
+Episode 198 steps: Original=  -2.492, Shaped=  -8.900, Total= -11.392, Best_ball_dist=inf

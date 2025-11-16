@@ -129,16 +129,35 @@ class SuccessFocusedWrapper:
         # Dense shaping rewards to guide learning
         shaping_reward = 0
         
-        # Extract state information
+        # Extract state information with robust ball distance calculation
         ball_pos = info.get("ball_xpos_rel_robot", np.zeros(3))
         if len(ball_pos.shape) > 1:
             ball_pos = ball_pos[0]
-        ball_dist = np.linalg.norm(ball_pos)
+        
+        # Robust ball distance calculation
+        try:
+            ball_dist = float(np.linalg.norm(ball_pos))
+            # Force initialize best_ball_dist if still inf
+            if self.best_ball_dist == float('inf') and ball_dist < 50:  # Reasonable distance
+                self.best_ball_dist = ball_dist
+                print(f"🎾 FORCED ball distance init: {ball_dist:.3f}m")
+        except Exception as e:
+            print(f"❌ Ball distance error: {e}, ball_pos: {ball_pos}")
+            ball_dist = float('inf')
         
         robot_quat = info.get("robot_quat", np.array([0, 0, 0, 1]))
         if len(robot_quat.shape) > 1:
             robot_quat = robot_quat[0]
-        robot_upright = 1.0 - abs(robot_quat[2])  # 1.0 = perfectly upright
+        
+        # Robust robot upright calculation with debug
+        try:
+            robot_upright = 1.0 - abs(robot_quat[2])  # 1.0 = perfectly upright
+            robot_upright = max(0.0, min(1.0, robot_upright))  # Clamp to [0,1]
+            if self.episode_step == 1:  # Debug on first step
+                print(f"🤖 Robot upright: {robot_upright:.3f}, quat: {robot_quat}")
+        except Exception as e:
+            print(f"❌ Robot upright error: {e}")
+            robot_upright = 0.5  # Default moderate upright
         
         robot_vel = info.get("robot_velocimeter", np.zeros(3))
         if len(robot_vel.shape) > 1:
