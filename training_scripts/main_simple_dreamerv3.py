@@ -372,20 +372,28 @@ class CPUModelWrapper:
     def __call__(self, obs):
         """Make model output CPU-safe for SAI evaluation"""
         with torch.no_grad():
-            if isinstance(obs, np.ndarray):
-                device = next(self.model.parameters()).device
-                obs_tensor = torch.FloatTensor(obs).to(device)
-                if len(obs_tensor.shape) == 1:
-                    obs_tensor = obs_tensor.unsqueeze(0)
-            else:
-                obs_tensor = obs
+            # Ensure obs is numpy array with correct shape
+            if isinstance(obs, torch.Tensor):
+                obs = obs.cpu().numpy()
             
-            # Get action from model
-            action, _ = self.model.select_action(obs_tensor.squeeze(0).cpu().numpy())
+            if isinstance(obs, np.ndarray):
+                # If obs has batch dimension, remove it for select_action
+                if len(obs.shape) > 1:
+                    obs = obs.flatten()
+                
+                # Get action from model (model handles device internally)
+                action, _ = self.model.select_action(obs)
+            else:
+                # Handle other input types
+                action, _ = self.model.select_action(np.array(obs).flatten())
             
             # Ensure output is numpy array
             if isinstance(action, torch.Tensor):
                 action = action.cpu().numpy()
+            
+            # Ensure action has correct shape for SAI
+            if len(action.shape) > 1:
+                action = action.flatten()
             
             return action
 

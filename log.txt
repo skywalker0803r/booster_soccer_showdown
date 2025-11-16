@@ -1,27 +1,14 @@
+RuntimeError: Tensors must have same number of dimensions: got 2 and 3
+
+The above exception was the direct cause of the following exception:
+
+╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
+│ /content/booster_soccer_showdown/training_scripts/main_simple_dreamerv3.py:414 in <module>       │
 │                                                                                                  │
-│ /usr/local/lib/python3.12/dist-packages/sai_rl/model/model_manager.py:183 in                     │
-│ _determine_model_type                                                                            │
-│                                                                                                  │
-│   180 │   │   │   │   if model_type is not None:                                                 │
-│   181 │   │   │   │   │   determined_model_type = model_type                                     │
-│   182 │   │   │   │   else:                                                                      │
-│ ❱ 183 │   │   │   │   │   raise ModelError(                                                      │
-│   184 │   │   │   │   │   │   "Could not automatically determine model type. "                   │
-│   185 │   │   │   │   │   │   "Please specify 'model_type' parameter explicitly."                │
-│   186 │   │   │   │   │   )                                                                      │
-│                                                                                                  │
-│ ╭────────────────────────────────────────── locals ──────────────────────────────────────────╮   │
-│ │             algorithm = None                                                               │   │
-│ │              cls_path = 'builtins.object'                                                  │   │
-│ │  determined_algorithm = None                                                               │   │
-│ │ determined_model_type = None                                                               │   │
-│ │                 model = <__main__.CPUModelWrapper object at 0x78b3c77a1f40>                │   │
-│ │            model_type = None                                                               │   │
-│ │   model_type_detected = False                                                              │   │
-│ │                  self = <sai_rl.model.model_manager.ModelManager object at 0x78b3b111bb60> │   │
-│ │                  sess = None                                                               │   │
-│ │                status = <sai_rl.sai_console.SAIStatus object at 0x78b3b12dc9e0>            │   │
-│ ╰────────────────────────────────────────────────────────────────────────────────────────────╯   │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-ModelError: Could not automatically determine model type. Please specify 'model_type' parameter explicitly.
-/content/booster_soccer_showdown# 
+│   411 print("=== Starting Evaluation ===")                                                       │
+│   412                                                                                            │
+│   413 ## Benchmark the model locally with CPU wrapper                                            │
+│ ❱ 414 sai.benchmark(cpu_model, action_function, Preprocessor, model_type="pytorch")              │
+│   415                                                                                            │
+│   416 ## Submit to leaderboard                                                                   │
+│   417 print("=== Submitting to Leaderboard ===")  
