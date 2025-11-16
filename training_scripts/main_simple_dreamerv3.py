@@ -364,6 +364,34 @@ def dreamerv3_training_loop():
 print("Creating SimpleDreamerV3 model...")
 model = dreamerv3_training_loop()
 
+## Create a CPU-safe model wrapper
+class CPUModelWrapper:
+    def __init__(self, model):
+        self.model = model
+    
+    def __call__(self, obs):
+        """Make model output CPU-safe for SAI evaluation"""
+        with torch.no_grad():
+            if isinstance(obs, np.ndarray):
+                device = next(self.model.parameters()).device
+                obs_tensor = torch.FloatTensor(obs).to(device)
+                if len(obs_tensor.shape) == 1:
+                    obs_tensor = obs_tensor.unsqueeze(0)
+            else:
+                obs_tensor = obs
+            
+            # Get action from model
+            action, _ = self.model.select_action(obs_tensor.squeeze(0).cpu().numpy())
+            
+            # Ensure output is numpy array
+            if isinstance(action, torch.Tensor):
+                action = action.cpu().numpy()
+            
+            return action
+
+# Create CPU-safe wrapper
+cpu_model = CPUModelWrapper(model)
+
 ## Define an action function
 def action_function(policy):
     # Convert CUDA tensor to numpy if needed
@@ -382,11 +410,11 @@ def action_function(policy):
 
 print("=== Starting Evaluation ===")
 
-## Benchmark the model locally
-sai.benchmark(model, action_function, Preprocessor)
+## Benchmark the model locally with CPU wrapper
+sai.benchmark(cpu_model, action_function, Preprocessor)
 
 ## Submit to leaderboard
 print("=== Submitting to Leaderboard ===")
-sai.submit("Vedanta_SimpleDreamerV3", model, action_function, Preprocessor)
+sai.submit("Vedanta_SimpleDreamerV3", cpu_model, action_function, Preprocessor)
 
 print("=== Complete ===")
