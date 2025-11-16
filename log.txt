@@ -1,3 +1,25 @@
+│ /usr/local/lib/python3.12/dist-packages/gymnasium/vector/async_vector_env.py:711 in              │
+│ _raise_if_errors                                                                                 │
+│                                                                                                  │
+│   708 │   │   │   if i == num_errors - 1:                                                        │
+│   709 │   │   │   │   logger.error("Raising the last exception back to the main process.")       │
+│   710 │   │   │   │   self._state = AsyncState.DEFAULT                                           │
+│ ❱ 711 │   │   │   │   raise exctype(value)                                                       │
+│   712 │                                                                                          │
+│   713 │   def __del__(self):                                                                     │
+│   714 │   │   """On deleting the object, checks that the vector environment is closed."""        │
+│                                                                                                  │
+│ ╭─────────────────────────────────────────── locals ───────────────────────────────────────────╮ │
+│ │          i = 1                                                                               │ │
+│ │      index = 0                                                                               │ │
+│ │ num_errors = 2                                                                               │ │
+│ │       self = AsyncVectorEnv(num_envs=2)                                                      │ │
+│ │  successes = [False, False]                                                                  │ │
+│ │      trace = 'Traceback (most recent call last):\n  File                                     │ │
+│ │              "/usr/local/lib/python3.12/dist-packag'+1938                                    │ │
+│ │      value = TypeError("object of type 'numpy.float32' has no len()")                        │ │
+│ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 TypeError: object of type 'numpy.float32' has no len()
 
 The above exception was the direct cause of the following exception:
@@ -11,4 +33,4 @@ The above exception was the direct cause of the following exception:
 │ ❱ 414 sai.benchmark(model, action_function=action_function, preprocessor_class=Preprocessor, m   │
 │   415                                                                                            │
 │   416 ## Submit to leaderboard                                                                   │
-│   417 print("=== Submitting to Leaderboard ===") 
+│   417 print("=== Submitting to Leaderboard ===")     

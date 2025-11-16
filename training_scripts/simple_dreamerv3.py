@@ -460,8 +460,12 @@ class SimpleDreamerV3(nn.Module):
     
     def forward(self, obs_tensor):
         """PyTorch-like forward for compatibility"""
-        if len(obs_tensor.shape) == 1:
-            obs_tensor = obs_tensor.unsqueeze(0)
+        try:
+            if len(obs_tensor.shape) == 1:
+                obs_tensor = obs_tensor.unsqueeze(0)
+        except:
+            # Handle case where obs_tensor might not have shape attribute
+            obs_tensor = torch.FloatTensor([obs_tensor]) if not isinstance(obs_tensor, torch.Tensor) else obs_tensor
         
         # Ensure obs_tensor is on CPU for select_action
         if hasattr(obs_tensor, 'is_cuda') and obs_tensor.is_cuda:
@@ -473,14 +477,19 @@ class SimpleDreamerV3(nn.Module):
             
         action, _ = self.select_action(obs_numpy)
         
-        # Ensure action is always a 1D array of correct size for SAI compatibility
-        if isinstance(action, np.ndarray):
-            if action.ndim == 0:
-                action = np.array([action])
-            elif action.ndim == 1 and action.shape[0] != 12:
-                action = np.resize(action, (12,))
-        elif isinstance(action, (float, np.float32, np.float64)):
-            # Handle scalar case
-            action = np.array([action])
+        # CRITICAL: Ensure action is ALWAYS a 12-dimensional numpy array
+        if not isinstance(action, np.ndarray):
+            action = np.array([action] * 12)  # If scalar, replicate to 12 dims
+        elif action.ndim == 0:
+            action = np.array([float(action)] * 12)  # If 0-dim array, expand to 12 dims
+        elif action.size != 12:
+            if action.size == 1:
+                action = np.array([float(action[0])] * 12)  # If 1 element, replicate
+            else:
+                action = np.resize(action, (12,))  # Resize to 12 dims
+        
+        # Final safety check
+        assert isinstance(action, np.ndarray), f"Action must be numpy array, got {type(action)}"
+        assert action.shape == (12,), f"Action must have shape (12,), got {action.shape}"
         
         return action
