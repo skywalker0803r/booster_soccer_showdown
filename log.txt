@@ -1,2 +1,3 @@
-SimpleDreamerV3 GPU Training Log
-=================================
+SimpleDreamerV3 GPU Training - Fixed Version
+============================================
+Ready for training...
