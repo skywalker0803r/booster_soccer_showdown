@@ -131,16 +131,89 @@ class TensorBoardRewardCallback(BaseCallback):
 
         return True
 
+def choose_training_mode():
+    """選擇訓練模式：從頭開始或繼續訓練"""
+    print("\n" + "="*50)
+    print("🤔 請選擇訓練模式：")
+    print("   1 - 從頭開始新訓練")
+    print("   2 - 載入現有模型繼續訓練")
+    print("="*50)
+    
+    while True:
+        choice = input("請選擇 (1 或 2): ").strip()
+        
+        if choice == "1":
+            return "new", None
+            
+        elif choice == "2":
+            # 顯示可用的模型
+            if os.path.exists("./saved_models"):
+                print("\n📁 找到的模型檔案:")
+                model_files = [f for f in os.listdir("./saved_models") if f.endswith(".zip")]
+                if model_files:
+                    for i, file in enumerate(model_files, 1):
+                        print(f"   {i}. {file}")
+                    print("   0. 手動輸入路徑")
+                else:
+                    print("   (沒有找到模型檔案)")
+            
+            while True:
+                model_path = input("\n請輸入模型檔案路徑 (或輸入數字選擇): ").strip()
+                
+                # 如果輸入數字，選擇對應的模型
+                if model_path.isdigit():
+                    idx = int(model_path)
+                    if idx == 0:
+                        model_path = input("請輸入完整路徑: ").strip()
+                    elif 1 <= idx <= len(model_files):
+                        model_path = f"./saved_models/{model_files[idx-1]}"
+                    else:
+                        print("❌ 無效的選擇")
+                        continue
+                
+                # 檢查檔案是否存在
+                if os.path.exists(model_path):
+                    return "continue", model_path
+                else:
+                    print(f"❌ 找不到檔案: {model_path}")
+                    retry = input("重新輸入? (y/n): ").lower()
+                    if retry != 'y':
+                        return "new", None
+        else:
+            print("❌ 請輸入 1 或 2")
+
+# 選擇訓練模式
+training_mode, model_path = choose_training_mode()
+
 # 設定 TensorBoard 日誌目錄
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-tensorboard_log = f"./runs/SimplePPO_{timestamp}"
+if training_mode == "new":
+    tensorboard_log = f"./runs/SimplePPO_{timestamp}"
+    print(f"\n🆕 從頭開始新訓練")
+else:
+    tensorboard_log = f"./runs/SimplePPO_Continue_{timestamp}"
+    print(f"\n🔄 繼續訓練模型: {model_path}")
+
 os.makedirs("./runs", exist_ok=True)
 
 print(f"📊 TensorBoard 日誌將保存到: {tensorboard_log}")
 print(f"🖥️  啟動 TensorBoard 指令: tensorboard --logdir=./runs")
 
-## Create the model (加入 TensorBoard 支援)
-model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=tensorboard_log)
+## Create or load the model
+if training_mode == "new":
+    print("\n🆕 創建新的 PPO 模型...")
+    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=tensorboard_log)
+else:
+    print("\n📥 載入現有模型...")
+    try:
+        model = PPO.load(model_path, env=env)
+        # 更新 tensorboard 日誌路徑
+        model.tensorboard_log = tensorboard_log
+        print("✅ 模型載入成功")
+    except Exception as e:
+        print(f"❌ 模型載入失敗: {e}")
+        print("🔄 改為創建新模型...")
+        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=tensorboard_log)
 
 ## Define an action function
 def action_function(policy):
@@ -158,14 +231,37 @@ def action_function(policy):
 # 創建回調函數
 callback = TensorBoardRewardCallback()
 
-print("🚀 開始訓練 PPO 模型...")
-model.learn(total_timesteps=100000, callback=callback)  # 比官方例子多訓練一點
+# 詢問訓練步數
+default_steps = 100000
+while True:
+    try:
+        steps_input = input(f"\n請輸入訓練步數 (預設 {default_steps}): ").strip()
+        if not steps_input:
+            total_steps = default_steps
+            break
+        total_steps = int(steps_input)
+        if total_steps > 0:
+            break
+        else:
+            print("❌ 請輸入正整數")
+    except ValueError:
+        print("❌ 請輸入有效數字")
+
+print(f"\n🚀 開始訓練 PPO 模型...")
+print(f"   模式: {'新訓練' if training_mode == 'new' else '繼續訓練'}")
+print(f"   步數: {total_steps:,}")
+
+model.learn(total_timesteps=total_steps, callback=callback)
 
 # 保存模型
 os.makedirs("./saved_models", exist_ok=True)
-model_path = f"./saved_models/simple_ppo_{timestamp}"
-model.save(model_path)
-print(f"💾 模型已保存到: {model_path}")
+if training_mode == "new":
+    save_model_path = f"./saved_models/simple_ppo_{timestamp}"
+else:
+    save_model_path = f"./saved_models/simple_ppo_continued_{timestamp}"
+
+model.save(save_model_path)
+print(f"💾 模型已保存到: {save_model_path}")
 
 ## Watch (註解掉，因為在 Colab 上無法使用)
 #sai.watch(model, action_function, Preprocessor)
@@ -188,5 +284,5 @@ print(f"""
    1. 執行 local_watch.py 觀看模型並決定是否提交
    2. 執行 tensorboard --logdir=./runs 查看訓練曲線
 
-💾 模型檔案: {model_path}.zip
+💾 模型檔案: {save_model_path}.zip
 """)
