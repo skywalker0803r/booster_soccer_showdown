@@ -7,7 +7,7 @@ import torch
 import gymnasium as gym
 from gymnasium.spaces import Box
 from datetime import datetime
-from aligned_reward_shaping import aligned_enhanced_preprocessor
+from aligned_reward_shaping_fixed import aligned_enhanced_preprocessor
 
 class Preprocessor():
     def get_task_onehot(self, info):
