@@ -324,6 +324,16 @@ def choose_training_mode():
         else:
             print("❌ 請輸入 1 或 2")
 
+sai = SAIClient(comp_id="booster-soccer-showdown", api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv")
+base_env = sai.make_env()
+
+def action_function(policy):
+    expected_bounds = [-1, 1]
+    action_percent = (policy - expected_bounds[0]) / (expected_bounds[1] - expected_bounds[0])
+    bounded_percent = np.minimum(np.maximum(action_percent, 0), 1)
+    return base_env.action_space.low + (base_env.action_space.high - base_env.action_space.low) * bounded_percent
+base_env.close()
+
 def main():
     print("🎯 PPO + 獎勵塑形訓練 (修復版)")
     print("=" * 50)
@@ -430,12 +440,6 @@ def main():
     # 評估
     print("📈 進行本地評估...")
     
-    def action_function(policy):
-        expected_bounds = [-1, 1]
-        action_percent = (policy - expected_bounds[0]) / (expected_bounds[1] - expected_bounds[0])
-        bounded_percent = np.minimum(np.maximum(action_percent, 0), 1)
-        return base_env.action_space.low + (base_env.action_space.high - base_env.action_space.low) * bounded_percent
-
     sai.benchmark(model, action_function, RewardShapingPreprocessor)
     
     env.close()
