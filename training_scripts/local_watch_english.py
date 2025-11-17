@@ -1,9 +1,9 @@
 """
-本地模型總結 - TensorBoard 監控 + 觀看 + 提交
-從 Colab 下載模型檔案後，在本地完成：
-1. TensorBoard 監控訓練過程
-2. 觀看模型實際表現
-3. 決定是否提交到排行榜
+Local Model Watch and Submit - TensorBoard + Watch + Submit
+After downloading model files from Colab, complete locally:
+1. TensorBoard monitoring of training process
+2. Watch actual model performance
+3. Decide whether to submit to leaderboard
 """
 
 from sai_rl import SAIClient
@@ -15,8 +15,8 @@ import threading
 import time
 import webbrowser
 
-# 你的模型檔案路徑 (需要修改為實際下載的模型路徑)
-MODEL_PATH = "./saved_models/ppo_standalone_20251117_105737.zip"  # 修改這裡！
+# Your model file path (modify this to actual downloaded model path)
+MODEL_PATH = "./saved_models/ppo_standalone_20251117_105737.zip"  # Modify this!
 
 class Preprocessor():
     def get_task_onehot(self, info):
@@ -93,172 +93,170 @@ class Preprocessor():
 
         return obs
 
-def action_function(policy):
-    """動作函數，將策略輸出轉換為環境動作"""
-    expected_bounds = [-1, 1]
-    action_percent = (policy - expected_bounds[0]) / (
-        expected_bounds[1] - expected_bounds[0]
-    )
-    bounded_percent = np.minimum(np.maximum(action_percent, 0), 1)
-    return (
-        env.action_space.low
-        + (env.action_space.high - env.action_space.low) * bounded_percent
-    )
-
 def start_tensorboard():
-    """啟動 TensorBoard 並開啟瀏覽器"""
+    """Start TensorBoard and open browser"""
     if not os.path.exists("./runs"):
-        print("⚠️  找不到 runs/ 資料夾，跳過 TensorBoard")
+        print("WARNING: runs/ folder not found, skipping TensorBoard")
         return None
     
     try:
-        print("🚀 啟動 TensorBoard...")
-        # 啟動 TensorBoard 在背景執行
+        print("Starting TensorBoard...")
+        # Start TensorBoard in background
         proc = subprocess.Popen(
             ["tensorboard", "--logdir=./runs", "--port=6006"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
         
-        # 等待一下讓 TensorBoard 啟動
+        # Wait for TensorBoard to start
         time.sleep(3)
         
-        # 開啟瀏覽器
-        print("🌐 開啟瀏覽器: http://localhost:6006")
+        # Open browser
+        print("Opening browser: http://localhost:6006")
         webbrowser.open("http://localhost:6006")
         
         return proc
         
     except FileNotFoundError:
-        print("❌ 找不到 tensorboard 指令，請先安裝: pip install tensorboard")
+        print("ERROR: tensorboard command not found, please install: pip install tensorboard")
         return None
     except Exception as e:
-        print(f"⚠️  TensorBoard 啟動失敗: {e}")
+        print(f"WARNING: TensorBoard start failed: {e}")
         return None
 
 def ask_user_submission(model, sai):
-    """詢問用戶是否要提交模型"""
+    """Ask user whether to submit model"""
     while True:
         print("\n" + "="*50)
-        print("🤔 觀看完模型表現，你想提交到排行榜嗎？")
-        print("   y - 是的，提交模型")
-        print("   n - 不提交")
-        print("   r - 重新觀看一次")
+        print("After watching model performance, do you want to submit to leaderboard?")
+        print("   y - Yes, submit model")
+        print("   n - No, don't submit")
+        print("   r - Watch again")
         
-        choice = input("請選擇 (y/n/r): ").lower().strip()
+        choice = input("Please choose (y/n/r): ").lower().strip()
         
         if choice == 'y':
-            print("\n🏆 正在提交模型到排行榜...")
+            print("\nSubmitting model to leaderboard...")
             try:
-                # 詢問提交的模型名稱
-                model_name = input("請輸入模型名稱 (預設: My PPO Model): ").strip()
+                # Ask for model name
+                model_name = input("Enter model name (default: My PPO Model): ").strip()
                 if not model_name:
                     model_name = "My PPO Model"
                 
                 sai.submit(model_name, model, action_function, Preprocessor)
-                print("✅ 模型提交成功！")
+                print("SUCCESS: Model submitted successfully!")
                 return True
             except Exception as e:
-                print(f"❌ 提交失敗: {e}")
+                print(f"ERROR: Submission failed: {e}")
                 return False
                 
         elif choice == 'n':
-            print("👍 好的，不提交模型")
+            print("OK, not submitting model")
             return False
             
         elif choice == 'r':
-            print("\n🎬 重新開始觀看...")
+            print("\nStarting watch again...")
             try:
-                sai.watch(model, action_function, Preprocessor,use_custom_eval=False)
+                sai.watch(model, action_function, Preprocessor)
             except KeyboardInterrupt:
-                print("\n⏹️  觀看已停止")
+                print("\nWatch stopped")
             continue
             
         else:
-            print("❌ 無效選擇，請輸入 y、n 或 r")
+            print("ERROR: Invalid choice, please enter y, n, or r")
+
+def action_function(policy):
+    """Action function compatible with SAI submission format"""
+    expected_bounds = [-1, 1]
+    action_percent = (policy - expected_bounds[0]) / (expected_bounds[1] - expected_bounds[0])
+    bounded_percent = np.minimum(np.maximum(action_percent, 0), 1)
+    # Use hard-coded action space bounds
+    action_low = np.array([-1.0] * 12)
+    action_high = np.array([1.0] * 12)
+    return action_low + (action_high - action_low) * bounded_percent
 
 def main():
     global env
     
-    print("📊 本地模型總結 - TensorBoard + 觀看 + 提交")
+    print("Local Model Summary - TensorBoard + Watch + Submit")
     print("=" * 60)
     
-    # 檢查模型檔案是否存在
+    # Check if model file exists
     if not os.path.exists(MODEL_PATH):
-        print(f"❌ 找不到模型檔案: {MODEL_PATH}")
-        print("\n📝 請執行以下步驟:")
-        print("1. 從 Colab 下載 saved_models/ 資料夾")
-        print("2. 修改此腳本中的 MODEL_PATH 變數")
-        print("3. 確保模型檔案路徑正確")
-        print(f"\n💡 範例檔案名稱: simple_ppo_20241117_123456.zip")
+        print(f"ERROR: Model file not found: {MODEL_PATH}")
+        print("\nPlease follow these steps:")
+        print("1. Download saved_models/ folder from Colab")
+        print("2. Modify MODEL_PATH variable in this script")
+        print("3. Ensure model file path is correct")
+        print(f"\nExample filename: ppo_standalone_20241117_105737.zip")
         
-        # 顯示當前目錄下的模型檔案
+        # Show available model files
         if os.path.exists("./saved_models"):
-            print(f"\n📁 找到的模型檔案:")
+            print(f"\nFound model files:")
             for file in os.listdir("./saved_models"):
                 if file.endswith(".zip"):
                     print(f"   - {os.path.join('./saved_models', file)}")
         return
     
-    # 啟動 TensorBoard
+    # Start TensorBoard
     tensorboard_proc = start_tensorboard()
     
     try:
-        # 初始化 SAI 客戶端
+        # Initialize SAI client
         sai = SAIClient(comp_id="booster-soccer-showdown", api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv")
-        print("✅ SAI 客戶端初始化成功")
+        print("SUCCESS: SAI client initialized")
         
-        # 創建環境
+        # Create environment
         env = sai.make_env(use_custom_eval=False)
-        print("✅ 環境創建成功")
+        print("SUCCESS: Environment created")
         
-        # 載入訓練好的模型
-        print(f"📥 載入模型: {MODEL_PATH}")
+        # Load trained model
+        print(f"Loading model: {MODEL_PATH}")
         model = PPO.load(MODEL_PATH)
-        print("✅ 模型載入成功")
+        print("SUCCESS: Model loaded")
         
         print("\n" + "="*60)
-        print("🎯 現在你可以：")
-        print("1. 📊 查看 TensorBoard (已自動開啟瀏覽器)")
-        print("2. 🎬 觀看模型實際表現")
-        print("3. 🏆 決定是否提交到排行榜")
+        print("Now you can:")
+        print("1. View TensorBoard (browser opened automatically)")
+        print("2. Watch model actual performance")
+        print("3. Decide whether to submit to leaderboard")
         print("="*60)
         
-        # 詢問是否要開始觀看
-        input("\n按 Enter 開始觀看模型表現...")
+        # Ask if user wants to start watching
+        input("\nPress Enter to start watching model performance...")
         
-        # 開始觀看模型
-        print("\n🎬 開始觀看模型表現...")
-        print("   按 Ctrl+C 可以停止觀看")
+        # Start watching model
+        print("\nStarting model watch...")
+        print("   Press Ctrl+C to stop watching")
         
         try:
             sai.watch(model, action_function, Preprocessor,use_custom_eval=False)
         except KeyboardInterrupt:
-            print("\n⏹️  觀看已停止")
+            print("\nWatch stopped")
         
-        # 詢問是否提交
+        # Ask about submission
         ask_user_submission(model, sai)
         
     except Exception as e:
-        print(f"\n❌ 發生錯誤: {e}")
-        print("\n🛠️  可能的解決方案:")
-        print("1. 確保已安裝所有必要的依賴")
-        print("2. 檢查網路連接")
-        print("3. 確認 API 金鑰是否正確")
-        print("4. 確認模型檔案是否完整")
+        print(f"\nERROR: {e}")
+        print("\nPossible solutions:")
+        print("1. Ensure all required dependencies are installed")
+        print("2. Check network connection")
+        print("3. Verify API key is correct")
+        print("4. Ensure model file is complete")
     
     finally:
-        # 關閉 TensorBoard
+        # Close TensorBoard
         if tensorboard_proc:
-            print("\n🔄 關閉 TensorBoard...")
+            print("\nClosing TensorBoard...")
             tensorboard_proc.terminate()
         
-        # 關閉環境
+        # Close environment
         if 'env' in globals():
             env.close()
-            print("✅ 環境已關閉")
+            print("SUCCESS: Environment closed")
         
-        print("\n🎉 本地總結完成！感謝使用！")
+        print("\nLocal summary complete! Thanks for using!")
 
 if __name__ == "__main__":
     main()
