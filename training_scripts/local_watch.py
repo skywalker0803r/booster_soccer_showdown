@@ -16,7 +16,7 @@ import time
 import webbrowser
 
 # 你的模型檔案路徑 (需要修改為實際下載的模型路徑)
-MODEL_PATH = "./saved_models/simple_ppo_20251117_062217.zip"  # 修改這裡！
+MODEL_PATH = "./saved_models/simple_ppo_20251117_064015.zip"  # 修改這裡！
 
 class Preprocessor():
     def get_task_onehot(self, info):
