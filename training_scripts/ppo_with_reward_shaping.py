@@ -157,13 +157,22 @@ class RewardShapingPreprocessor():
         """重置 episode 時調用"""
         self._prev_potential = None
 
-# TensorBoard callback for logging rewards
+# Enhanced TensorBoard callback with best model saving
 class TensorBoardRewardCallback(BaseCallback):
-    def __init__(self, verbose=0):
+    def __init__(self, save_path="./saved_models", save_prefix="best_model", verbose=0):
         super().__init__(verbose)
         self.episode_rewards = []
-        self.episode_original_rewards = []
         self.episode_count = 0
+        self.save_path = save_path
+        self.save_prefix = save_prefix
+        
+        # 最佳模型追蹤
+        self.best_mean_reward = float('-inf')
+        self.best_single_reward = float('-inf')
+        self.evaluation_window = 100  # 用最近100個episode評估
+        self.check_freq = 10000  # 每10000步檢查一次是否保存
+        
+        os.makedirs(save_path, exist_ok=True)
 
     def _on_step(self) -> bool:
         if len(self.locals.get('infos', [])) > 0:
@@ -179,10 +188,18 @@ class TensorBoardRewardCallback(BaseCallback):
                     
                     print(f"Episode {self.episode_count}: Reward = {episode_reward:.4f}, Length = {episode_length}")
                     
+                    # 追蹤最佳單次獎勵
+                    if episode_reward > self.best_single_reward:
+                        self.best_single_reward = episode_reward
+                        single_best_path = os.path.join(self.save_path, f"{self.save_prefix}_single_best.zip")
+                        self.model.save(single_best_path)
+                        print(f"🏆 NEW SINGLE BEST! Reward: {episode_reward:.4f} - Saved to {single_best_path}")
+                    
                     self.episode_rewards.append(episode_reward)
-                    if len(self.episode_rewards) > 100:
+                    if len(self.episode_rewards) > 200:  # 保留更多歷史
                         self.episode_rewards.pop(0)
                     
+                    # 計算移動平均
                     if len(self.episode_rewards) >= 10:
                         avg_10 = np.mean(self.episode_rewards[-10:])
                         self.logger.record('reward/avg_reward_10ep', avg_10)
@@ -190,8 +207,34 @@ class TensorBoardRewardCallback(BaseCallback):
                     if len(self.episode_rewards) >= 50:
                         avg_50 = np.mean(self.episode_rewards[-50:])
                         self.logger.record('reward/avg_reward_50ep', avg_50)
+                        
+                    if len(self.episode_rewards) >= 100:
+                        avg_100 = np.mean(self.episode_rewards[-100:])
+                        self.logger.record('reward/avg_reward_100ep', avg_100)
+                        
+                        # 檢查是否為最佳平均獎勵
+                        if avg_100 > self.best_mean_reward:
+                            self.best_mean_reward = avg_100
+                            mean_best_path = os.path.join(self.save_path, f"{self.save_prefix}_mean_best.zip")
+                            self.model.save(mean_best_path)
+                            print(f"📈 NEW MEAN BEST! Avg reward (100 ep): {avg_100:.4f} - Saved to {mean_best_path}")
+
+        # 定期保存檢查點
+        if self.n_calls % self.check_freq == 0:
+            checkpoint_path = os.path.join(self.save_path, f"{self.save_prefix}_checkpoint_{self.n_calls}.zip")
+            self.model.save(checkpoint_path)
+            print(f"💾 Checkpoint saved: {checkpoint_path}")
 
         return True
+    
+    def get_best_stats(self):
+        """獲取最佳統計資訊"""
+        return {
+            'best_single_reward': self.best_single_reward,
+            'best_mean_reward': self.best_mean_reward,
+            'total_episodes': self.episode_count,
+            'final_avg_reward': np.mean(self.episode_rewards[-100:]) if len(self.episode_rewards) >= 100 else np.mean(self.episode_rewards)
+        }
 
 # 創建環境包裝器
 class SAIRewardShapingWrapper(gym.Wrapper):
@@ -292,7 +335,7 @@ def choose_training_mode():
         else:
             print("❌ 請輸入 1 或 2")
 
-def action_function(policy):
+def action_function(policy, env_ref):
     """動作函數"""
     expected_bounds = [-1, 1]
     action_percent = (policy - expected_bounds[0]) / (
@@ -300,8 +343,8 @@ def action_function(policy):
     )
     bounded_percent = np.minimum(np.maximum(action_percent, 0), 1)
     return (
-        base_env.action_space.low
-        + (base_env.action_space.high - base_env.action_space.low) * bounded_percent
+        env_ref.action_space.low
+        + (env_ref.action_space.high - env_ref.action_space.low) * bounded_percent
     )
 
 def main():
@@ -380,9 +423,27 @@ def main():
     print(f"   步數: {total_steps:,}")
     print(f"   獎勵塑形: ✅ 啟用")
     
+    # 創建增強回調
+    callback = TensorBoardRewardCallback(
+        save_path="./saved_models",
+        save_prefix=f"ppo_reward_shaping_{timestamp}"
+    )
+    
+    print(f"\n🤖 模型會自動保存：")
+    print(f"   🏆 單次最佳: xxx_single_best.zip")
+    print(f"   📈 平均最佳: xxx_mean_best.zip") 
+    print(f"   💾 定期檢查點: xxx_checkpoint_xxxxx.zip")
+    
     # 訓練
-    callback = TensorBoardRewardCallback()
     model.learn(total_timesteps=total_steps, callback=callback)
+    
+    # 獲取訓練統計
+    stats = callback.get_best_stats()
+    print(f"\n📊 訓練統計摘要:")
+    print(f"   🏆 最佳單次獎勵: {stats['best_single_reward']:.4f}")
+    print(f"   📈 最佳平均獎勵: {stats['best_mean_reward']:.4f}")
+    print(f"   🎮 總回合數: {stats['total_episodes']}")
+    print(f"   🎯 最終平均獎勵: {stats['final_avg_reward']:.4f}")
     
     # 保存模型
     os.makedirs("./saved_models", exist_ok=True)
@@ -393,7 +454,12 @@ def main():
     
     # 評估
     print("📈 進行本地評估...")
-    sai.benchmark(model, action_function, RewardShapingPreprocessor)
+    
+    # 修正 action_function 參數
+    def fixed_action_function(policy):
+        return action_function(policy, base_env)
+    
+    sai.benchmark(model, fixed_action_function, RewardShapingPreprocessor)
     
     env.close()
     
