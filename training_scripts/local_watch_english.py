@@ -170,9 +170,9 @@ def action_function(policy):
     expected_bounds = [-1, 1]
     action_percent = (policy - expected_bounds[0]) / (expected_bounds[1] - expected_bounds[0])
     bounded_percent = np.minimum(np.maximum(action_percent, 0), 1)
-    # Use hard-coded action space bounds
-    action_low = np.array([-1.0] * 12)
-    action_high = np.array([1.0] * 12)
+    # Use official action space bounds from docs/About.md line 55
+    action_low = np.array([-45,-45,-30,-65,-24,-15,-45,-45,-30,-65,-24,-15])
+    action_high = np.array([45,45,30,65,24,15,45,45,30,65,24,15])
     return action_low + (action_high - action_low) * bounded_percent
 
 def main():
