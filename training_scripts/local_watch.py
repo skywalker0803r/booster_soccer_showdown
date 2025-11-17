@@ -1,18 +1,17 @@
+"""
+本地觀看訓練好的 PPO 模型
+從 Colab 下載模型檔案後，在本地電腦上觀看模型表現
+"""
+
 from sai_rl import SAIClient
 from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import BaseCallback
 import numpy as np
 import os
-from datetime import datetime
 
-## Initialize the SAI client
-sai = SAIClient(comp_id="booster-soccer-showdown", api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv")
-
-## Make the environment
-env = sai.make_env()
+# 你的模型檔案路徑 (需要修改為實際下載的模型路徑)
+MODEL_PATH = "./saved_models/simple_ppo_20241117_123456.zip"  # 修改這裡！
 
 class Preprocessor():
-
     def get_task_onehot(self, info):
         if 'task_index' in info:
             return info['task_index']
@@ -28,7 +27,6 @@ class Preprocessor():
         return a - b + c 
 
     def modify_state(self, obs, info):
-        
         if len(obs.shape) == 1:
             obs = np.expand_dims(obs, axis=0)
 
@@ -88,62 +86,8 @@ class Preprocessor():
 
         return obs
 
-# TensorBoard callback for logging rewards
-class TensorBoardRewardCallback(BaseCallback):
-    def __init__(self, verbose=0):
-        super().__init__(verbose)
-        self.episode_rewards = []
-        self.episode_count = 0
-
-    def _on_step(self) -> bool:
-        # Log rewards when episodes are done
-        if len(self.locals.get('infos', [])) > 0:
-            for info in self.locals['infos']:
-                if 'episode' in info:
-                    episode_reward = info['episode']['r']
-                    episode_length = info['episode']['l']
-                    self.episode_count += 1
-                    
-                    # Log to tensorboard
-                    self.logger.record('reward/episode_reward', episode_reward)
-                    self.logger.record('reward/episode_length', episode_length)
-                    self.logger.record('reward/episode_count', self.episode_count)
-                    
-                    print(f"Episode {self.episode_count}: Reward = {episode_reward:.4f}, Length = {episode_length}")
-                    
-                    # Keep track for moving average
-                    self.episode_rewards.append(episode_reward)
-                    if len(self.episode_rewards) > 100:
-                        self.episode_rewards.pop(0)
-                    
-                    # Log moving averages
-                    if len(self.episode_rewards) >= 10:
-                        avg_10 = np.mean(self.episode_rewards[-10:])
-                        self.logger.record('reward/avg_reward_10ep', avg_10)
-                    
-                    if len(self.episode_rewards) >= 50:
-                        avg_50 = np.mean(self.episode_rewards[-50:])
-                        self.logger.record('reward/avg_reward_50ep', avg_50)
-                        
-                    if len(self.episode_rewards) == 100:
-                        avg_100 = np.mean(self.episode_rewards)
-                        self.logger.record('reward/avg_reward_100ep', avg_100)
-
-        return True
-
-# 設定 TensorBoard 日誌目錄
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-tensorboard_log = f"./runs/SimplePPO_{timestamp}"
-os.makedirs("./runs", exist_ok=True)
-
-print(f"📊 TensorBoard 日誌將保存到: {tensorboard_log}")
-print(f"🖥️  啟動 TensorBoard 指令: tensorboard --logdir=./runs")
-
-## Create the model (加入 TensorBoard 支援)
-model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=tensorboard_log)
-
-## Define an action function
 def action_function(policy):
+    """動作函數，將策略輸出轉換為環境動作"""
     expected_bounds = [-1, 1]
     action_percent = (policy - expected_bounds[0]) / (
         expected_bounds[1] - expected_bounds[0]
@@ -154,41 +98,63 @@ def action_function(policy):
         + (env.action_space.high - env.action_space.low) * bounded_percent
     )
 
-## Train the model
-# 創建回調函數
-callback = TensorBoardRewardCallback()
+def main():
+    global env
+    
+    print("🏠 本地觀看 PPO 模型")
+    print("=" * 40)
+    
+    # 檢查模型檔案是否存在
+    if not os.path.exists(MODEL_PATH):
+        print(f"❌ 找不到模型檔案: {MODEL_PATH}")
+        print("\n📝 請執行以下步驟:")
+        print("1. 從 Colab 下載 saved_models/ 資料夾")
+        print("2. 修改此腳本中的 MODEL_PATH 變數")
+        print("3. 確保模型檔案路徑正確")
+        print(f"\n💡 範例檔案名稱: simple_ppo_20241117_123456.zip")
+        
+        # 顯示當前目錄下的模型檔案
+        if os.path.exists("./saved_models"):
+            print(f"\n📁 找到的模型檔案:")
+            for file in os.listdir("./saved_models"):
+                if file.endswith(".zip"):
+                    print(f"   - {os.path.join('./saved_models', file)}")
+        return
+    
+    try:
+        # 初始化 SAI 客戶端
+        sai = SAIClient(comp_id="booster-soccer-showdown", api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv")
+        print("✅ SAI 客戶端初始化成功")
+        
+        # 創建環境
+        env = sai.make_env()
+        print("✅ 環境創建成功")
+        
+        # 載入訓練好的模型
+        print(f"📥 載入模型: {MODEL_PATH}")
+        model = PPO.load(MODEL_PATH)
+        print("✅ 模型載入成功")
+        
+        # 開始觀看模型
+        print("\n🎬 開始觀看模型表現...")
+        print("   按 Ctrl+C 可以停止觀看")
+        
+        sai.watch(model, action_function, Preprocessor)
+        
+    except KeyboardInterrupt:
+        print("\n⏹️  觀看已停止")
+    except Exception as e:
+        print(f"\n❌ 發生錯誤: {e}")
+        print("\n🛠️  可能的解決方案:")
+        print("1. 確保已安裝所有必要的依賴")
+        print("2. 檢查網路連接")
+        print("3. 確認 API 金鑰是否正確")
+        print("4. 確認模型檔案是否完整")
+    
+    finally:
+        if 'env' in globals():
+            env.close()
+            print("✅ 環境已關閉")
 
-print("🚀 開始訓練 PPO 模型...")
-model.learn(total_timesteps=100000, callback=callback)  # 比官方例子多訓練一點
-
-# 保存模型
-os.makedirs("./saved_models", exist_ok=True)
-model_path = f"./saved_models/simple_ppo_{timestamp}"
-model.save(model_path)
-print(f"💾 模型已保存到: {model_path}")
-
-## Watch (註解掉，因為在 Colab 上無法使用)
-#sai.watch(model, action_function, Preprocessor)
-print("ℹ️  sai.watch 功能已註解掉 (Colab 環境不支援)")
-
-## Benchmark the model locally
-print("📈 進行本地評估...")
-sai.benchmark(model,action_function, Preprocessor)
-
-## submit model
-print("🏆 提交模型到排行榜...")
-sai.submit("Simple PPO Model", model,action_function, Preprocessor)
-
-env.close()
-
-print(f"""
-🎉 訓練完成！
-
-📊 TensorBoard 查看方式:
-   1. 下載 runs/ 資料夾到本地
-   2. 在本地執行: tensorboard --logdir=./runs
-   3. 開啟瀏覽器: http://localhost:6006
-
-💾 模型檔案: {model_path}.zip
-   下載到本地後可以用 PPO.load() 載入
-""")
+if __name__ == "__main__":
+    main()
