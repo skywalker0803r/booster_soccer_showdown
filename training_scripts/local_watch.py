@@ -16,7 +16,7 @@ import time
 import webbrowser
 
 # 你的模型檔案路徑 (需要修改為實際下載的模型路徑)
-MODEL_PATH = "./saved_models/simple_ppo_20241117_123456.zip"  # 修改這裡！
+MODEL_PATH = "./saved_models/simple_ppo_20251117_062217.zip"  # 修改這裡！
 
 class Preprocessor():
     def get_task_onehot(self, info):
@@ -209,7 +209,7 @@ def main():
         print("✅ SAI 客戶端初始化成功")
         
         # 創建環境
-        env = sai.make_env()
+        env = sai.make_env(use_custom_eval=False)
         print("✅ 環境創建成功")
         
         # 載入訓練好的模型
