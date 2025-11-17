@@ -4,13 +4,15 @@ from stable_baselines3.common.callbacks import BaseCallback
 import numpy as np
 import os
 import torch
+import gymnasium as gym
+from gymnasium.spaces import Box
 from datetime import datetime
 
 ## Initialize the SAI client
 sai = SAIClient(comp_id="booster-soccer-showdown", api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv")
 
 ## Make the environment
-env = sai.make_env()
+base_env = sai.make_env()
 
 class Preprocessor():
 
@@ -88,6 +90,65 @@ class Preprocessor():
                          task_onehot))
 
         return obs
+
+# 創建環境包裝器來正確處理預處理
+import gymnasium as gym
+from gymnasium.spaces import Box
+
+class SAIPreprocessorWrapper(gym.Wrapper):
+    """包裝器，將 SAI 環境與預處理器整合"""
+    
+    def __init__(self, sai_env, preprocessor_class):
+        super().__init__(sai_env)
+        self.preprocessor = preprocessor_class()
+        
+        # 重新定義觀察空間為預處理後的 89 維
+        self.observation_space = Box(
+            low=-np.inf, 
+            high=np.inf, 
+            shape=(89,), 
+            dtype=np.float32
+        )
+        
+        # 動作空間保持不變
+        self.action_space = sai_env.action_space
+    
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        
+        # 不使用獎勵形塑，無需重置
+        
+        # 預處理觀察
+        processed_obs = self.preprocessor.modify_state(obs, info)
+        
+        # 確保輸出是一維數組
+        if processed_obs.ndim == 2 and processed_obs.shape[0] == 1:
+            processed_obs = processed_obs.squeeze(0)
+        
+        return processed_obs.astype(np.float32), info
+    
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        
+        # 預處理觀察
+        processed_obs = self.preprocessor.modify_state(obs, info)
+        
+        # 不使用獎勵形塑，保持原始獎勵
+        # reward = reward  # 保持原始獎勵不變
+        
+        # 確保輸出是一維數組
+        if processed_obs.ndim == 2 and processed_obs.shape[0] == 1:
+            processed_obs = processed_obs.squeeze(0)
+        
+        return processed_obs.astype(np.float32), reward, terminated, truncated, info
+
+# 包裝環境（不使用獎勵形塑，只用基本預處理器）
+env = SAIPreprocessorWrapper(base_env, Preprocessor)
+
+print(f"✅ 環境已包裝")
+print(f"   原始觀察空間: {base_env.observation_space}")
+print(f"   處理後觀察空間: {env.observation_space}")
+print(f"   動作空間: {env.action_space}")
 
 # TensorBoard callback for logging rewards
 class TensorBoardRewardCallback(BaseCallback):
@@ -295,7 +356,7 @@ print("ℹ️  sai.watch 功能已註解掉 (Colab 環境不支援)")
 
 ## Benchmark the model locally
 print("📈 進行本地評估...")
-sai.benchmark(model,action_function, Preprocessor)
+sai.benchmark(model, action_function, Preprocessor)
 
 env.close()
 

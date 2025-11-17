@@ -5,69 +5,63 @@ observation shape.
 The above exception was the direct cause of the following exception:
 
 ╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
-│ /content/booster_soccer_showdown/training_scripts/simple_ppo.py:275 in <module>                  │
+│ /content/booster_soccer_showdown/training_scripts/simple_ppo.py:298 in <module>                  │
 │                                                                                                  │
-│   272                                                                                            │
-│   273 ## Benchmark the model locally                                                             │
-│   274 print("📈 進行本地評估...")                                                                │
-│ ❱ 275 sai.benchmark(model,action_function, Preprocessor)                                         │
-│   276                                                                                            │
-│   277 env.close()                                                                                │
-│   278     
+│   295                                                                                            │
+│   296 ## Benchmark the model locally                                                             │
+│   297 print("📈 進行本地評估...")                                                                │
+│ ❱ 298 sai.benchmark(model,action_function, Preprocessor)                                         │
+│   299                                                                                            │
+│   300 env.close()   
 
 
 ╭─ Response ───────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ 完美！我已經修復了 simple_ppo.py，讓它與 main.py 保持一致：                                                          │
+│ 完成！現在 PPO 版本已經移除了獎勵形塑，使用純原始獎勵訓練：                                                          │
 │                                                                                                                      │
 │                                                                                                                      │
-│                                                    🔧 修復內容：                                                     │
+│                                                    🎯 修改內容：                                                     │
 │                                                                                                                      │
-│                                               1. 移除了錯誤的維度壓縮                                                │
+│                                                   ✅ 移除獎勵形塑                                                    │
 │                                                                                                                      │
-│  • 保持 modify_state 返回 (1, 89) 形狀，與 DDPG 版本一致                                                             │
+│  • 不再使用 aligned_enhanced_preprocessor                                                                            │
+│  • 直接使用基本的 Preprocessor 類別                                                                                  │
+│  • 保持原始環境獎勵不變                                                                                              │
 │                                                                                                                      │
-│                                                2. 加強了 PPO 模型配置                                                │
-│                                                                                                                      │
-│  • 明確指定網路架構 [256, 128, 64]（與 DDPG 版本相同）                                                               │
-│  • 添加了完整的 PPO 超參數配置                                                                                       │
-│  • 自動 GPU 檢測和使用                                                                                               │
-│                                                                                                                      │
-│                                                  3. 添加必要的導入                                                   │
-│                                                                                                                      │
-│  • 導入 torch 用於 GPU 檢測                                                                                          │
+│                                                   📊 現在的架構：                                                    │
 │                                                                                                                      │
 │                                                                                                                      │
-│                                                 ✨ 現在的 PPO 配置：                                                 │
+│  SAI 原始環境 (45 維) + 原始獎勵                                                                                     │
+│      ↓                                                                                                               │
+│  SAIPreprocessorWrapper                                                                                              │
+│      ↓ 只做觀察預處理 (不改變獎勵)                                                                                   │
+│  PPO 看到的環境 (89 維) + 原始獎勵                                                                                   │
+│      ↓ 訓練                                                                                                          │
+│  PPO 模型 (純原始獎勵學習)                                                                                           │
 │                                                                                                                      │
 │                                                                                                                      │
-│  model = PPO(                                                                                                        │
-│      "MlpPolicy",                                                                                                    │
-│      env,                                                                                                            │
-│      verbose=1,                                                                                                      │
-│      tensorboard_log=tensorboard_log,                                                                                │
-│      policy_kwargs=dict(net_arch=[256, 128, 64]),                                                                    │
-│      learning_rate=3e-4,                                                                                             │
-│      n_steps=2048,                                                                                                   │
-│      batch_size=64,                                                                                                  │
-│      device='cuda' if torch.cuda.is_available() else 'cpu'                                                           │
-│  )                                                                                                                   │
+│                                                                                                                      │
+│                                               🔄 與 DDPG 版本的對比：                                                │
 │                                                                                                                      │
 │                                                                                                                      │
-│ 這確保了：                                                                                                           │
+│   版本                  預處理     獎勵          算法                                                                │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                                                               │
+│   DDPG (main.py)        ✅ 89 維   🎯 獎勵形塑   DDPG                                                                │
+│   PPO (simple_ppo.py)   ✅ 89 維   🎯 原始獎勵   PPO                                                                 │
 │                                                                                                                      │
-│  • ✅ 觀察空間相容性 - 與 SAI 環境完全匹配                                                                           │
-│  • ✅ 網路架構一致 - 與 DDPG 版本使用相同的神經網路結構                                                              │
-│  • ✅ 效能優化 - 自動使用 GPU 和優化的超參數                                                                         │
 │                                                                                                                      │
+│ 這樣你可以比較：                                                                                                     │
 │                                                                                                                      │
-│                                             🚀 現在應該可以正常運行了！                                              │
+│  • DDPG + 獎勵形塑 vs PPO + 原始獎勵                                                                                 │
+│  • 看看哪種組合效果更好                                                                                              │
+│                                                                                                                      │
+│ 現在可以開始純淨的 PPO 訓練了：                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
 │  cd training_scripts                                                                                                 │
 │  python simple_ppo.py                                                                                                │
 │                                                                                                                      │
 │                                                                                                                      │
-│ 這次應該不會再有維度錯誤了。想要測試一下嗎？                                                                         │
+│ PPO 將學會在原始稀疏獎勵環境中找到有效策略！                                                                         │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-Session context: ▮▮▮▮▮▮▮▮▮▮ 50.4K/200K
-Daily total:     ▮▮▮▮▮▮▮▮▮▮ 3.6M/20M
+Session context: ▮▮▮▮▮▮▮▮▮▮ 56.4K/200K
+Daily total:     ▮▮▮▮▮▮▮▮▮▮ 3.9M/20M
