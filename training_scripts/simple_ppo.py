@@ -3,6 +3,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 import numpy as np
 import os
+import torch
 from datetime import datetime
 
 ## Initialize the SAI client
@@ -86,9 +87,6 @@ class Preprocessor():
                          info["defender_xpos"],
                          task_onehot))
 
-        # 確保輸出是一維數組
-        if obs.shape[0] == 1:
-            obs = obs.squeeze(0)
         return obs
 
 # TensorBoard callback for logging rewards
@@ -203,9 +201,24 @@ print(f"📊 TensorBoard 日誌將保存到: {tensorboard_log}")
 print(f"🖥️  啟動 TensorBoard 指令: tensorboard --logdir=./runs")
 
 ## Create or load the model
+# 配置 PPO 策略，指定正確的觀察空間維度
+policy_kwargs = dict(
+    net_arch=[256, 128, 64],  # 與 DDPG 版本相同的網路架構
+)
+
 if training_mode == "new":
     print("\n🆕 創建新的 PPO 模型...")
-    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=tensorboard_log)
+    model = PPO(
+        "MlpPolicy", 
+        env, 
+        verbose=1, 
+        tensorboard_log=tensorboard_log,
+        policy_kwargs=policy_kwargs,
+        learning_rate=3e-4,
+        n_steps=2048,
+        batch_size=64,
+        device='cuda' if torch.cuda.is_available() else 'cpu'
+    )
 else:
     print("\n📥 載入現有模型...")
     try:
@@ -216,7 +229,17 @@ else:
     except Exception as e:
         print(f"❌ 模型載入失敗: {e}")
         print("🔄 改為創建新模型...")
-        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=tensorboard_log)
+        model = PPO(
+            "MlpPolicy", 
+            env, 
+            verbose=1, 
+            tensorboard_log=tensorboard_log,
+            policy_kwargs=policy_kwargs,
+            learning_rate=3e-4,
+            n_steps=2048,
+            batch_size=64,
+            device='cuda' if torch.cuda.is_available() else 'cpu'
+        )
 
 ## Define an action function
 def action_function(policy):
