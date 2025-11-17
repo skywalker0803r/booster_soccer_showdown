@@ -441,7 +441,7 @@ print(f"模型已保存到: {save_model_path}")
 
 ## Benchmark the model locally
 print("進行本地評估...")
-sai.benchmark(model, action_function, preprocessor_class=EnhancedPreprocessor)
+sai.benchmark(model, action_function, Preprocessor)
 
 env.close()
 
