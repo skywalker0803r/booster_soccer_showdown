@@ -97,16 +97,83 @@ class AlignedSoccerRewardShaper:
         elif movement_speed > 3.0:  # Too frantic
             shaped_reward -= 0.005
             
-        # 6. SUCCESS AMPLIFICATION: Boost any positive original reward
+        # 6. BALL VELOCITY REWARD: Task-specific ball speed rewards
+        shaped_reward = self._add_ball_velocity_reward(info, shaped_reward)
+        
+        # 7. SUCCESS AMPLIFICATION: Boost any positive original reward
         if original_reward > 0:
             shaped_reward += 0.01
             
-        # 7. CONSERVATIVE CLIPPING: Keep shaping minimal
-        shaped_reward = np.clip(shaped_reward, -0.05, 0.03)
+        # 8. CONSERVATIVE CLIPPING: Keep shaping minimal
+        shaped_reward = np.clip(shaped_reward, -0.05, 0.05)  # Increased upper limit for velocity rewards
         
         self.step_count += 1
         return original_reward + shaped_reward
     
+    def _add_ball_velocity_reward(self, info, shaped_reward):
+        """
+        Task-specific ball velocity rewards based on direction and speed
+        """
+        ball_vel = info.get("ball_velp_rel_robot", np.zeros((1, 3)))
+        if len(ball_vel.shape) > 1:
+            ball_vel = ball_vel[0]
+        
+        ball_speed = np.linalg.norm(ball_vel)
+        
+        # Skip if ball is not moving
+        if ball_speed < 0.1:
+            return shaped_reward
+        
+        # Get task-relevant positions
+        goal_pos = info.get("goal_team_1_rel_robot", np.zeros((1, 3)))
+        if len(goal_pos.shape) > 1:
+            goal_pos = goal_pos[0]
+            
+        target_pos = info.get("target_xpos_rel_robot", np.zeros((1, 3)))
+        if len(target_pos.shape) > 1:
+            target_pos = target_pos[0]
+        
+        ball_direction = ball_vel / ball_speed
+        
+        # Determine task type and apply appropriate velocity rewards
+        if np.linalg.norm(target_pos) > 0.1:  # Task 3: Precision Pass
+            target_direction = target_pos / (np.linalg.norm(target_pos) + 1e-8)
+            target_alignment = np.dot(target_direction, ball_direction)
+            
+            if target_alignment > 0.8 and 1.0 < ball_speed < 5.0:
+                # Perfect direction, optimal speed for passing
+                shaped_reward += 0.02 * min(ball_speed, 4.0)
+            elif target_alignment > 0.6 and ball_speed < 3.0:
+                # Good direction, acceptable speed
+                shaped_reward += 0.01 * ball_speed
+            elif target_alignment < -0.3 and ball_speed > 2.0:
+                # Wrong direction, high speed - penalty
+                shaped_reward -= 0.01
+                
+        else:  # Task 1 & 2: Penalty Kicks
+            goal_direction = goal_pos / (np.linalg.norm(goal_pos) + 1e-8)
+            goal_alignment = np.dot(goal_direction, ball_direction)
+            
+            if goal_alignment > 0.8:  # Strong alignment toward goal
+                if ball_speed > 3.0:
+                    # High speed toward goal - excellent
+                    shaped_reward += 0.025 * min(ball_speed, 8.0)
+                elif ball_speed > 1.0:
+                    # Medium speed toward goal - good
+                    shaped_reward += 0.015 * ball_speed
+                else:
+                    # Low speed toward goal - okay
+                    shaped_reward += 0.01 * ball_speed
+                    
+            elif goal_alignment > 0.5:  # Moderate alignment
+                shaped_reward += 0.008 * min(ball_speed, 5.0)
+                
+            elif goal_alignment < -0.3 and ball_speed > 2.0:
+                # High speed away from goal - penalty
+                shaped_reward -= 0.015
+        
+        return shaped_reward
+
     def reset(self):
         """Reset for new episode"""
         self.prev_ball_dist = None
