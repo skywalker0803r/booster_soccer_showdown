@@ -14,9 +14,22 @@ import gymnasium as gym
 import sys
 
 # 添加 booster_control 到路徑
-sys.path.append('booster_control')
-from se3_keyboard import Se3Keyboard, Se3Keyboard_Pynput
-from t1_utils import LowerT1JoyStick
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+booster_control_path = os.path.join(os.path.dirname(current_dir), 'booster_control')
+sys.path.insert(0, booster_control_path)
+
+try:
+    from se3_keyboard import Se3Keyboard, Se3Keyboard_Pynput
+    from t1_utils import LowerT1JoyStick
+    print(f"✅ 成功導入 booster_control 模組")
+except ImportError as e:
+    print(f"❌ 導入模組失敗: {e}")
+    print(f"🔍 嘗試的路徑: {booster_control_path}")
+    print(f"📁 當前目錄內容: {os.listdir('.')}")
+    if os.path.exists('booster_control'):
+        print(f"📁 booster_control 內容: {os.listdir('booster_control')}")
+    raise
 
 
 class ExpertTrajectoryCollector:
