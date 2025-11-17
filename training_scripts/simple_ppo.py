@@ -86,6 +86,9 @@ class Preprocessor():
                          info["defender_xpos"],
                          task_onehot))
 
+        # 確保輸出是一維數組
+        if obs.shape[0] == 1:
+            obs = obs.squeeze(0)
         return obs
 
 # TensorBoard callback for logging rewards
