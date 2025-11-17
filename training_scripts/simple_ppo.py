@@ -175,20 +175,18 @@ print("ℹ️  sai.watch 功能已註解掉 (Colab 環境不支援)")
 print("📈 進行本地評估...")
 sai.benchmark(model,action_function, Preprocessor)
 
-## submit model
-print("🏆 提交模型到排行榜...")
-sai.submit("Simple PPO Model", model,action_function, Preprocessor)
-
 env.close()
 
 print(f"""
-🎉 訓練完成！
+🎉 Colab 訓練完成！
 
-📊 TensorBoard 查看方式:
-   1. 下載 runs/ 資料夾到本地
-   2. 在本地執行: tensorboard --logdir=./runs
-   3. 開啟瀏覽器: http://localhost:6006
+📦 下載以下檔案到本地:
+   1. saved_models/ 資料夾 - 包含訓練好的模型
+   2. runs/ 資料夾 - 包含 TensorBoard 日誌
+
+🖥️  本地操作:
+   1. 執行 local_watch.py 觀看模型並決定是否提交
+   2. 執行 tensorboard --logdir=./runs 查看訓練曲線
 
 💾 模型檔案: {model_path}.zip
-   下載到本地後可以用 PPO.load() 載入
 """)
