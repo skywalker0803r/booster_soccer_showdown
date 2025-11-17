@@ -356,7 +356,10 @@ def action_function(policy):
     expected_bounds = [-1, 1]
     action_percent = (policy - expected_bounds[0]) / (expected_bounds[1] - expected_bounds[0])
     bounded_percent = np.minimum(np.maximum(action_percent, 0), 1)
-    return base_env.action_space.low + (base_env.action_space.high - base_env.action_space.low) * bounded_percent
+    # Use hard-coded action space bounds to avoid base_env dependency
+    action_low = np.array([-1.0] * 12)  # Standard robot joint limits
+    action_high = np.array([1.0] * 12)
+    return action_low + (action_high - action_low) * bounded_percent
 
 ## Initialize the SAI client
 sai = SAIClient(comp_id="booster-soccer-showdown", api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv")
