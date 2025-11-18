@@ -16,3 +16,6 @@
   請試試看吧！好的，我將執行您剛才確認過的訓練腳本。
 
   我會使用 4 個平行環境訓練 500,000 個時間步，並且每 5000 步在終端機更新一次詳細的訓練日誌。
+
+
+  python training_scripts/ppo_with_pbrs.py --total_timesteps=15000000 --n_envs=4 --log_interval=5000
