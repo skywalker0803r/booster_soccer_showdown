@@ -160,20 +160,36 @@ class SaveBestModelCallback(BaseCallback):
         self.save_path = save_path
         self.save_prefix = save_prefix
         self.best_mean_reward = -np.inf
+        self.episode_rewards = []
         os.makedirs(save_path, exist_ok=True)
 
     def _on_step(self) -> bool:
-        # Check if 'monitor' information is available in infos
-        if 'episode' in self.training_env.get_attr('info')[0]:
-            # In VecEnv, infos is a list of dicts. We check the first one.
-            mean_reward = np.mean([info['episode']['r'] for info in self.locals['infos'] if 'episode' in info])
-            
-            if mean_reward > self.best_mean_reward:
-                self.best_mean_reward = mean_reward
-                best_model_path = os.path.join(self.save_path, f"{self.save_prefix}_best.zip")
-                self.model.save(best_model_path)
-                if self.verbose > 0:
-                    print(f"📈 New best mean reward: {self.best_mean_reward:.2f} -> Saved model to {best_model_path}")
+        # Access 'infos' from the callback's locals dictionary
+        for info in self.locals.get('infos', []):
+            if 'episode' in info:
+                # An episode has finished
+                episode_reward = info['episode']['r']
+                self.episode_rewards.append(episode_reward)
+                
+                # Keep last 100 rewards for moving average
+                if len(self.episode_rewards) > 100:
+                    self.episode_rewards.pop(0)
+
+                # Log the reward
+                self.logger.record('reward/episode_reward', episode_reward)
+
+                # Calculate and log moving average if we have enough episodes
+                if len(self.episode_rewards) >= 20: # Start logging after 20 episodes
+                    mean_reward = np.mean(self.episode_rewards)
+                    self.logger.record('reward/mean_reward_last_100', mean_reward)
+
+                    # Check if this is the best model based on mean reward
+                    if mean_reward > self.best_mean_reward:
+                        self.best_mean_reward = mean_reward
+                        best_model_path = os.path.join(self.save_path, f"{self.save_prefix}_best.zip")
+                        self.model.save(best_model_path)
+                        if self.verbose > 0:
+                            print(f"📈 New best mean reward: {self.best_mean_reward:.2f} -> Saved model to {best_model_path}")
         return True
 
 # --- Main Execution Block ---
