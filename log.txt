@@ -1,59 +1,106 @@
------------------------------
-Training Stage: HRL
-Training Mode: NEW
-Policy: <class 'stable_baselines3.common.policies.ActorCriticPolicy'>
-Timesteps per update: 2048
-Total Timesteps: 5000000
-Learning Rate: 0.0003
-Gamma: 0.99
-Clip Range: FloatSchedule(ConstantSchedule(val=0.2))
+你覺得訓練得起來嗎
 
-HRL LL Steps: 10
+這套訓練框架設計得相當完整和嚴謹，綜合使用了當前強化學習領域中解決複雜控制問題的兩種核心策略：PBRS (獎勵塑形) 和 HRL (分層強化學習)。
 
-TensorBoard Log: runs/hrl_20251118-105635_hl_policy
-Models will be saved in: hrl_models
------------------------------
+因此，我認為這個策略訓練成功的可能性很高。
 
-Logging to runs/hrl_20251118-105635_hl_policy/PPO_1
----------------------------------
-| rollout/           |          |
-|    ep_len_mean     | 28       |
-|    ep_rew_mean     | -2.49    |
-| time/              |          |
-|    fps             | 40       |
-|    iterations      | 1        |
-|    time_elapsed    | 50       |
-|    total_timesteps | 2048     |
----------------------------------
------------------------------------------
-| rollout/                |             |
-|    ep_len_mean          | 28          |
-|    ep_rew_mean          | -2.49       |
-| time/                   |             |
-|    fps                  | 39          |
-|    iterations           | 2           |
-|    time_elapsed         | 103         |
-|    total_timesteps      | 4096        |
-| train/                  |             |
-|    approx_kl            | 0.008109456 |
-|    clip_fraction        | 0.0241      |
-|    clip_range           | 0.2         |
-|    entropy_loss         | -0.688      |
-|    explained_variance   | -0.418      |
-|    learning_rate        | 0.0003      |
-|    loss                 | -0.00646    |
-|    n_updates            | 10          |
-|    policy_gradient_loss | -0.00256    |
-|    value_loss           | 0.0147      |
------------------------------------------
+成功的關鍵在於：
 
-🛠️ 下一步行動建議
-現在程式正在訓練中，您可以關注以下幾個方面來監控和管理訓練進度：
+1. 低階技能訓練 (Move/Kick) 的穩定性：由 PBRS 保證
+踢足球的任務獎勵非常稀疏（只有進球才有大獎勵）。如果直接訓練，策略很難收斂。
 
-監控 TensorBoard： 您在日誌中看到：TensorBoard Log: runs/hrl_20251118-105635_hl_policy。建議您啟動 TensorBoard 來即時查看平均回報（rollout/ep_reward_mean_smooth）和訓練損失。
+解決方案： 透過 PBRSWrapper 引入了潛在函數 V(s)。這個函數會獎勵代理：
 
-等待模型保存： log_callback.py 中的 DetailedLogCallback 會在平均回報創下新高時自動保存模型到 hrl_models 目錄，並在終端輸出提示，您只需等待即可。
+k 
+1
+​
+  參數：鼓勵代理靠近球。
 
-如果您需要，我可以提供啟動 TensorBoard 的終端命令，或查看 log_callback.py 中模型保存的具體邏輯。
+k 
+2
+​
+  參數：鼓勵代理將球踢向球門。
 
-您希望我提供什麼幫助？ (例如：如何啟動 TensorBoard？)
+優勢： 這種輔助獎勵 R 
+′
+ =R+γ⋅V(s 
+′
+ )−V(s) 能提供持續的學習訊號，大大加快了機器人學會移動和踢球這兩個基礎技能的速度。
+
+2. 高階策略的學習效率：由 HRL 提升
+一旦低階技能訓練完成並保存，複雜的協調問題就被簡化了。
+
+解決方案： HierarchicalWrapper 將機器人的複雜連續動作空間抽象為簡單的離散技能選擇 (Discrete(2): Move 或 Kick)。
+
+優勢： 高階策略 (HL Policy) 不必學習如何控制每個關節，它只需決定何時和多久執行移動技能，以及何時執行踢球技能。這將高階決策的難度降低了幾個數量級，使其更容易在合理的時間內收斂。
+
+潛在的挑戰點
+當然，訓練的最終結果仍然取決於幾個細節：
+
+超參數調校 (Hyperparameters)： ppo_with_pbrs.py 中的 lr, gamma, n_epochs 等 PPO 參數，以及 PBRS 中的 k 
+1
+​
+ ,k 
+2
+​
+  係數，如果設置不當，仍可能導致訓練不穩定。
+
+低階模型的品質： 如果 move_policy_final.zip 和 kick_policy_final.zip 的表現不佳，高階策略無論如何協調，最終表現都會受限。
+
+狀態預處理 (Preprocessor)： 狀態轉換（例如四元數旋轉到機器人座標系）的邏輯是否正確，對模型學習至關重要。
+
+結論： 雖然存在調校的難度，但這個框架所採用的 PBRS + HRL 組合
+是業界公認解決此類複雜機器人控制任務的有效方法。
+如果參數調整得當，訓練出一個會踢足球的機器人策略是非常有可能的。
+
+那我該依序在終端機輸入啥指令 才訓練得起來
+
+您需要按照三個階段的順序，使用 ppo_with_pbrs.py 腳本來執行訓練，並在最後使用 local_watch_english.py 進行測試和提交。
+
+以下是您應當依序在終端機中輸入的指令：
+
+🟢 準備工作：確保環境和檔案就緒
+在開始訓練之前，請確保：
+
+您已經安裝了所有必要的 Python 庫 (stable-baselines3, gymnasium, numpy, tensorboard, sai_rl 等)。
+
+這五個 Python 檔案 (ppo_with_pbrs.py, hrl_wrapper.py, pbrs_wrapper.py, log_callback.py, local_watch_english.py) 位於同一個資料夾中。
+
+在 ppo_with_pbrs.py 腳本中，您的 SAIClient API 金鑰已被正確設置。
+
+階段一：低階技能訓練 (PBRS)
+訓練基礎技能並將模型保存到 ./low_level_models/ 目錄中。
+
+順序	目的	指令	預期輸出檔案
+1.	訓練 Move 技能 (使用 PBRS)	python ppo_with_pbrs.py --stage move --mode new	./low_level_models/move_policy_final.zip
+2.	訓練 Kick 技能 (使用 PBRS)	python ppo_with_pbrs.py --stage kick --mode new	./low_level_models/kick_policy_final.zip
+注意： 每個訓練步驟可能需要很長的時間（取決於 total_timesteps 和您的硬體配置）。請等待第一個訓練完成後，再執行第二個指令。
+
+階段二：高階策略訓練 (HRL)
+訓練高階策略，它將載入並協調上面訓練好的 Move 和 Kick 技能。
+
+順序	目的	指令	預期輸出檔案
+3.	訓練 HRL 策略 (協調 Move/Kick)	python ppo_with_pbrs.py --stage hrl --mode new	./hrl_models/hl_policy_final.zip
+階段三：評估與提交
+使用訓練好的高階模型進行模擬觀察，並決定是否提交到排行榜。
+
+順序	目的	操作及指令
+4.	修改模型路徑	
+編輯 local_watch_english.py 檔案：
+
+
+將 MODEL_PATH 變數修改為您的最終模型路徑：
+
+
+MODEL_PATH = "./hrl_models/hl_policy_final.zip"
+
+5.	啟動觀察/提交	python local_watch_english.py
+執行步驟 5 後，程式將會：
+
+啟動 TensorBoard 讓您檢視訓練曲線。
+
+提示您按 Enter 開始在模擬器中觀察訓練成果。
+
+觀察結束後，詢問您是否要提交 (Submit) 模型。
+
+您是否需要我提供關於如何監控訓練進度的指令（使用 TensorBoard）？
