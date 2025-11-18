@@ -32,16 +32,10 @@ class PBRSPreprocessor:
         default_pos = np.zeros((self.num_envs, 3), dtype=np.float32)
         
         # 球相對於機器人的位置 (只取 x, y)
-        try:
-            agent_to_ball_pos = info.get('ball_xpos_rel_robot', default_pos)[:, :2]
-        except:
-            agent_to_ball_pos = info.get('ball_xpos_rel_robot', default_pos)[:2]
+        agent_to_ball_pos = info.get('ball_xpos_rel_robot', default_pos)[:, :2]
         
         # 目標相對於球的位置 (只取 x, y)
-        try:
-            ball_to_goal_pos = info.get('goal_team_0_rel_ball', default_pos)[:, :2]
-        except:
-            ball_to_goal_pos = info.get('goal_team_0_rel_ball', default_pos)[:2]
+        ball_to_goal_pos = info.get('goal_team_0_rel_ball', default_pos)[:, :2]
 
         return agent_to_ball_pos, ball_to_goal_pos
     
@@ -53,15 +47,15 @@ class PBRSPreprocessor:
         """
         vec_agent_to_ball, vec_ball_to_goal = self.get_features(info)
         
-        # 距離項 (L2 Norm)
-        dist_agent_ball = np.linalg.norm(vec_agent_to_ball)
-        dist_ball_goal = np.linalg.norm(vec_ball_to_goal)
+        # 🚨 修正: 加上 axis=1 以確保在 num_envs=1 時，返回形狀為 (1,) 的陣列，而非標量 float
+        dist_agent_ball = np.linalg.norm(vec_agent_to_ball, axis=1)
+        dist_ball_goal = np.linalg.norm(vec_ball_to_goal, axis=1)
 
         # 💡 角度項 (用於 kick 階段)
         potential_value = - (self.k1 * dist_agent_ball) - (self.k2 * dist_ball_goal)
         
         if self.stage == 'kick' and self.k3 > _FLOAT_EPS:
-            # 確保向量長度不為零
+            # 由於 dist_agent_ball 和 dist_ball_goal 已經是 (N,) 形狀，使用 [:, None] 轉為 (N, 1) 方便除法
             norm_agent_to_ball = dist_agent_ball[:, None] + _FLOAT_EPS
             norm_ball_to_goal = dist_ball_goal[:, None] + _FLOAT_EPS
             
@@ -70,7 +64,7 @@ class PBRSPreprocessor:
             unit_ball_to_goal = vec_ball_to_goal / norm_ball_to_goal
 
             # 內積 (cos 夾角) - 機器人到球的方向與球到目標的方向夾角
-            # 鼓勵機器人站在球的後面
+            # np.sum(..., axis=1) 確保返回 (N,) 形狀
             cos_angle = np.sum(unit_agent_to_ball * unit_ball_to_goal, axis=1)
             
             # 將 cos_angle 項加到潛力函數中，最大化 cos_angle（趨近於 1）
@@ -100,7 +94,14 @@ class PBRSWrapper(gym.Wrapper):
 
     def step(self, action: Union[int, np.ndarray]) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict[str, Any]]:
         obs, reward, terminated, truncated, info = self.env.step(action)
-        done = terminated | truncated # 向量化的終止條件
+        
+        # 🚨 修正: 將單一環境輸出的標量 (float/bool) 轉換為陣列，以與 self.prev_potential (N,) 匹配
+        if self.num_envs == 1:
+            reward = np.array([reward], dtype=np.float32)
+            terminated = np.array([terminated], dtype=bool)
+            truncated = np.array([truncated], dtype=bool)
+            
+        done = terminated | truncated # 向量化的終止條件 (形狀為 (N,))
         
         # 計算 V(s')
         new_potential = self.preprocessor.compute_potential(info)
@@ -117,7 +118,11 @@ class PBRSWrapper(gym.Wrapper):
         # 更新 V(s) 準備下一個時間步
         self.prev_potential = new_potential
         
-        return obs, shaped_reward, terminated, truncated, info
+        # 由於 PBRSWrapper 在 DummyVecEnv 內部，其輸出的 terminated 和 truncated 應保持原始 shape，因此需要轉換回去
+        if self.num_envs == 1:
+            return obs, shaped_reward[0], terminated[0], truncated[0], info
+        else:
+            return obs, shaped_reward, terminated, truncated, info
 
 
 # --- 3. 輔助函數 (供 ppo_with_pbrs.py 調用) ---
@@ -145,7 +150,7 @@ def make_pbrs_env(
         return PBRSWrapper(
             env, 
             stage=stage, 
-            num_envs=1, # 每個獨立環境的 num_envs 都是 1
+            num_envs=1, # 💡 這裡必須是 1，因為每個 env_fn 建立的是一個獨立環境
             gamma=config['gamma'], 
             k1=config['k1'], 
             k2=config['k2'], 
