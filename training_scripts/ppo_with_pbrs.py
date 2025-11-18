@@ -123,7 +123,7 @@ def main(stage: str, mode: str, num_envs: int = 1):
 
     # --- 訓練環境與模型準備 ---
     print("🛠️ 正在初始化環境和模型...")
-    env = make_env(sai, comp_id=sai.comp_id, stage=stage, num_envs=num_envs, config=config)
+    env = make_env(sai, comp_id="booster-soccer-showdown", stage=stage, num_envs=num_envs, config=config)
 
     # 設置日誌和模型儲存路徑
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
