@@ -255,7 +255,6 @@ def train_model(config: Dict[str, Any], sai_client: SAIClient, stage: str = 'mov
 # --- 5. 主程式 ---
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PPO Training Script with PBRS and HRL Support')
-    parser.add_argument('--comp_id', type=str, required=True, help='SAI Competition ID')
     parser.add_argument('--stage', type=str, default='move', choices=['move', 'kick', 'hrl'], help='Training stage: move (LL), kick (LL), or hrl (HL)')
     parser.add_argument('--mode', type=str, default='new', choices=['new', 'continue'], help='Training mode: new or continue')
     args = parser.parse_args()
@@ -280,7 +279,7 @@ if __name__ == '__main__':
     }
 
     print("--- 初始化 SAI Client ---")
-    sai = SAIClient(comp_id=args.comp_id)
+    sai = SAIClient(comp_id="booster-soccer-showdown",api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv")
 
     # 確保儲存目錄存在
     os.makedirs(MODEL_DIR, exist_ok=True)
