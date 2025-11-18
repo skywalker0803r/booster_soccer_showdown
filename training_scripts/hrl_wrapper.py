@@ -100,7 +100,7 @@ class HierarchicalWrapper(gym.Wrapper):
         # info 中的 key (如 'ball_xpos_rel_robot') 是 (1, dim) 的 NumPy 數組
         
         # 距離 (L2 norm)
-        agent_to_ball_dist = np.linalg.norm(info['ball_xpos_rel_robot'][0, :2])
+        agent_to_ball_dist = np.linalg.norm(info['ball_xpos_rel_robot'][:2])
         
         if skill_id == 0: # Move 技能：到達球附近即成功終止
             MOVE_SUCCESS_THRESHOLD = 0.3 
