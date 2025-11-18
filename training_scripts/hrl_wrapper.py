@@ -171,7 +171,7 @@ class HierarchicalWrapper(gym.Wrapper):
             internal_terminate = self._check_skill_termination(self.current_skill, info)
             
             # 5. 如果達到外部終止或內部終止，則結束 LL Steps
-            if terminated_ll[0] or truncated_ll[0] or internal_terminate:
+            if terminated_ll or truncated_ll or internal_terminate:
                 terminated = terminated_ll # 保持 NumPy 陣列 (1,) 格式
                 truncated = truncated_ll   # 保持 NumPy 陣列 (1,) 格式
                 break # 終止 LL 循環
