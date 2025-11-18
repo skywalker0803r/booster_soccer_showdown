@@ -192,7 +192,7 @@ def main():
             n_epochs=config['n_epochs'],
             ent_coef=config['ent_coef'], 
             clip_range=config['clip_range'],
-            verbose=0, 
+            verbose=2, 
             tensorboard_log=log_dir,
             policy_kwargs=policy_kwargs,
             device="cuda" if torch.cuda.is_available() else "cpu"
