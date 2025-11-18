@@ -134,7 +134,7 @@ def make_pbrs_env(
         
     # 定義一個建立環境的函數
     def env_fn():
-        env = sai.make_env(comp_id, env_id=env_id)
+        env = sai.make_env(env_id, comp_id=comp_id)
         # 傳遞所有 config 參數
         return PBRSWrapper(
             env, 
