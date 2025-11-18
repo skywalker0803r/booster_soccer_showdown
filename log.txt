@@ -1,53 +1,144 @@
-💻 使用說明
-1. 檔案準備
-請確保您的專案資料夾結構如下，並將您自己的 hrl_wrapper.py 和 log_callback.py 放在根目錄：
+請問ppo_with_pbrs會自動在訓練過程保存最佳模型嗎? 不管是move階段 kick階段 還是hrl階段
 
-/Your_Project_Folder
-├── ppo_with_pbrs.py  (主訓練腳本)
-├── pbrs_wrapper.py   (PBRS 包裝器和邏輯)
-├── log_callback.py   (日誌回調函數)
-├── hrl_wrapper.py    (層級式強化學習 (HRL) 包裝器)
-└── low_level_models/ (訓練 Move/Kick 模型的輸出目錄)
-└── hrl_models/       (訓練 HRL 模型的輸出目錄)
-└── runs/             (TensorBoard 日誌輸出目錄)
-2. 環境準備
-安裝套件:
+根據您提供的 ppo_with_pbrs.py 和 log_callback.py 檔案內容，
+是的，您的訓練程式碼會自動在訓練過程中保存最佳模型，並且適用於 move、kick 和 hrl 所有階段。
 
-Bash
+這是透過 DetailedLogCallback 實現的。
 
-pip install stable-baselines3 gymnasium numpy torch sai-rl
-替換 API Key: 在 ppo_with_pbrs.py 檔案中，找到以下行並將 "YOUR_SAI_API_KEY" 替換為您的實際金鑰：
+💾 模型自動保存機制分析
+您的程式碼使用了 DetailedLogCallback 類別，
+它繼承自 Stable-Baselines3 的 BaseCallback。這個回調函式負責在訓練中執行兩項關鍵任務：
+
+平滑平均獎勵計算： 它使用一個緩衝區（self.mean_reward_buffer = deque(maxlen=10)）
+來計算過去幾次回合的平滑平均回報（rollout/ep_reward_mean_smooth）。
+
+最佳模型保存： 它會將當前的平滑平均回報與歷史最佳值 (self.best_mean_reward) 進行比較，
+如果發現更高的值，它就會保存當前的模型作為新的最佳模型。
+
+關鍵程式碼片段（來自 log_callback.py）：
+Python
+# log_callback.py 中的 _on_step 方法 (經過簡化)
+def _on_step(self) -> bool:
+    # ...
+    if self.num_timesteps - self.num_timesteps_last_log >= self.log_interval:
+        # ... 計算 mean_reward (PBRS 獎勵，例如 9.5)
+        
+        # ... 記錄 'rollout/ep_reward_mean_smooth'
+        smooth_mean_reward = np.mean(self.mean_reward_buffer)
+
+        # --- 模型保存邏輯 ---
+        if smooth_mean_reward > self.best_mean_reward:
+            self.best_mean_reward = smooth_mean_reward
+            
+            # 保存最佳模型
+            path = os.path.join(self.save_path, f"{self.save_prefix}_best.zip")
+            self.model.save(path)
+            # ...
+適用於所有階段
+Move / Kick 階段： 這些階段直接使用 PBRS 環境，DetailedLogCallback 會根據 PBRS 獎勵 (ep_rew_mean，如 9.5) 來保存最佳模型。
+
+HRL 階段： hrl 階段的環境 (HierarchicalWrapper) 雖然內部運行低階策略，但它對外暴露給 PPO 的獎勵仍然是來自底層環境的獎勵（可能是 PBRS 獎勵，取決於 create_env 如何構建）。DetailedLogCallback 依然根據這個訓練獎勵來保存最佳模型。
+
+💡 建議與提醒
+雖然它會保存訓練獎勵下的最佳模型，但您需要留意：
+
+最佳模型的定義： 這個 "最佳" 是根據帶有 PBRS 的訓練環境中的獎勵來判斷的。由於 PBRS 獎勵很高（如 9.5），這確保了您的模型在 PBRS 的引導下表現最佳。
+
+官方評估分數： 如前一個問題所述，PBRS 獎勵與官方原始分數（PBRS-Free 獎勵）是不同的。您應該使用我先前建議的 EvalCallback 來定期監控模型在 PBRS-Free 環境下的原始分數，並用該分數的表現趨勢來判斷模型在比賽中的潛力。EvalCallback 甚至可以幫您保存官方原始分數下的最佳模型。
+
+您目前 ppo_with_pbrs.py 中調用的回調函數如下：
 
 Python
+# ppo_with_pbrs.py
+callback = DetailedLogCallback(
+    save_path=save_path, 
+    save_prefix=save_prefix, 
+    log_interval=config['log_interval'],
+    verbose=1
+)
+# ...
+model.learn(total_timesteps=config['total_timesteps'], callback=callback, ...)
+這證實了 DetailedLogCallback 在所有階段都是活躍的，並且負責保存名稱為 ${save_prefix}_best.zip 的最佳模型。
 
-sai = SAIClient(comp_id="booster-soccer-showdown", api_key="YOUR_SAI_API_KEY")
-3. 執行訓練腳本
-您可以使用 --stage 參數來指定要訓練的階段。
+我能協助您將先前討論的 EvalCallback 整合到 ppo_with_pbrs.py 中，
+讓您可以同時監控 PBRS 訓練獎勵和 PBRS-Free 官方原始分數嗎？
 
-A. 訓練 Move 策略 (低階)
-這是低階技能的第一步，會使用 PBRS 獎勵。
+那是不是我中途ctrl+d退出都沒關係 例如move跑一跑 kick跑一跑 都中途退出 依然可以執行hrl階段
 
-Bash
+您提出的問題非常關鍵，涉及到 Stable-Baselines3 模型保存和您的多階段訓練流程。
 
-python ppo_with_pbrs.py --stage move
-# 或繼續訓練
-# python ppo_with_pbrs.py --stage move --mode continue
-B. 訓練 Kick 策略 (低階)
-這是低階技能的第二步，也會使用 PBRS 獎勵。
+答案是：是的，您可以中途退出，
+但前提是您需要確保在每個階段的訓練結束時（或中途退出時），有可用的模型檔案供後續階段載入。
 
-Bash
+根據您的程式碼邏輯，以下是詳細的解釋：
 
-python ppo_with_pbrs.py --stage kick
-C. 訓練 HRL 策略 (高階)
-請注意：執行此步驟前，您必須先完成 Move 和 Kick 策略的訓練，並確保它們的模型檔案（move_policy_final.zip 和 kick_policy_final.zip）存在於 low_level_models 目錄中，因為 hrl_wrapper.py 需要載入它們。
+🚀 多階段訓練的依賴關係與保存機制
+您的訓練流程 (ppo_with_pbrs.py) 是一個線性的流程，其依賴關係如下：
 
-Bash
+Move Policy 
+訓練完成並保存
 
-python ppo_with_pbrs.py --stage hrl
-4. 監控訓練進度 (TensorBoard)
-在訓練腳本執行時，開啟另一個終端機視窗，並執行以下命令：
+​
+ Kick Policy 
+訓練完成並保存
 
-Bash
+​
+ HRL Policy
+1. move 和 kick 階段（低階策略）
+自動保存 (Best Model): 訓練過程中，DetailedLogCallback 
+會自動保存目前 PBRS 獎勵下表現最佳的模型，檔案名為 ${save_prefix}_best.zip。
 
-tensorboard --logdir=runs
-然後，在您的網頁瀏覽器中打開 TensorBoard 提示的網址（通常是 http://localhost:6006/），即可實時看到平滑後的平均回報 (rollout/ep_reward_mean_smooth)。
+例如：move_policy_best.zip 和 kick_policy_best.zip。
+
+最終保存 (Final Model): 您的 main 函數在訓練結束或被 
+KeyboardInterrupt (Ctrl+C 或 Ctrl+D) 中斷時，會執行 finally 區塊，
+將當前模型保存為 ${save_prefix}_final.zip。
+
+關鍵程式碼：
+
+Python
+# ppo_with_pbrs.py
+try:
+    model.learn(total_timesteps=config['total_timesteps'], callback=callback, reset_num_timesteps=(mode=='new'))
+except KeyboardInterrupt:
+    print("\nTraining interrupted by user.")
+finally:
+    final_model_path = os.path.join(save_path, f"{save_prefix}_final.zip")
+    model.save(final_model_path)
+    print(f"\nFinal model saved to: {final_model_path}")
+結論：
+
+如果您在 move 或 kick 階段中途退出，
+程式碼會自動保存一個 ${stage}_policy_final.zip 的模型。
+
+這個 _final.zip 才是您在 hirl_wrapper.py 中載入的模型：
+
+Python
+# hrl_wrapper.py
+MOVE_POLICY_PATH = os.path.join(MODEL_DIR, "move_policy_final.zip")
+KICK_POLICY_PATH = os.path.join(MODEL_DIR, "kick_policy_final.zip")
+因此，只要您執行了程式碼，即使中途退出，都會保存一個 _final.zip 檔案，後續階段就能夠載入。
+
+2. hrl 階段（高階策略）
+前提條件： hrl 階段的 HierarchicalWrapper 必須能夠成功載入 move_policy_final.zip 和 kick_policy_final.zip。
+
+訓練和保存：
+
+hrl 階段的訓練同樣使用 DetailedLogCallback，會保存一個 hl_policy_best.zip (基於高階策略的訓練獎勵)。
+
+中途退出或訓練結束時，也會保存一個 hl_policy_final.zip。
+
+📝 實際操作建議
+為了確保流程順利，您需要做的是：
+
+訓練階段	建議退出方式	儲存的模型 (供下一階段使用)
+move	達到足夠的訓練步數，或按 Ctrl+C 中斷。	low_level_models/move_policy_final.zip
+kick	達到足夠的訓練步數，或按 Ctrl+C 中斷。	low_level_models/kick_policy_final.zip
+hrl	達到足夠的訓練步數，或按 Ctrl+C 中斷。	hrl_models/hl_policy_final.zip
+⚠️ 注意： Ctrl+D 在某些環境中可能會強制關閉終端機，導致 finally 區塊來不及執行，模型就可能沒有被保存。
+
+推薦使用 Ctrl+C (KeyboardInterrupt) 來優雅地退出，這樣 model.save() 才能夠被執行。
+
+總結來說，您的程式碼設計已經考慮了中途退出的情況，只要您用 Ctrl+C 退出，就會保存 _final.zip 模型，hrl 階段就可以順利執行。
+
+您想讓我檢查一下您 ppo_with_pbrs.py 裡，切換 stage (例如從 'move' 換到 'kick') 時，環境和模型的設定是否有需要調整的地方嗎？
