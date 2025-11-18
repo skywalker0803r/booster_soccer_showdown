@@ -1,27 +1,57 @@
-您的修改非常成功，完全正確！
+既然沒有低階模型，那麼我們必須按照分層強化學習 (HRL) 的設計，依序完成以下三個階段的訓練：
 
-您已經將所有複雜的優化點和前一個步驟中討論的潛在問題都修復和強化了。這套完整的程式碼框架現在非常強大且魯棒，大幅提高了訓練成功的機率。
+Move (移動) 技能訓練：使用強化後的 PBRS 框架。
 
-以下是確認成功的幾個關鍵點：
+Kick (踢球) 技能訓練：使用強化後的 PBRS （包含角度引導 k3） 框架。
 
-💯 修正與優化確認
-1. ppo_with_pbrs.py (主訓練腳本)
-VecNormalize 導入和應用正確：在 make_env 中正確應用了 VecNormalize，這對於 PPO 訓練穩定性至關重要。
+HRL (分層) 高階策略訓練：載入前面兩個模型，訓練 HL 策略進行技能切換。
 
-超參數和網路結構優化：增加了網路深度（[512, 512, 256]）並降低了熵係數（0.005），有助於策略收斂和性能提升。
+請按照以下順序在您的 Colab 終端機中執行指令：
 
-2. pbrs_wrapper.py (PBRS 環境包裝)
-新增角度項 k3 實作正確：在 kick 階段的潛力函數中，您成功加入了 k3 * cos_angle 項。這能有效引導機器人移動到球後方，以更有利的角度踢球，是提升踢球成功率的關鍵。
+🛠️ 第一階段：訓練 Move (移動) 技能
+這個階段會訓練一個低階策略，目標是讓機器人能快速移動到球附近。模型會儲存在 ./low_level_models/。
 
-向量化 PBRS 正確：所有的距離計算和潛力函數更新（shaped_reward[~done] += ...）都使用了 NumPy 的向量操作，確保在多環境或單一向量環境中都能正常運行。
+Bash
 
-3. hrl_wrapper.py (HRL 環境包裝)
-解決向量化接口問題 (關鍵修復)：
+# 訓練 Move 技能
+# --stage move: 使用 PBRS 接近球的獎勵引導 (k1, k2)
+# --num_envs 4: 建議使用 4 個或更多環境並行，加速訓練
+python ppo_with_pbrs.py --stage move --mode new --num_envs 4
+預計結果： 訓練完成後，您會看到文件 ./low_level_models/ppo_move_..._final.zip 和 ./low_level_models/vec_normalize_move.pkl。
 
-您正確將 step 函數的獎勵 (accumulated_reward) 和終止標誌 (terminated, truncated) 改為返回 NumPy 陣列（形狀為 (1,)），這完全符合 DummyVecEnv 的接口要求。
+目標： 讓平均獎勵穩定上升，並達到您滿意的性能。
 
-技能切換懲罰和低階獎勵累積現在都使用 NumPy 陣列加法 (accumulated_reward += reward)，避免了資料型別不匹配的錯誤。
+⚽ 第二階段：訓練 Kick (踢球) 技能
+這個階段會訓練一個低階策略，目標是將球踢向目標。由於您的程式碼加入了 k3 角度引導，這個模型應該會學到更好的踢球位置。
 
-技能內部終止條件：實作了 _check_skill_termination，允許高階策略在低階技能提前成功時立即切換（例如，Move 技能在到達球附近時立刻結束），顯著提高了 HRL 的反應速度和訓練效率。
+Bash
 
-現在您可以安心地使用這套完整的程式碼框架進行訓練。
+# 訓練 Kick 技能
+# --stage kick: 使用 PBRS 包含角度引導 (k1, k2, k3)
+# --num_envs 4: 建議使用 4 個或更多環境並行
+python ppo_with_pbrs.py --stage kick --mode new --num_envs 4
+預計結果： 訓練完成後，您會看到文件 ./low_level_models/ppo_kick_..._final.zip 和 ./low_level_models/vec_normalize_kick.pkl。
+
+重命名： 為了讓 HRL 訓練腳本（hrl_wrapper.py）能順利找到這兩個模型，您必須將它們重命名為預期的檔名：
+
+Bash
+
+# 範例：將最新的 move final model 重命名為 move_policy_final.zip
+# 請將 'YOUR_MOVE_MODEL_FILE' 替換為實際的檔名
+mv low_level_models/ppo_move_YOUR_MOVE_MODEL_FILE_final.zip low_level_models/move_policy_final.zip
+
+# 範例：將最新的 kick final model 重命名為 kick_policy_final.zip
+# 請將 'YOUR_KICK_MODEL_FILE' 替換為實際的檔名
+mv low_level_models/ppo_kick_YOUR_KICK_MODEL_FILE_final.zip low_level_models/kick_policy_final.zip
+
+# 💡 提示：您也可以手動將 'move_policy_final.zip' 和 'kick_policy_final.zip' 重新命名為您的最佳模型。
+🔗 第三階段：訓練 HRL (分層) 策略
+一旦兩個低階模型準備就緒並正確重命名後，就可以開始訓練高階策略了。
+
+Bash
+
+# 訓練 HRL 高階策略
+# --stage hrl: 載入並使用前面訓練好的 move/kick 模型
+# --num_envs 4: 建議使用 4 個或更多環境並行
+python ppo_with_pbrs.py --stage hrl --mode new --num_envs 4
+請從第一階段開始，訓練完成後記得進行第二階段，最終進行第三階段。祝您訓練順利！
