@@ -21,4 +21,4 @@ conda create -n booster-ssl python=3.11 -y && conda activate booster-ssl
 pip install -r requirements.txt
 
 # 訓練
-python training_scripts/ppo_with_pbrs.py
+python training_scripts/ppo_with_pbrs.py --stage move
