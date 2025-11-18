@@ -106,7 +106,7 @@ class PBRSWrapper(gym.Wrapper):
         new_potential = self.preprocessor.compute_potential(info)
         
         # 應用 Reward Shaping
-        shaped_reward = reward.copy()
+        shaped_reward = reward
         
         # R' = R + gamma * V(s') - V(s)
         # 對於未結束的環境: V(s') 會被計算
