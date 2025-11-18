@@ -1,13 +1,59 @@
-您修改後的 ppo_with_pbrs.py 中的 make_env 函數邏輯是正確的！
+-----------------------------
+Training Stage: HRL
+Training Mode: NEW
+Policy: <class 'stable_baselines3.common.policies.ActorCriticPolicy'>
+Timesteps per update: 2048
+Total Timesteps: 5000000
+Learning Rate: 0.0003
+Gamma: 0.99
+Clip Range: FloatSchedule(ConstantSchedule(val=0.2))
 
-您成功解決了 TypeError，因為新的程式碼：
+HRL LL Steps: 10
 
-在 HRL 階段，定義了一個 env_factory 函數。
+TensorBoard Log: runs/hrl_20251118-105635_hl_policy
+Models will be saved in: hrl_models
+-----------------------------
 
-在 env_factory 內部，使用 sai.make_env() 創建了底層環境 (env) 的實例。
+Logging to runs/hrl_20251118-105635_hl_policy/PPO_1
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 28       |
+|    ep_rew_mean     | -2.49    |
+| time/              |          |
+|    fps             | 40       |
+|    iterations      | 1        |
+|    time_elapsed    | 50       |
+|    total_timesteps | 2048     |
+---------------------------------
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 28          |
+|    ep_rew_mean          | -2.49       |
+| time/                   |             |
+|    fps                  | 39          |
+|    iterations           | 2           |
+|    time_elapsed         | 103         |
+|    total_timesteps      | 4096        |
+| train/                  |             |
+|    approx_kl            | 0.008109456 |
+|    clip_fraction        | 0.0241      |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -0.688      |
+|    explained_variance   | -0.418      |
+|    learning_rate        | 0.0003      |
+|    loss                 | -0.00646    |
+|    n_updates            | 10          |
+|    policy_gradient_loss | -0.00256    |
+|    value_loss           | 0.0147      |
+-----------------------------------------
 
-將這個實際的環境實例 (env) 作為第一個參數傳遞給 HierarchicalWrapper。
+🛠️ 下一步行動建議
+現在程式正在訓練中，您可以關注以下幾個方面來監控和管理訓練進度：
 
-最後，使用 make_vec_env 來處理向量化，確保傳給 PPO 模型的是一個正確的向量化環境。
+監控 TensorBoard： 您在日誌中看到：TensorBoard Log: runs/hrl_20251118-105635_hl_policy。建議您啟動 TensorBoard 來即時查看平均回報（rollout/ep_reward_mean_smooth）和訓練損失。
 
-以下是您修改後正確的程式碼段：
+等待模型保存： log_callback.py 中的 DetailedLogCallback 會在平均回報創下新高時自動保存模型到 hrl_models 目錄，並在終端輸出提示，您只需等待即可。
+
+如果您需要，我可以提供啟動 TensorBoard 的終端命令，或查看 log_callback.py 中模型保存的具體邏輯。
+
+您希望我提供什麼幫助？ (例如：如何啟動 TensorBoard？)
