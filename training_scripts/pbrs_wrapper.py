@@ -32,10 +32,16 @@ class PBRSPreprocessor:
         default_pos = np.zeros((self.num_envs, 3), dtype=np.float32)
         
         # 球相對於機器人的位置 (只取 x, y)
-        agent_to_ball_pos = info.get('ball_xpos_rel_robot', default_pos)[:, :2]
+        try:
+            agent_to_ball_pos = info.get('ball_xpos_rel_robot', default_pos)[:, :2]
+        except:
+            agent_to_ball_pos = info.get('ball_xpos_rel_robot', default_pos)[:2]
         
         # 目標相對於球的位置 (只取 x, y)
-        ball_to_goal_pos = info.get('goal_team_0_rel_ball', default_pos)[:, :2]
+        try:
+            ball_to_goal_pos = info.get('goal_team_0_rel_ball', default_pos)[:, :2]
+        except:
+            ball_to_goal_pos = info.get('goal_team_0_rel_ball', default_pos)[:2]
 
         return agent_to_ball_pos, ball_to_goal_pos
     
