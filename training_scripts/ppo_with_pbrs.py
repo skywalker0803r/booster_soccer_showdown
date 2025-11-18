@@ -14,7 +14,7 @@ from collections import deque
 from stable_baselines3.common.logger import configure
 import torch
 from typing import Dict, Any, Union, Tuple
-
+from log_callback import DetailedLogCallback
 from sai_rl import SAIClient
 
 # --- HRL Wrapper 匯入 ---
@@ -113,53 +113,6 @@ class PBRSWrapper(gym.Wrapper):
         reward += shaping_reward
         
         return obs, reward, terminated, truncated, info
-
-# --- 3. 訓練日誌回調函數 ---
-class DetailedLogCallback(BaseCallback):
-    """用於記錄詳細訓練指標的回調函數。"""
-    def __init__(self, save_path: str, save_prefix: str, log_interval: int = 100000, verbose: int = 1):
-        super().__init__(verbose)
-        self.save_path = save_path
-        self.save_prefix = save_prefix
-        self.log_interval = log_interval
-        self.ep_rewards = deque(maxlen=100) # 追蹤最近 100 個回合
-        self.ep_lengths = deque(maxlen=100)
-        self.current_ep_reward = 0
-        self.current_ep_length = 0
-        self.last_save_timesteps = 0
-
-    def _on_step(self) -> bool:
-        # PPO 的 self.locals['dones'] 和 self.locals['rewards'] 已經是批次 (在這裡是 VecEnv=1)
-        reward = self.locals['rewards'][0] 
-        done = self.locals['dones'][0]
-
-        self.current_ep_reward += reward
-        self.current_ep_length += 1
-        
-        if done:
-            self.ep_rewards.append(self.current_ep_reward)
-            self.ep_lengths.append(self.current_ep_length)
-            self.current_ep_reward = 0
-            self.current_ep_length = 0
-        
-        # 每隔 log_interval 步數記錄並儲存
-        if self.num_timesteps - self.last_save_timesteps >= self.log_interval:
-            mean_reward = np.mean(self.ep_rewards) if self.ep_rewards else 0
-            mean_length = np.mean(self.ep_lengths) if self.ep_lengths else 0
-            
-            # 記錄到 TensorBoard
-            self.logger.record('rollout/ep_rew_mean', mean_reward)
-            self.logger.record('rollout/ep_len_mean', mean_length)
-            self.logger.dump(self.num_timesteps)
-
-            # 儲存模型
-            save_model_path = os.path.join(self.save_path, f"{self.save_prefix}_{self.num_timesteps}.zip")
-            self.model.save(save_model_path)
-            
-            self.last_save_timesteps = self.num_timesteps
-
-        return True
-
 
 # --- 4. 訓練函數 ---
 

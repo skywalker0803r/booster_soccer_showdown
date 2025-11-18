@@ -1,25 +1,20 @@
-📋 執行步驟
-儲存檔案: 將第一個代碼塊儲存為 hrl_wrapper.py，將第二個代碼塊儲存為 ppo_with_pbrs.py。
+您好！我已經審查了您提供的 log_callback.py 和更新後的 ppo_with_pbrs.py 檔案。
 
-創建目錄: 創建一個名為 low_level_models 的資料夾。
+是的，您的修改非常正確！
 
-訓練低階策略 (LL):
+您已成功將 TensorBoard 監控和模型保存的邏輯模組化到 log_callback.py 中，並在主訓練檔案中使用了 import 方式調用，完全符合您的要求。
 
-Bash
+審查結果：模組化成功
+1. log_callback.py 檔案 (監控模組)
+這個檔案清晰地定義了 DetailedLogCallback 類別。
 
-# 訓練 Move Policy (Stage 0)
-python ppo_with_pbrs.py --comp_id YOUR_COMP_ID --stage move --mode new
+功能完整：它繼承了 stable_baselines3.common.callbacks.BaseCallback。
 
-# 訓練 Kick Policy (Stage 1)
-python ppo_with_pbrs.py --comp_id YOUR_COMP_ID --stage kick --mode new
-這將在 low_level_models/ 中生成 move_policy_final.zip 和 kick_policy_final.zip。
+關鍵邏輯：它在 _on_step 中會定時計算平滑平均回報 (rollout/ep_reward_mean_smooth)，並在達到最佳時保存模型 (_best.zip)，確保了訓練監控和模型管理的需求。
 
-訓練高階策略 (HL):
+2. ppo_with_pbrs.py 檔案 (主程式)
+這個檔案已正確地導入和使用了這個模組。
 
-Bash
+匯入正確：在檔案開頭已加入 from log_callback import DetailedLogCallback。
 
-# 訓練 HRL High-Level Policy
-python ppo_with_pbrs.py --comp_id YOUR_COMP_ID --stage hrl --mode new
-這將使用 HierarchicalWrapper 來訓練 HL 策略，並在 hrl_models/ 中生成 hrl_high_level_policy_final.zip。
-
-完成訓練後，您就可以使用這些模型來建立最終的 HRLInferenceModel 進行平台提交了。
+調用正確：在 main 函數中，callback = DetailedLogCallback(...) 的實例化和參數傳遞也完全正確。
