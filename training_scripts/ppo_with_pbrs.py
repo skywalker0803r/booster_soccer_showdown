@@ -1,5 +1,5 @@
 # ppo_with_pbrs.py
-
+import shutil # 用於檔案複製
 import argparse
 import os
 import sys
@@ -197,6 +197,18 @@ def main(stage: str, mode: str, num_envs: int = 1):
         final_model_path = os.path.join(save_path, f"{save_prefix}_final.zip")
         model.save(final_model_path)
         print(f"\n✅ Final model saved to {final_model_path}")
+
+        # --- 新增邏輯: 將模型複製到 HRL 預期的固定路徑 (FIX) ---
+        if stage in ['move', 'kick']:
+            # HRL 預期的固定路徑：low_level_models/move_policy_final.zip 或 kick_policy_final.zip
+            hrl_target_path = os.path.join(MODEL_DIR, f"{stage}_policy_final.zip") 
+            try:
+                shutil.copyfile(final_model_path, hrl_target_path)
+                print(f"✅ Copied {stage} model to HRL fixed path: {hrl_target_path}")
+            except Exception as e:
+                # 雖然不應發生，但保留錯誤處理
+                print(f"❌ Warning: Failed to copy model to HRL fixed path: {e}")
+        # -----------------------------------------------------------
         
         # 保存 VecNormalize 統計數據 (對推論很重要)
         stats_path = os.path.join(save_path, f"vec_normalize_{stage}.pkl")
