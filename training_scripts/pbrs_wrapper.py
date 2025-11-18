@@ -29,14 +29,32 @@ class PBRSPreprocessor:
         """從 info 中提取球和目標的位置，用於計算 potential function。"""
         
         # 處理 info 中可能缺失的 key，並確保形狀正確 (num_envs, dim)
+        # 這裡的 default_pos 形狀應為 (self.num_envs, 3)
         default_pos = np.zeros((self.num_envs, 3), dtype=np.float32)
         
-        # 球相對於機器人的位置 (只取 x, y)
-        agent_to_ball_pos = info.get('ball_xpos_rel_robot', default_pos)[:, :2]
         
+        # --- 1. 處理 'ball_xpos_rel_robot' ---
+        # 獲取球相對於機器人的位置。在單一環境 (num_envs=1) 下，它可能是 (3,)。
+        ball_pos_raw = info.get('ball_xpos_rel_robot', default_pos)
+        
+        # 💡 修正: 確保其至少為 2 維。如果它是 (3,)，會被轉換為 (1, 3)。
+        ball_pos_batch = np.atleast_2d(ball_pos_raw)
+        
+        # 球相對於機器人的位置 (只取 x, y)。現在可以安全地使用 2D 索引。
+        agent_to_ball_pos = ball_pos_batch[:, :2]
+        
+        
+        # --- 2. 處理 'goal_team_0_rel_ball' ---
+        # 獲取目標相對於球的位置。
+        goal_pos_raw = info.get('goal_team_0_rel_ball', default_pos)
+        
+        # 💡 修正: 確保其至少為 2 維。
+        goal_pos_batch = np.atleast_2d(goal_pos_raw)
+            
         # 目標相對於球的位置 (只取 x, y)
-        ball_to_goal_pos = info.get('goal_team_0_rel_ball', default_pos)[:, :2]
+        ball_to_goal_pos = goal_pos_batch[:, :2]
 
+        # 輸出形狀現在總是 (N, 2)，其中 N=num_envs (通常為 1 或更大)
         return agent_to_ball_pos, ball_to_goal_pos
     
     def compute_potential(self, info: Dict[str, Any]) -> np.ndarray:
