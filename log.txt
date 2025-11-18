@@ -1,20 +1,53 @@
-您好！我已經審查了您提供的 log_callback.py 和更新後的 ppo_with_pbrs.py 檔案。
+💻 使用說明
+1. 檔案準備
+請確保您的專案資料夾結構如下，並將您自己的 hrl_wrapper.py 和 log_callback.py 放在根目錄：
 
-是的，您的修改非常正確！
+/Your_Project_Folder
+├── ppo_with_pbrs.py  (主訓練腳本)
+├── pbrs_wrapper.py   (PBRS 包裝器和邏輯)
+├── log_callback.py   (日誌回調函數)
+├── hrl_wrapper.py    (層級式強化學習 (HRL) 包裝器)
+└── low_level_models/ (訓練 Move/Kick 模型的輸出目錄)
+└── hrl_models/       (訓練 HRL 模型的輸出目錄)
+└── runs/             (TensorBoard 日誌輸出目錄)
+2. 環境準備
+安裝套件:
 
-您已成功將 TensorBoard 監控和模型保存的邏輯模組化到 log_callback.py 中，並在主訓練檔案中使用了 import 方式調用，完全符合您的要求。
+Bash
 
-審查結果：模組化成功
-1. log_callback.py 檔案 (監控模組)
-這個檔案清晰地定義了 DetailedLogCallback 類別。
+pip install stable-baselines3 gymnasium numpy torch sai-rl
+替換 API Key: 在 ppo_with_pbrs.py 檔案中，找到以下行並將 "YOUR_SAI_API_KEY" 替換為您的實際金鑰：
 
-功能完整：它繼承了 stable_baselines3.common.callbacks.BaseCallback。
+Python
 
-關鍵邏輯：它在 _on_step 中會定時計算平滑平均回報 (rollout/ep_reward_mean_smooth)，並在達到最佳時保存模型 (_best.zip)，確保了訓練監控和模型管理的需求。
+sai = SAIClient(comp_id="booster-soccer-showdown", api_key="YOUR_SAI_API_KEY")
+3. 執行訓練腳本
+您可以使用 --stage 參數來指定要訓練的階段。
 
-2. ppo_with_pbrs.py 檔案 (主程式)
-這個檔案已正確地導入和使用了這個模組。
+A. 訓練 Move 策略 (低階)
+這是低階技能的第一步，會使用 PBRS 獎勵。
 
-匯入正確：在檔案開頭已加入 from log_callback import DetailedLogCallback。
+Bash
 
-調用正確：在 main 函數中，callback = DetailedLogCallback(...) 的實例化和參數傳遞也完全正確。
+python ppo_with_pbrs.py --stage move
+# 或繼續訓練
+# python ppo_with_pbrs.py --stage move --mode continue
+B. 訓練 Kick 策略 (低階)
+這是低階技能的第二步，也會使用 PBRS 獎勵。
+
+Bash
+
+python ppo_with_pbrs.py --stage kick
+C. 訓練 HRL 策略 (高階)
+請注意：執行此步驟前，您必須先完成 Move 和 Kick 策略的訓練，並確保它們的模型檔案（move_policy_final.zip 和 kick_policy_final.zip）存在於 low_level_models 目錄中，因為 hrl_wrapper.py 需要載入它們。
+
+Bash
+
+python ppo_with_pbrs.py --stage hrl
+4. 監控訓練進度 (TensorBoard)
+在訓練腳本執行時，開啟另一個終端機視窗，並執行以下命令：
+
+Bash
+
+tensorboard --logdir=runs
+然後，在您的網頁瀏覽器中打開 TensorBoard 提示的網址（通常是 http://localhost:6006/），即可實時看到平滑後的平均回報 (rollout/ep_reward_mean_smooth)。
