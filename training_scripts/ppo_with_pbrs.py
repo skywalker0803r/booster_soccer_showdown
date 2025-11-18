@@ -89,7 +89,7 @@ def make_env(
         # 建立基礎環境並包裹 HierarchicalWrapper
         def env_fn():
             # 假設 HRL 使用的基礎環境與 kick 訓練相似
-            base_env = sai.make_env(comp_id, env_id=comp_id)
+            base_env = sai.make_env()
             # HierarchicalWrapper 會在內部處理 LL Policy 的載入
             return HierarchicalWrapper(base_env, ll_steps=config['ll_steps'])
 
