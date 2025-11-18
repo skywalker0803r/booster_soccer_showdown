@@ -51,16 +51,21 @@ class HierarchicalWrapper(gym.Wrapper):
         self.current_skill = 0  # 當前技能 ID
         self.last_skill = 0
         
+        # 動作空間：離散的技能 ID (0: Move, 1: Kick)
+        # 由於這是 HRL 的頂層，這個 action_space 代表高層動作空間
+        self.action_space = Discrete(2) 
+        
+        # 💡 修復: 為了滿足 _augment_obs 中的屬性存取，明確定義它。
+        # 雖然 self.action_space 已經是 Discrete(2)，但為了相容錯誤追溯中的命名，我們新增此屬性。
+        self.action_space_high_level = self.action_space  # <--- 關鍵修復點
+
         # 💡 擴展觀察空間：原始觀察 + [當前技能 ID (2維 1-hot), 技能執行進度 (1維 float)]
         original_obs_space = self.env.observation_space.shape[0]
         # 技能 ID (2維 1-hot) + 技能進度 (1維 float) = 3 維
-        new_obs_dim = original_obs_space + 3 
+        new_obs_dim = original_obs_space + self.action_space_high_level.n + 1 
         
         # 由於 VecEnv 會將多個環境的輸出堆疊，所以這裡的 shape 只需要 (new_obs_dim,)
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(new_obs_dim,), dtype=np.float32)
-
-        # 動作空間：離散的技能 ID (0: Move, 1: Kick)
-        self.action_space = Discrete(2)
 
     @property
     def num_envs(self) -> int:
@@ -74,6 +79,7 @@ class HierarchicalWrapper(gym.Wrapper):
         ...
         """
         # 創建 1-hot 技能數組
+        # 💡 修復: 現在 self.action_space_high_level 已經存在
         num_high_level_actions = self.action_space_high_level.n
         skill_one_hot = np.zeros(num_high_level_actions, dtype=np.float32)
         skill_one_hot[skill_id] = 1.0
