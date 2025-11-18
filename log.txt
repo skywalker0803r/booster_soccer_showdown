@@ -1,71 +1,18 @@
-╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│  > 我剛剛用原版的Preprocessor把他覆蓋掉了但是看到AttributeError: wrapper PotentialBasedRewardWrapper has no │
-│     attribute 'info'                                                                                        │
-│    /content/booster_soccer_showdown#                                                                        │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+好了，我已經將 ppo_with_pbrs.py 更新為包含詳細日誌記錄功能的最終版本。
 
-✦ 啊，您遇到了一個新的錯誤，這個錯誤是我在編寫 SaveBestModelCallback 時引入的，非常抱歉！
+  現在的腳本：
+   1. 修復了之前我們遇到的所有錯誤。
+   2. 會將詳細的訓練指標（塑形獎勵、潛力值、距離等）記錄到 TensorBoard。
+   3. 會定期在終端機打印這些指標的平均值，讓您能即時追蹤。
 
-  錯誤原因：
-  AttributeError: 'PotentialBasedRewardWrapper' has no attribute 'info'
-  這個錯誤的意思是，回呼（Callback）試圖從環境中直接讀取一個叫做 info 的屬性
-  (self.training_env.get_attr('info'))，但我們的 PotentialBasedRewardWrapper 環境包裝器上並沒有這個屬性。
+  如何執行：
 
-  在 Stable Baselines 3 的框架中，正確的做法是從 _on_step 函數的本地變數 self.locals['infos'] 中獲取每一步的
-   info 字典。
+  您現在可以執行訓練了。我加入了一個新的 --log_interval
+  參數，您可以決定要多頻繁地在終端機看到詳細日誌（預設是每 10000 步）。
 
-  修正計畫：
-  我將修正 SaveBestModelCallback 類別，讓它從正確的地方讀取 info
-  字典，並參考原版腳本中的回呼邏輯，使其更健壯，能夠正確記錄和比較平均獎勵來保存最佳模型。
+   1 # 這個指令會每 5000 步打印一次詳細日誌
+   2 python training_scripts/ppo_with_pbrs.py --total_timesteps=500000 --n_envs=4 --log_interval=5000
 
-  我現在就來執行這個修正。
- ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
- │ ✔ Edit training_scripts\ppo_with_pbrs.py: class SaveBestModelCallback(Ba... => class SaveBestModelCallback… │
- │                                                                                                              │
- │    160       self.save_path = save_path                                                                      │
- │    161       self.save_prefix = save_prefix                                                                  │
- │    162       self.best_mean_reward = -np.inf                                                                 │
- │    163 +     self.episode_rewards = []                                                                       │
- │    164       os.makedirs(save_path, exist_ok=True)                                                           │
- │    165                                                                                                       │
- │    166   def _on_step(self) -> bool:                                                                         │
- │    166 -     # Check if 'monitor' information is available in infos                                          │
- │    167 -     if 'episode' in self.training_env.get_attr('info')[0]:                                          │
- │    168 -         # In VecEnv, infos is a list of dicts. We check the first one.                              │
- │    169 -         mean_reward = np.mean([info['episode']['r'] for info in self.locals['infos'] if             │
- │        'episode' in info])                                                                                   │
- │    167 +     # Access 'infos' from the callback's locals dictionary                                          │
- │    168 +     for info in self.locals.get('infos', []):                                                       │
- │    169 +         if 'episode' in info:                                                                       │
- │    170 +             # An episode has finished                                                               │
- │    171 +             episode_reward = info['episode']['r']                                                   │
- │    172 +             self.episode_rewards.append(episode_reward)                                             │
- │    173                                                                                                       │
- │    174 +             # Keep last 100 rewards for moving average                                              │
- │    175 +             if len(self.episode_rewards) > 100:                                                     │
- │    176 +                 self.episode_rewards.pop(0)                                                         │
- │    177 +                                                                                                     │
- │    178 +             # Log the reward                                                                        │
- │    179 +             self.logger.record('reward/episode_reward', episode_reward)                             │
- │    180 +                                                                                                     │
- │    181 +             # Calculate and log moving average if we have enough episodes                           │
- │    182 +             if len(self.episode_rewards) >= 20: # Start logging after 20 episodes                   │
- │    183 +                 mean_reward = np.mean(self.episode_rewards)                                         │
- │    184 +                 self.logger.record('reward/mean_reward_last_100', mean_reward)                      │
- │    185 +                                                                                                     │
- │    186 +                 # Check if this is the best model based on mean reward                              │
- │    187                   if mean_reward > self.best_mean_reward:                                             │
- │    188                       self.best_mean_reward = mean_reward                                             │
- │    189                       best_model_path = os.path.join(self.save_path, f"{self.save_prefix}             │
- │          _best.zip")                                                                                         │
- ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-✦ 好的，我已經修正了回呼函數 SaveBestModelCallback 中的錯誤。
+  請試試看吧！好的，我將執行您剛才確認過的訓練腳本。
 
-  AttributeError 的問題已經解決。新的回呼函數現在會從正確的位置 (self.locals['infos'])
-  讀取每一局結束時的資訊，並計算移動平均獎勵來保存表現最好的模型。
-
-  現在整個腳本應該可以正常運作了。請您再次嘗試執行訓練。
-
-  啟動訓練指令：
-
-   1 python training_scripts/ppo_with_pbrs.py --total_timesteps=500000 --n_envs=4
+  我會使用 4 個平行環境訓練 500,000 個時間步，並且每 5000 步在終端機更新一次詳細的訓練日誌。
