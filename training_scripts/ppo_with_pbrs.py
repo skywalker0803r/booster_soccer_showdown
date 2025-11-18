@@ -88,14 +88,26 @@ def make_env(sai: SAIClient, stage: str, num_envs: int, config: Dict[str, Any]) 
     創建環境，並根據 stage 應用適當的 Wrapper (PBRS 或 HRL)。
     """
     if stage == 'hrl':
-        # HRL 階段使用 HierarchicalWrapper (這需要 hrl_wrapper.py)
         print("--- 建立 HRL 環境 (HierarchicalWrapper) ---")
-        return HierarchicalWrapper(
-            sai=sai, 
-            comp_id="booster-soccer-showdown", # 應從 config 或 args 取得
-            ll_steps=config['ll_steps'], 
-            num_envs=num_envs
-        )
+        
+        # HRL 需要一個底層環境來進行包裝
+        # 假設 LL 訓練是使用 'LowerT1GoaliePenaltyKick-v0' 或類似的基礎環境
+        ll_env_id = "LowerT1GoaliePenaltyKick-v0" 
+        
+        def env_factory():
+            # 建立單一底層環境
+            env = sai.make_env(env_id=ll_env_id) # 使用 SAIClient 建立底層環境
+            
+            # 將底層環境包裝進 HierarchicalWrapper
+            hrl_env = HierarchicalWrapper(
+                env=env, # 傳入實際的環境實例
+                ll_steps=config['ll_steps']
+            )
+            return hrl_env
+
+        # 建立向量化環境
+        vec_env = make_vec_env(env_factory, n_envs=num_envs)
+        return vec_env
     
     # move 或 kick 階段使用 PBRSWrapper (這需要 pbrs_wrapper.py)
     print(f"--- 建立 {stage.upper()} 環境 (PBRSWrapper) ---")
