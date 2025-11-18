@@ -119,3 +119,42 @@ target_xpos_rel_robot	ndarray	3	[-4.2, -1.44, 0.1333]
 target_velp_rel_robot	ndarray	3	[0, 0, 0]
 defender_xpos	ndarray	9	[-10.9707, -0.4792, 0.2724, -10.9707, 0.4808, 0.2724, -10.9707, 1.4408, 0.2724]
 success	bool	N/A	false
+An example of how we can use the preprocessor to create a shared state space across tasks in the scene is as follows:
+
+python
+
+Copy
+
+class Preprocessor():
+    def get_task_onehot(self, info):
+        if "task_index" in info:
+            return info["task_index"]
+        else:
+            return np.array([])
+
+    def modify_state(self, obs, info):
+        if len(obs.shape) == 1:
+            obs = np.expand_dims(obs, axis=0)
+        obs = obs[:,:32]
+
+        task_onehot = self.get_task_onehot(info)
+        if len(task_onehot.shape) == 1:
+            task_onehot = np.expand_dims(task_onehot, axis=0)
+        
+        return np.hstack((obs, task_onehot))
+This is only an example, and we encourage you to create your own!
+
+Create Scene
+To instantiate this scene and load a particular task, you can use:
+
+python
+
+Copy
+
+from sai_rl import SAIClient
+
+sai = SAIClient(scene_id="scn_fk2IPfTF7cVe")
+env = sai.make_env("LowerT1KickToTarget-v0")
+Alternatively, you can use the task index to initialize a scene environment instead of the gym id as follows: env = sai.make_env(2)
+
+However, regardless which environment you create with the SAI client, when you run a local evaluation, it will evaluate the entire scene, which means it evaluates all tasks in the scene.
