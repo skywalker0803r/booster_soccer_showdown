@@ -26,27 +26,39 @@ class Preprocessor:
         return a - b + c
 
     def modify_state(self, obs, info):
-        if len(obs.shape) == 1:
+        # Ensure obs is 2D
+        if obs.ndim == 1:
             obs = np.expand_dims(obs, axis=0)
 
-        # Ensure all info fields are correctly shaped
-        for key in info:
-            if isinstance(info[key], (np.ndarray, list)) and len(np.array(info[key]).shape) == 1:
-                 if key not in ['task_index', 'player_team']: # These can be 1D
-                    try:
-                        info[key] = np.expand_dims(np.array(info[key]), axis=0)
-                    except (ValueError, TypeError):
-                        pass # Ignore if not applicable
+        # List of all keys we expect to use from the info dict
+        info_keys = [
+            "robot_quat", "robot_gyro", "robot_accelerometer", "robot_velocimeter",
+            "goal_team_0_rel_robot", "goal_team_1_rel_robot", "goal_team_0_rel_ball",
+            "goal_team_1_rel_ball", "ball_xpos_rel_robot", "ball_velp_rel_robot",
+            "ball_velr_rel_robot", "player_team", "goalkeeper_team_0_xpos_rel_robot",
+            "goalkeeper_team_0_velp_rel_robot", "goalkeeper_team_1_xpos_rel_robot",
+            "goalkeeper_team_1_velp_rel_robot", "target_xpos_rel_robot",
+            "target_velp_rel_robot", "defender_xpos"
+        ]
+
+        # Ensure all required info arrays are 2D
+        for key in info_keys:
+            if key in info:
+                val = np.asarray(info[key])
+                if val.ndim == 1:
+                    info[key] = np.expand_dims(val, axis=0)
 
         task_onehot = self.get_task_onehot(info)
-        if len(task_onehot.shape) == 1:
+        if task_onehot.ndim == 1:
             task_onehot = np.expand_dims(task_onehot, axis=0)
 
         robot_qpos = obs[:, :12]
         robot_qvel = obs[:, 12:24]
         quat = info["robot_quat"]
         base_ang_vel = info["robot_gyro"]
-        project_gravity = self.quat_rotate_inverse(quat, np.array([0.0, 0.0, -1.0]))
+        # Ensure the vector for quat_rotate_inverse is also 2D
+        gravity_vec_2d = np.array([[0.0, 0.0, -1.0]])
+        project_gravity = self.quat_rotate_inverse(quat, gravity_vec_2d)
 
         # Combine all state information
         processed_obs = np.hstack([
