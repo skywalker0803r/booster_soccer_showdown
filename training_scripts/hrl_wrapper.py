@@ -68,18 +68,22 @@ class HierarchicalWrapper(gym.Wrapper):
         return 1 
 
     def _augment_obs(self, obs: np.ndarray, skill_id: int, progress: float) -> np.ndarray:
-        """將技能 ID 和進度追加到觀察中，用於 HL Policy。"""
-        # obs 來自 DummyVecEnv/VecNormalize，形狀應為 (num_envs, obs_dim)
-        num_envs = obs.shape[0] 
+        """
+        將技能 ID (1-hot) 和進度添加到觀察狀態中。
+        :param obs: 原始觀察狀態 (1D)。
+        ...
+        """
+        # 創建 1-hot 技能數組
+        num_high_level_actions = self.action_space_high_level.n
+        skill_one_hot = np.zeros(num_high_level_actions, dtype=np.float32)
+        skill_one_hot[skill_id] = 1.0
         
-        skill_one_hot = np.zeros((num_envs, 2), dtype=np.float32)
-        # 技能 0/1 設置為 1
-        skill_one_hot[np.arange(num_envs), skill_id] = 1.0 
+        # 將所有數組保持為 1D 進行拼接
+        progress_scalar = np.array([progress], dtype=np.float32)
         
-        progress_array = np.full((num_envs, 1), progress, dtype=np.float32)
-        
-        # 拼接原始觀察、1-hot 技能 ID 和進度
-        return np.concatenate([obs, skill_one_hot, progress_array], axis=1).astype(np.float32)
+        # 在 1D 上拼接 (軸 0)
+        # 拼接後 shape: (original_obs_dim + num_skills + 1,)
+        return np.concatenate([obs, skill_one_hot, progress_scalar], axis=0).astype(np.float32)
     
     def _check_skill_termination(self, skill_id: int, info: Dict[str, Any]) -> bool:
         """
