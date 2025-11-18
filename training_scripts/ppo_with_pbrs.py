@@ -117,7 +117,6 @@ def main(stage: str, mode: str, num_envs: int = 1):
     sai = SAIClient(
         comp_id="booster-soccer-showdown", # ⚠️ 請替換為您的比賽 ID
         api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv",        # ⚠️ 請替換為您的 API Key
-        timeout=10000
     )
 
     config = default_config
