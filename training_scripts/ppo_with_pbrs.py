@@ -8,7 +8,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import BaseCallback
 from collections import deque
-from stable_baselines3.common.logger import configure_logger
+from stable_baselines3.common.logger import configure
 import torch
 
 from sai_rl import SAIClient
@@ -306,7 +306,7 @@ if __name__ == "__main__":
         save_prefix = f"ppo_pbrs_continued_{timestamp}"
         try:
             model = PPO.load(model_path_to_load, env=env)
-            new_logger = configure_logger(verbose=0, tensorboard_log=log_dir, reset_num_timesteps=False)
+            new_logger = configure(log_dir, ["stdout", "tensorboard"])
             model.set_logger(new_logger)
             print("模型載入成功，將繼續訓練。\n注意：模型將使用已保存的超參數，剛才輸入的PPO超參數將被忽略。")
         except Exception as e:
