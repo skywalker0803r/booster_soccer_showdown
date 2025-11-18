@@ -54,8 +54,8 @@ class PBRSPreprocessor:
         vec_agent_to_ball, vec_ball_to_goal = self.get_features(info)
         
         # 距離項 (L2 Norm)
-        dist_agent_ball = np.linalg.norm(vec_agent_to_ball, axis=1)
-        dist_ball_goal = np.linalg.norm(vec_ball_to_goal, axis=1)
+        dist_agent_ball = np.linalg.norm(vec_agent_to_ball)
+        dist_ball_goal = np.linalg.norm(vec_ball_to_goal)
 
         # 💡 角度項 (用於 kick 階段)
         potential_value = - (self.k1 * dist_agent_ball) - (self.k2 * dist_ball_goal)
