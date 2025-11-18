@@ -192,30 +192,30 @@ class RewardShaper:
             target_alignment = np.dot(target_direction, ball_direction)
             
             if target_alignment > 0.8 and 1.0 < ball_speed < 5.0:
-                shaped_reward += 0.02 * min(ball_speed, 4.0)
+                shaped_reward += 0.05 * min(ball_speed, 4.0)
+            # 原: 0.01 -> 新: 0.03 (3 倍增強)
             elif target_alignment > 0.6 and ball_speed < 3.0:
-                shaped_reward += 0.01 * ball_speed
+                shaped_reward += 0.03 * ball_speed
             elif target_alignment < -0.3 and ball_speed > 2.0:
                 shaped_reward -= 0.01
-                
-        else:  # Task 1 & 2: Penalty Kicks
+
+        else: # Task 1 & 2: Penalty Kicks (您的修改已到位)
             goal_direction = goal_pos / (np.linalg.norm(goal_pos) + 1e-8)
             goal_alignment = np.dot(goal_direction, ball_direction)
-            
+
             if goal_alignment > 0.8:
+                # 您的修改: 0.025 -> 0.06
                 if ball_speed > 3.0:
-                    shaped_reward += 0.025 * min(ball_speed, 8.0)
+                    shaped_reward += 0.06 * min(ball_speed, 8.0)
+                # 您的修改: 0.015 -> 0.045
                 elif ball_speed > 1.0:
-                    shaped_reward += 0.015 * ball_speed
+                    shaped_reward += 0.045 * ball_speed
                 else:
                     shaped_reward += 0.01 * ball_speed
-                    
             elif goal_alignment > 0.5:
                 shaped_reward += 0.008 * min(ball_speed, 5.0)
-                
             elif goal_alignment < -0.3 and ball_speed > 2.0:
                 shaped_reward -= 0.015
-        
         return shaped_reward
 
     def reset(self):
