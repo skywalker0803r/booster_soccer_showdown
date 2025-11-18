@@ -1,218 +1,25 @@
-training_scripts\ppo_with_pbrs.py
-這個程式到底在幹嘛詳細解釋
+📋 執行步驟
+儲存檔案: 將第一個代碼塊儲存為 hrl_wrapper.py，將第二個代碼塊儲存為 ppo_with_pbrs.py。
 
-好的，這是一個使用 近端策略優化 (PPO) 演算法，並結合 潛能式獎勵塑形 (Potential-Based Reward Shaping, PBRS) 來訓練強化學習智能體 (RL Agent) 的 Python 腳本。
+創建目錄: 創建一個名為 low_level_models 的資料夾。
 
-這個程式主要用於訓練一個 足球機器人智能體 (很可能是在一個如 SAI Soccer 或類似的模擬環境中)，使其學會操控機器人朝向球，並將球射入球門。
+訓練低階策略 (LL):
 
-以下是程式碼各部分的詳細解釋：
+Bash
 
-💻 程式核心功能與流程
-該程式的目標是透過 PPO 演算法，在一個自訂的環境（透過 SAIClient 創建）中訓練一個智能體。關鍵的訓練優化點是使用了 PotentialBasedRewardWrapper 來實施 PBRS，以提供更密集、更有指導性的獎勵訊號，加速學習。
+# 訓練 Move Policy (Stage 0)
+python ppo_with_pbrs.py --comp_id YOUR_COMP_ID --stage move --mode new
 
-配置設定： 互動式地收集使用者輸入，設定訓練的總步數、環境數量、PPO 超參數（學習率、Gamma 等）以及 PBRS 的權重 (k1, k2)。
+# 訓練 Kick Policy (Stage 1)
+python ppo_with_pbrs.py --comp_id YOUR_COMP_ID --stage kick --mode new
+這將在 low_level_models/ 中生成 move_policy_final.zip 和 kick_policy_final.zip。
 
-環境準備： 使用 SAIClient 建立基礎環境，並用 PotentialBasedRewardWrapper 包裝，實施獎勵塑形並進行狀態預處理。
+訓練高階策略 (HL):
 
-模型初始化： 根據使用者選擇（新訓練或繼續訓練），初始化或載入 Stable-Baselines3 的 PPO 模型。
+Bash
 
-訓練迴圈： 運行 model.learn()，利用 DetailedLogCallback 在訓練過程中進行詳細記錄、日誌輸出，並保存表現最好的模型。
+# 訓練 HRL High-Level Policy
+python ppo_with_pbrs.py --comp_id YOUR_COMP_ID --stage hrl --mode new
+這將使用 HierarchicalWrapper 來訓練 HL 策略，並在 hrl_models/ 中生成 hrl_high_level_policy_final.zip。
 
-結果保存： 訓練結束後保存最終模型，並提供 TensorBoard 查閱日誌的指令。
-
-🧩 主要組成部分詳解
-1. Preprocessor 類
-這個類別負責將原始環境觀察值 (Observation) 和資訊 (Info) 轉換成適合 RL 模型輸入的狀態 (State)。
-
-quat_rotate_inverse： 實現四元數 (Quaternion) 的逆旋轉操作。這用於將機器的姿態資訊（四元數）轉換為世界坐標系下的向量（例如，將重力向量旋轉到機器人坐標系中，以獲取投影重力）。
-
-modify_state： 這是核心的狀態預處理函數。它將原始的觀察值（機器人關節位置 robot_qpos 和速度 robot_qvel）與 Info 字典中額外的感測器和場景資訊 堆疊 (Stack) 起來，形成一個包含 89 個元素 的巨大狀態向量 (Observation Space)。
-
-新增的資訊包括： 投影重力 (project_gravity)、機器人角速度、加速度、速度、球門/球/守門員/目標的相對位置和速度，以及任務獨熱編碼 (task_onehot)。
-
-2. PotentialBasedRewardWrapper 類
-這是實現 潛能式獎勵塑形 (PBRS) 的核心。它包裝了原始環境，修改了觀察空間和獎勵訊號。
-
-潛能函數 (Φ) 的計算 (_calculate_potential)： 潛能函數的設計基於任務目標（將球射入球門）。它使用了以下兩個距離作為潛能的負數：
-
-智能體到球的距離 (dist 
-agent-ball
-​
- )
-
-球到球門的距離 (dist 
-ball-goal
-​
- )
-
-潛能 P 的計算公式為：
-
-P=−k 
-1
-​
- ⋅dist 
-agent-ball
-​
- −k 
-2
-​
- ⋅dist 
-ball-goal
-​
- 
-獎勵塑形 (step 函數)： 根據 PBRS 的理論，塑形後的獎勵 (R 
-s
-​
- ) 是原始環境獎勵 (R) 加上潛能差異的折現值：
-
-R 
-s
-​
- =R+γ⋅P 
-current
-​
- −P 
-previous
-​
- 
-γ 是折扣因子 (gamma)。
-
-P 
-current
-​
-  是當前時間步的潛能。
-
-P 
-previous
-​
-  是上一個時間步的潛能。
-
-最終的總獎勵 (total_reward) 就是 R+R 
-s
-​
- 。 這種設計確保了只要智能體做出縮小距離（即增加潛能）的動作，就能獲得額外的正向獎勵。
-
-觀察空間 (observation_space)： 由於 Preprocessor 的加入，觀察空間被硬編碼為 (89,) 維度的 Box 空間。
-
-3. DetailedLogCallback 類
-這是 Stable-Baselines3 的自訂回調函數，負責訓練過程中的日誌記錄和模型保存。
-
-功能：
-
-收集指標： 在每個步驟 (_on_step) 收集原始獎勵、塑形獎勵、潛能值、智能體到球的距離、球到球門的距離等詳細資訊。
-
-間隔日誌： 每隔 log_interval 步（預設 10000 步）計算所有收集到的指標的平均值，並記錄到 TensorBoard 和終端。
-
-保存最佳模型： 追蹤最近 100 集的滾動平均獎勵，如果當前平均獎勵超過歷史最佳，則將當前模型保存為 _best.zip。
-
-4. 主執行區塊 (if __name__ == "__main__":)
-互動設定： 透過 prompt_for_value 函數提示使用者輸入所有訓練超參數。
-
-環境建立： 使用 make_vec_env 創建多個平行環境 (n_envs)，所有環境都用 PotentialBasedRewardWrapper 包裝，以進行高效的並行數據採集。
-
-訓練模式選擇： 讓使用者選擇是從頭開始新訓練 (mode = 'new') 還是載入現有模型繼續訓練 (mode = 'continue')。
-
-模型實例化/載入： 根據選擇的模式和使用者輸入的超參數，初始化或載入 PPO 模型。新模型的網路結構被設定為 [256,256,128,128,64]。
-
-訓練執行： 呼叫 model.learn() 開始訓練，並傳入 DetailedLogCallback。
-
-清理： 訓練結束或被中斷時，保存最終模型並關閉環境。
-
-🔑 總結
-這個程式是一個典型的 RL 訓練腳本，專為一個基於物理的 移動/踢球任務 設計，使用了 PPO 作為主要的訓練演算法，並策略性地應用了 PBRS 來顯著改善智能體的學習效率。Preprocessor 和 DetailedLogCallback 則提供了必要的狀態特徵工程和訓練監控功能。
-
-請問您想對程式中的哪個特定部分進行更深入的探討？例如，PBRS 的原理、PPO 的超參數設置，或是 Preprocessor 中某一特定資訊的用途？
-
-你覺得這樣訓練得起來嗎
-
-從程式碼的設計和採用的技術來看，這個訓練腳本很有可能成功訓練出一個有效的智能體，但最終的成功與否取決於多個因素。
-
-以下是我的詳細分析：
-
-📈 成功的潛在優勢 (Why it might work)
-採用強大的演算法 PPO： PPO (Proximal Policy Optimization) 是一個在各種 RL 任務中表現穩定且高效的演算法，是業界和學術界的首選之一。
-
-實施潛能式獎勵塑形 (PBRS)： 這是最大的優勢。
-
-解決稀疏獎勵問題： 足球這類任務的環境獎勵（例如，進球）通常非常稀疏。PBRS 透過獎勵智能體做趨近於目標的行為（接近球和將球推向球門），提供密集且有指導性的訊號。
-
-保證策略不變性 (Policy Invariance)： 潛能式塑形 R 
-s
-​
- =R+γ⋅P 
-current
-​
- −P 
-previous
-​
-  在理論上保證了最優策略不會因塑形而改變，這使得訓練更穩定且目標正確。
-
-精細的狀態預處理 (Preprocessor)：
-
-將機器人局部坐標系的資訊 (如陀螺儀、加速度計) 與世界坐標系的目標資訊 (球門、球的相對位置) 結合，提供了豐富且具有辨識度的狀態輸入。
-
-轉換到相對坐標系： 將所有目標（球、球門、守門員）轉換為相對於機器人或球的相對位置，有助於智能體學習與自身姿態無關的通用策略。
-
-使用 Vectorized Environments (make_vec_env)： 透過平行處理多個環境（預設 n_envs=4），可以大幅提高數據採集效率，縮短訓練時間並降低採樣方差。
-
-詳細的監控機制 (DetailedLogCallback)： 能夠追蹤原始獎勵、塑形獎勵、潛能值和距離等關鍵指標，這對於診斷訓練進度、調整 k 
-1
-​
-  和 k 
-2
-​
-  等超參數非常有幫助。
-
-🚧 潛在的挑戰和風險 (What could go wrong)
-PBRS 參數的平衡 (k1, k2)：
-
-如果 k 
-1
-​
-  和 k 
-2
-​
-  的權重設定不當（如其中一個權重過大），智能體可能會過度專注於單一目標（例如，只追球但不射門），導致策略次優。
-
-巨大的狀態空間維度： 89 維度的狀態空間相對較大。雖然網路結構 [256,256,128,128,64] 看起來是合理的，但如果任務的複雜度遠超預期，可能需要調整網路深度或寬度。
-
-超參數調優 (Hyperparameter Tuning)： PPO 對超參數 (特別是 clip_range 和 n_steps) 比較敏感。程式提供了合理的預設值，但在實際訓練中可能仍需要大量的調優工作。
-
-「非預期」的潛能函數： 雖然 P=−k 
-1
-​
- ⋅dist 
-agent-ball
-​
- −k 
-2
-​
- ⋅dist 
-ball-goal
-​
-  的設計是合理的，但環境中可能存在智能體應該避免的區域或行為（例如，踢到自家球門）。如果潛能函數沒有考慮這些負面因素，智能體可能會學到一些有風險但能增加潛能的行為。
-
-結論
-總體而言，這是一個設計精良且基於最新技術的訓練腳本。只要訓練環境本身是穩定的，並且 PBRS 權重 (k 
-1
-​
- ,k 
-2
-​
- ) 和 PPO 超參數經過合理調整，訓練成功的機率很高。
-
-我建議密切關注 TensorBoard 中的指標，特別是：
-
-step_metrics/mean_potential： 應該穩定增長或保持高位。
-
-step_metrics/mean_dist_agent_ball 和 mean_dist_ball_goal： 應該隨著訓練進度而下降。
-
-episode/reward： 最終的成功指標。
-
-您是否想讓我幫您計算一下 PBRS 權重 k 
-1
-​
-  和 k 
-2
-​
-  之間可能存在的最佳比例？
+完成訓練後，您就可以使用這些模型來建立最終的 HRLInferenceModel 進行平台提交了。
