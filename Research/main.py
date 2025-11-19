@@ -61,9 +61,9 @@ class OUNoise:
 # =================================================================
 # 3. 超參數和初始化
 # =================================================================
-TOTAL_TIMESTEPS = 2000#_000 # 設定總訓練步數
+TOTAL_TIMESTEPS = 2000_000 # 設定總訓練步數
 MODEL_NAME = "Booster-DDPG-FF-v1" 
-BUFFER_CAPACITY = 1000#_000
+BUFFER_CAPACITY = 1000_000
 BATCH_SIZE = 256
 LEARNING_RATE = 3e-4 
 NEURONS = [256, 256] 
