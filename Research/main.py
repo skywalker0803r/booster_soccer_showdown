@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-# main_pure_curiosity.py
-# 純好奇心驅動的DDPG訓練腳本 (不使用OU噪音和PBRS)
+# main_td3_curiosity.py
+# 使用TD3改進的純好奇心驅動訓練腳本
 
 import numpy as np
 import torch
 from sai_rl import SAIClient 
-from ddpg_model import DDPG_FF, ReplayBuffer
-from utils import Preprocessor  # 不導入calculate_potential
+from td3_model import TD3_FF, ReplayBuffer  # 使用TD3替代DDPG
+from utils import Preprocessor
 from logger import TensorBoardLogger
 from curiosity_module import CuriosityDrivenExploration
 from gdrive_utils import SimpleGDriveSync
@@ -15,7 +15,7 @@ from gdrive_utils import SimpleGDriveSync
 # 1. 初始化 SAIClient 和環境
 # =================================================================
 sai = SAIClient(
-    comp_id="booster-soccer-showdown" , 
+    comp_id="booster-soccer-showdown", 
     api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv",
 )
 
@@ -40,28 +40,36 @@ def action_function(policy):
     )
 
 # =================================================================
-# 3. 超參數和初始化 (純好奇心版)
+# 3. 超參數和初始化 (TD3 + 純好奇心版)
 # =================================================================
 TOTAL_TIMESTEPS = 1000000
-MODEL_NAME = "Booster-DDPG-PureCuriosity-v1"
+MODEL_NAME = "Booster-TD3-PureCuriosity-v1"
 BUFFER_CAPACITY = 1000000
 BATCH_SIZE = 256
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 3e-4  # TD3通常使用稍高的學習率
 NEURONS = [256, 256] 
 UPDATE_FREQ = 1
 SAVE_FREQ = 50
+
+# TD3 特有參數
+POLICY_DELAY = 2      # 策略延遲更新頻率
+POLICY_NOISE = 0.2    # 目標策略噪音
+NOISE_CLIP = 0.5      # 噪音裁剪範圍
 
 # 好奇心模組參數 (關鍵設置)
 INTRINSIC_REWARD_SCALE = 1.0  # 增大係數，因為只依賴好奇心
 CURIOSITY_UPDATE_FREQ = 1
 
-# 初始化模型
-ddpg_agent = DDPG_FF(
+# 初始化TD3模型
+td3_agent = TD3_FF(
     N_FEATURES, 
     env.action_space, 
     NEURONS, 
     torch.nn.functional.relu,
-    LEARNING_RATE
+    LEARNING_RATE,
+    policy_delay=POLICY_DELAY,
+    policy_noise=POLICY_NOISE,
+    noise_clip=NOISE_CLIP
 )
 replay_buffer = ReplayBuffer(BUFFER_CAPACITY, (N_FEATURES,), N_ACTIONS)
 
@@ -82,7 +90,7 @@ gdrive_sync = SimpleGDriveSync()
 # 詢問是否載入舊模型
 def choose_model_loading():
     print("\n" + "="*50)
-    print("🤔 訓練模式選擇")
+    print("🤔 TD3訓練模式選擇")
     print("="*50)
     
     # 檢查本地已有模型
@@ -132,7 +140,7 @@ model_type, model_path = choose_model_loading()
 
 # GPU設置
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-ddpg_agent.to(device)
+td3_agent.to(device)
 curiosity_explorer.to(device)
 
 # 載入模型 (如果選擇了)
@@ -150,11 +158,11 @@ if model_path:
         checkpoint = torch.load(model_path, map_location=device)
         
         if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
-            ddpg_agent.load_state_dict(checkpoint['model_state_dict'])
+            td3_agent.load_state_dict(checkpoint['model_state_dict'])
             start_episode = checkpoint.get('episode', 0)
             print(f"✅ 已載入模型 (從Episode {start_episode}繼續)")
         else:
-            ddpg_agent.load_state_dict(checkpoint)
+            td3_agent.load_state_dict(checkpoint)
             print(f"✅ 已載入模型 (狀態dict格式)")
             
     except Exception as e:
@@ -176,14 +184,18 @@ episode_steps = 0
 best_reward = -np.inf
 best_model_path = f"best_{MODEL_NAME}.pth"
 
-print(f"🧠 純好奇心DDPG訓練開始，設備：{device}")
+print(f"🧠 TD3 + 純好奇心訓練開始，設備：{device}")
+print(f"🎯 TD3改進特性：")
+print(f"   • Double Q-Learning: ✅")
+print(f"   • Delayed Policy Updates: ✅ (每{POLICY_DELAY}次)")
+print(f"   • Target Policy Smoothing: ✅ (噪音σ={POLICY_NOISE})")
 print(f"🔥 內在獎勵縮放係數：{INTRINSIC_REWARD_SCALE}")
 print(f"❌ OU噪音：已禁用")
 print(f"❌ PBRS獎勵：已禁用") 
 print(f"✅ 純好奇心探索：已啟用")
 
 # =================================================================
-# 4. 純好奇心 DDPG 訓練循環
+# 4. TD3 + 純好奇心 訓練循環
 # =================================================================
 current_obs, info = env.reset()
 state = Preprocessor().modify_state(current_obs, info)[0] 
@@ -192,7 +204,7 @@ state = torch.tensor(state).float().to(device)
 for t in range(1, TOTAL_TIMESTEPS + 1):
     # 1. 採集動作 (不添加OU噪音，純依賴好奇心探索)
     with torch.no_grad():
-        raw_action_tensor = ddpg_agent(state.unsqueeze(0))
+        raw_action_tensor = td3_agent(state.unsqueeze(0))
     raw_action = raw_action_tensor.cpu().numpy().flatten()
     
     # 🚫 不添加OU噪音 - 純依賴好奇心驅動的探索
@@ -239,7 +251,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         done
     )
 
-    # DDPG 模型更新
+    # TD3 模型更新
     if replay_buffer.size > BATCH_SIZE and t % UPDATE_FREQ == 0:
         states, actions, rewards, next_states, dones = replay_buffer.sample(BATCH_SIZE)
         
@@ -249,7 +261,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         next_states = torch.tensor(next_states).float().to(device)
         dones = torch.tensor(dones).float().to(device)
         
-        critic_loss, actor_loss = ddpg_agent.model_update(states, actions, rewards, next_states, dones)
+        critic_loss, actor_loss = td3_agent.model_update(states, actions, rewards, next_states, dones)
         
         # 更新好奇心模組
         if t % CURIOSITY_UPDATE_FREQ == 0:
@@ -264,7 +276,13 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         # 記錄訓練指標
         logger.set_step(t) 
         logger.log_scalar("Loss/Critic_Loss", critic_loss) 
-        logger.log_scalar("Loss/Actor_Loss", actor_loss) 
+        if actor_loss is not None and actor_loss != 0.0:  # TD3的延遲更新
+            logger.log_scalar("Loss/Actor_Loss", actor_loss)
+        
+        # 記錄TD3特定指標
+        td3_stats = td3_agent.get_statistics()
+        logger.log_scalar("TD3/Update_Counter", td3_stats['update_counter'])
+        logger.log_scalar("TD3/Next_Actor_Update", td3_stats['next_actor_update'])
 
     # =================================================================
     # 🔄 回合結束處理
@@ -289,13 +307,14 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
             
             # 保存模型狀態 (包含元數據)
             checkpoint = {
-                'model_state_dict': ddpg_agent.state_dict(),
+                'model_state_dict': td3_agent.state_dict(),
                 'episode': episode_count + start_episode,
                 'timestep': t,
                 'best_reward': best_reward,
                 'total_reward': episode_reward_sum,
                 'intrinsic_reward': episode_intrinsic_reward_sum,
-                'episode_steps': episode_steps
+                'episode_steps': episode_steps,
+                'td3_update_counter': td3_agent.update_counter
             }
             
             # 本地保存
@@ -307,7 +326,8 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
                 'timestep': t,
                 'reward': episode_reward_sum,
                 'intrinsic_reward': episode_intrinsic_reward_sum,
-                'steps': episode_steps
+                'steps': episode_steps,
+                'algorithm': 'TD3'
             }
             gdrive_sync.save_model(checkpoint, f"best_{MODEL_NAME}", metadata)
             
@@ -322,12 +342,14 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         # 定期進度報告
         if episode_count % 5 == 0:
             ratio = episode_intrinsic_reward_sum / max(abs(episode_extrinsic_reward_sum), 0.001)
-            print(f"🧠 Episode {episode_count:3d} | "
+            td3_stats = td3_agent.get_statistics()
+            print(f"🎯 Episode {episode_count:3d} | "
                   f"總獎勵: {episode_reward_sum:6.2f} | "
                   f"原始: {episode_extrinsic_reward_sum:6.2f} | "
                   f"好奇心: {episode_intrinsic_reward_sum:5.2f} | "
                   f"步數: {episode_steps:3d} | "
-                  f"比例: {ratio:.2f}")
+                  f"比例: {ratio:.2f} | "
+                  f"TD3更新: {td3_stats['update_counter']}")
         
         # 重置環境
         current_obs, info = env.reset()
@@ -345,27 +367,32 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     # 大進度報告和定期備份
     if t % 100000 == 0:
         curiosity_stats = curiosity_explorer.get_statistics()
-        print(f"\n🚀 === 訓練進度報告 (步數: {t}) ===")
+        td3_stats = td3_agent.get_statistics()
+        print(f"\n🚀 === TD3訓練進度報告 (步數: {t}) ===")
         print(f"📊 回合總數: {episode_count}")
         print(f"💾 Buffer大小: {replay_buffer.size}")
         print(f"🏆 最佳總獎勵: {best_reward:.2f}")
         print(f"🧠 累計好奇心獎勵: {curiosity_stats['total_intrinsic_reward']:.2f}")
         print(f"📈 平均好奇心獎勵: {curiosity_stats['average_intrinsic_reward']:.4f}")
         print(f"🔄 好奇心更新次數: {curiosity_stats['update_count']}")
+        print(f"🎯 TD3更新次數: {td3_stats['update_counter']}")
+        print(f"⏰ 下次Actor更新: {td3_stats['next_actor_update']}步後")
         
         # 定期自動備份到Google Drive
         checkpoint_name = f"checkpoint_{t//1000}k"
         checkpoint_data = {
-            'model_state_dict': ddpg_agent.state_dict(),
+            'model_state_dict': td3_agent.state_dict(),
             'episode': episode_count + start_episode,
             'timestep': t,
-            'best_reward': best_reward
+            'best_reward': best_reward,
+            'td3_update_counter': td3_agent.update_counter
         }
         checkpoint_meta = {
             'episode': episode_count + start_episode,
             'timestep': t,
             'best_reward': best_reward,
-            'checkpoint': True
+            'checkpoint': True,
+            'algorithm': 'TD3'
         }
         
         if gdrive_sync.save_model(checkpoint_data, checkpoint_name, checkpoint_meta):
@@ -380,11 +407,12 @@ final_model_path = f"final_{MODEL_NAME}.pth"
 
 # 保存最終模型 (包含完整狀態)
 final_checkpoint = {
-    'model_state_dict': ddpg_agent.state_dict(),
+    'model_state_dict': td3_agent.state_dict(),
     'episode': episode_count + start_episode,
     'timestep': TOTAL_TIMESTEPS,
     'best_reward': best_reward,
-    'final_training': True
+    'final_training': True,
+    'td3_update_counter': td3_agent.update_counter
 }
 torch.save(final_checkpoint, final_model_path)
 
@@ -393,20 +421,23 @@ final_metadata = {
     'episode': episode_count + start_episode,
     'timestep': TOTAL_TIMESTEPS, 
     'best_reward': best_reward,
-    'training_completed': True
+    'training_completed': True,
+    'algorithm': 'TD3'
 }
 gdrive_sync.save_model(final_checkpoint, f"final_{MODEL_NAME}", final_metadata)
 
 curiosity_final_stats = curiosity_explorer.get_statistics()
+td3_final_stats = td3_agent.get_statistics()
 
-print(f"\n🎉 純好奇心訓練完成！")
+print(f"\n🎉 TD3 + 純好奇心訓練完成！")
 print(f"🏆 最佳回合獎勵: {best_reward:.2f}")
 print(f"🧠 總好奇心獎勵: {curiosity_final_stats['total_intrinsic_reward']:.2f}")
 print(f"📊 平均好奇心獎勵: {curiosity_final_stats['average_intrinsic_reward']:.4f}")
 print(f"🔄 總回合數: {episode_count}")
+print(f"🎯 TD3總更新次數: {td3_final_stats['update_counter']}")
 print(f"💾 模型文件: {best_model_path}, {final_model_path}")
 
 # 清理
 env.close()
 logger.close()
-print("🏁 純好奇心實驗完成！")
+print("🏁 TD3純好奇心實驗完成！")
