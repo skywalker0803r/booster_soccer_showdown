@@ -21,4 +21,5 @@ conda create -n booster-ssl python=3.11 -y && conda activate booster-ssl
 pip install -r requirements.txt
 
 # 訓練
-python Research/main.py
+cd Research
+python main.py
