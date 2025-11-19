@@ -27,7 +27,7 @@ class NeuralNetwork(nn.Module):
         self.n_layers = len(self.neurons) + 1
         self.layers = torch.nn.ModuleList()
         
-        # 建立網路層
+        # Build network layers
         for index in range(self.n_layers):
             if index == 0:
                 in_dim = n_features
@@ -52,7 +52,7 @@ class NeuralNetwork(nn.Module):
             if index < self.n_layers - 1:
                 current_layer = self.activation_function(layer(current_layer))
             else:
-                # 輸出層
+                # Output layer
                 current_layer = layer(current_layer)
                 if self.output_activation is not None:
                     current_layer = self.output_activation(current_layer)
@@ -61,11 +61,11 @@ class NeuralNetwork(nn.Module):
 
 class TD3_FF(torch.nn.Module):
     """
-    Twin Delayed Deep Deterministic Policy Gradient (TD3) 算法
-    相比DDPG的三個主要改進:
-    1. Double Q-Learning (雙Critic網路)
-    2. Delayed Policy Updates (延遲策略更新)
-    3. Target Policy Smoothing (目標策略平滑化)
+    Twin Delayed Deep Deterministic Policy Gradient (TD3) Algorithm
+    Three main improvements over DDPG:
+    1. Double Q-Learning (Twin Critic Networks)
+    2. Delayed Policy Updates
+    3. Target Policy Smoothing
     """
     def __init__(
         self, n_features, action_space, neurons, activation_function, learning_rate,
@@ -75,26 +75,26 @@ class TD3_FF(torch.nn.Module):
         self.action_space = action_space
         self.learning_rate = learning_rate
         self.gamma = 0.99
-        self.tau = 0.005  # TD3使用較大的tau值
+        self.tau = 0.005  # TD3 uses larger tau value
         
-        # TD3 特有參數
-        self.policy_delay = policy_delay  # 策略更新延遲
-        self.policy_noise = policy_noise  # 目標策略噪音標準差
-        self.noise_clip = noise_clip     # 噪音裁剪範圍
-        self.update_counter = 0          # 更新計數器
+        # TD3 specific parameters
+        self.policy_delay = policy_delay  # Policy update delay
+        self.policy_noise = policy_noise  # Target policy noise std
+        self.noise_clip = noise_clip     # Noise clipping range
+        self.update_counter = 0          # Update counter
         
         action_dim = action_space.shape[0]
         shared_inputs = [neurons, activation_function]
         
-        # Actor 網路
+        # Actor Network
         self.actor = NeuralNetwork(
             n_features,
             action_dim,
             *shared_inputs,
-            F.tanh,  # 輸出層使用 tanh，將動作範圍約束在 [-1, 1]
+            F.tanh,  # Output layer uses tanh to constrain action range to [-1, 1]
         )
         
-        # 🎯 TD3改進1: 雙Critic網路 (Double Q-Learning)
+        # 🎯 TD3 Improvement 1: Twin Critic Networks (Double Q-Learning)
         self.critic1 = NeuralNetwork(
             n_features + action_dim, 1, *shared_inputs
         )
@@ -102,7 +102,7 @@ class TD3_FF(torch.nn.Module):
             n_features + action_dim, 1, *shared_inputs
         )
 
-        # Target 網路
+        # Target Networks
         self.target_actor = NeuralNetwork(
             n_features,
             action_dim,
@@ -116,12 +116,12 @@ class TD3_FF(torch.nn.Module):
             n_features + action_dim, 1, *shared_inputs
         )
 
-        # 初始化 Target 網路與主網路權重相同
+        # Initialize Target networks with same weights as main networks
         self.target_actor.load_state_dict(self.actor.state_dict())
         self.target_critic1.load_state_dict(self.critic1.state_dict())
         self.target_critic2.load_state_dict(self.critic2.state_dict())
 
-        # 優化器
+        # Optimizers
         self.actor_optimizer = torch.optim.Adam(
             self.actor.parameters(), lr=self.learning_rate
         )
@@ -131,7 +131,7 @@ class TD3_FF(torch.nn.Module):
         )
 
     def soft_update_targets(self):
-        """軟更新 Target 網路權重 (Polyak Averaging)"""
+        """Soft update Target network weights (Polyak Averaging)"""
         # Actor
         for target_param, param in zip(
             self.target_actor.parameters(), self.actor.parameters()
@@ -158,53 +158,53 @@ class TD3_FF(torch.nn.Module):
 
     @staticmethod
     def backprop(optimizer, loss, max_grad_norm=1.0):
-        """執行反向傳播和梯度裁剪"""
+        """Execute backpropagation and gradient clipping"""
         optimizer.zero_grad()
         loss.backward()
-        # 梯度裁剪，防止梯度爆炸
+        # Gradient clipping to prevent gradient explosion
         for param_group in optimizer.param_groups:
             torch.nn.utils.clip_grad_norm_(param_group["params"], max_grad_norm)
         optimizer.step()
 
     @staticmethod
     def get_critic_state(state, action):
-        """將狀態和動作合併為 Critic 的輸入"""
+        """Combine state and action as input for Critic"""
         return torch.cat([state, action], dim=1)
 
     @staticmethod
     def tensor_to_array(torch_tensor):
-        """將 PyTorch Tensor 轉換為 numpy array"""
+        """Convert PyTorch Tensor to numpy array"""
         return torch_tensor.detach().cpu().numpy()
 
     def forward(self, state):
-        """僅返回 Actor 的動作輸出"""
+        """Return only Actor's action output"""
         return self.actor(state).cpu()
 
     def select_action(self, state_np):
-        """在環境交互時選擇動作"""
+        """Select action during environment interaction"""
         state = torch.tensor(state_np).float().to(next(self.parameters()).device)
         return self.tensor_to_array(self.actor(state))
 
     def model_update(self, states, actions, rewards, next_states, dones):
         """
-        TD3 模型的單次更新
-        注意：輸入 states, actions, rewards, next_states, dones 已經是 tensor 且在正確的 device 上
+        Single update of TD3 model
+        Note: inputs states, actions, rewards, next_states, dones are already tensors on correct device
         """
         self.update_counter += 1
         
-        # --- Critic 更新 (每次都更新) ---
+        # --- Critic Update (update every time) ---
         with torch.no_grad():
-            # 🎯 TD3改進3: Target Policy Smoothing (目標策略平滑化)
+            # 🎯 TD3 Improvement 3: Target Policy Smoothing
             next_actions = self.target_actor(next_states)
             
-            # 添加裁剪噪音到目標動作
+            # Add clipped noise to target actions
             noise = torch.clamp(
                 torch.randn_like(next_actions) * self.policy_noise,
                 -self.noise_clip, self.noise_clip
             )
             next_actions = torch.clamp(next_actions + noise, -1.0, 1.0)
             
-            # 🎯 TD3改進1: Double Q-Learning (取兩個Q值的最小值)
+            # 🎯 TD3 Improvement 1: Double Q-Learning (take minimum of two Q values)
             target_q1 = self.target_critic1(
                 TD3_FF.get_critic_state(next_states, next_actions)
             )
@@ -216,41 +216,41 @@ class TD3_FF(torch.nn.Module):
             # Bellman Target
             y = rewards + self.gamma * target_q * (1 - dones)
 
-        # 計算當前 Q 值
+        # Calculate current Q values
         current_q1 = self.critic1(TD3_FF.get_critic_state(states, actions))
         current_q2 = self.critic2(TD3_FF.get_critic_state(states, actions))
         
-        # Critic 損失 (兩個Critic的MSE損失之和)
+        # Critic loss (sum of MSE losses from both Critics)
         critic_loss = F.mse_loss(current_q1, y) + F.mse_loss(current_q2, y)
         TD3_FF.backprop(self.critic_optimizer, critic_loss)
         
         actor_loss = None
         
-        # 🎯 TD3改進2: Delayed Policy Updates (延遲策略更新)
+        # 🎯 TD3 Improvement 2: Delayed Policy Updates
         if self.update_counter % self.policy_delay == 0:
-            # --- Actor 更新 (每policy_delay次更新一次) ---
+            # --- Actor Update (update every policy_delay times) ---
             
-            # 計算當前狀態的最佳動作 (由 Actor 預測)
+            # Calculate optimal actions for current states (predicted by Actor)
             actor_actions = self.actor(states)
             
-            # 計算 Actor 損失 (-Q 值，只使用第一個Critic)
+            # Calculate Actor loss (-Q value, only use first Critic)
             actor_loss = -self.critic1(
                 TD3_FF.get_critic_state(states, actor_actions)
             ).mean()
             TD3_FF.backprop(self.actor_optimizer, actor_loss)
             
-            # --- Target 網路軟更新 ---
+            # --- Soft update Target networks ---
             self.soft_update_targets()
             
             actor_loss = actor_loss.item()
         else:
-            # 如果不更新Actor，返回None或上一次的值
+            # If Actor is not updated, return None or previous value
             actor_loss = 0.0
 
         return critic_loss.item(), actor_loss
 
     def get_statistics(self):
-        """獲取模型統計信息"""
+        """Get model statistics"""
         return {
             'update_counter': self.update_counter,
             'policy_delay': self.policy_delay,
@@ -259,32 +259,32 @@ class TD3_FF(torch.nn.Module):
 
 
 class ReplayBuffer:
-    """標準經驗重放緩衝區 (與DDPG相同)"""
+    """Standard experience replay buffer (same as DDPG)"""
     def __init__(self, capacity, observation_shape, action_dim):
         self.capacity = capacity
         self.ptr = 0
         self.size = 0
         
-        # 使用 numpy 陣列儲存經驗
+        # Use numpy arrays to store experiences
         self.states = np.zeros((capacity, *observation_shape), dtype=np.float32)
         self.actions = np.zeros((capacity, action_dim), dtype=np.float32)
-        # 調整 rewards 和 dones 的 shape
+        # Adjust shape of rewards and dones
         self.rewards = np.zeros((capacity, 1), dtype=np.float32)
         self.next_states = np.zeros((capacity, *observation_shape), dtype=np.float32)
         self.dones = np.zeros((capacity, 1), dtype=np.float32)
 
     def add(self, state, action, reward, next_state, done):
-        """儲存單次轉變 (s, a, r, s', d)"""
+        """Store single transition (s, a, r, s', d)"""
         self.states[self.ptr] = state
         self.actions[self.ptr] = action
         self.rewards[self.ptr] = reward
         self.next_states[self.ptr] = next_state
-        self.dones[self.ptr] = float(done)  # 轉換為 float (0.0 或 1.0)
+        self.dones[self.ptr] = float(done)  # Convert to float (0.0 or 1.0)
         self.ptr = (self.ptr + 1) % self.capacity
         self.size = min(self.size + 1, self.capacity)
 
     def sample(self, batch_size):
-        """隨機採樣批次經驗"""
+        """Randomly sample batch experiences"""
         ind = np.random.randint(0, self.size, size=batch_size)
         
         return (

@@ -6,14 +6,14 @@ import numpy as np
 class Preprocessor():
 
     def get_task_onehot(self, info):
-        # 保持不變：獲取 task_index 的 one-hot 編碼 (3 維)
+        # Keep unchanged: get one-hot encoding of task_index (3 dimensions)
         if 'task_index' in info:
             return info['task_index']
         else:
-            # 如果沒有，則返回一個 3 維的零向量
+            # If not available, return a 3-dimensional zero vector
             return np.array([0, 0, 0]) 
 
-    # 保持 quat_rotate_inverse 不變
+    # Keep quat_rotate_inverse unchanged
     def quat_rotate_inverse(self, q: np.ndarray, v: np.ndarray):
         q_w = q[:,[-1]]
         q_vec = q[:,:3]
@@ -27,20 +27,20 @@ class Preprocessor():
         if len(obs.shape) == 1:
             obs = np.expand_dims(obs, axis=0)
         
-        # 處理 info 數據擴展
+        # Handle info data expansion
         if len(info["robot_quat"].shape) == 1:
             info["robot_quat"] = np.expand_dims(info["robot_quat"], axis = 0)
             info["robot_gyro"] = np.expand_dims(info["robot_gyro"], axis = 0)
             info["robot_accelerometer"] = np.expand_dims(info["robot_accelerometer"], axis = 0)
             info["robot_velocimeter"] = np.expand_dims(info["robot_velocimeter"], axis = 0)
             
-        # 計算 Project Gravity
+        # Calculate Project Gravity
         quat = info["robot_quat"]
         project_gravity = self.quat_rotate_inverse(quat, np.array([0.0, 0.0, -1.0]))
 
-        # *** 創建 42 維的基礎狀態 ***
+        # *** Create 42-dimensional base state ***
         # 12 (qpos) + 12 (qvel) + 3 (proj_grav) + 3 (gyro) + 3 (accel) + 3 (velo) + 3 (ball_xpos) + 3 (ball_velp) = 42
-        # 注意: obs 的維度來自 SAI 環境原始輸出
+        # Note: obs dimensions come from SAI environment raw output
         base_state_42 = np.hstack((
                          obs[:,:12],                 # Joint Positions (12)
                          obs[:,12:24],                # Joint Velocities (12)
@@ -52,10 +52,10 @@ class Preprocessor():
                          obs[:, 27:30],               # Ball Linear Velocity (Relative to Robot) (3)
                          ))
 
-        # *** 附加 Task One-Hot 3 維，總計 45 維 ***
+        # *** Add Task One-Hot 3 dimensions, total 45 dimensions ***
         task_onehot = self.get_task_onehot(info)
         if len(task_onehot.shape) == 1:
             task_onehot = np.expand_dims(task_onehot, axis=0)
 
-        # 最終輸出是 45 維
+        # Final output is 45 dimensions
         return np.hstack((base_state_42, task_onehot))
