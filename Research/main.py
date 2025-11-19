@@ -61,14 +61,15 @@ class OUNoise:
 # =================================================================
 # 3. 超參數和初始化
 # =================================================================
-TOTAL_TIMESTEPS = 2000_000 # 設定總訓練步數
+TOTAL_TIMESTEPS = 2000000 # 設定總訓練步數
 MODEL_NAME = "Booster-DDPG-FF-v1" 
-BUFFER_CAPACITY = 1000_000
+BUFFER_CAPACITY = 1000000
 BATCH_SIZE = 256
 LEARNING_RATE = 3e-4 
 NEURONS = [256, 256] 
 EXPLORE_STEPS = 5000 
 UPDATE_FREQ = 1 # 每採集一步經驗，更新模型一次
+SAVE_FREQ = 50 # 每 50 個回合 (Episode) 檢查一次是否保存最佳模型 (新增參數)
 
 # 初始化模型和 Buffer
 ddpg_agent = DDPG_FF(
@@ -86,10 +87,15 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ddpg_agent.to(device)
 
 # 初始化 TensorBoard 紀錄器
-logger = TensorBoardLogger(model_name=MODEL_NAME) #
+logger = TensorBoardLogger(model_name=MODEL_NAME) 
 
 # 初始化回合獎勵追蹤
-episode_reward_sum = 0 #
+episode_reward_sum = 0
+episode_count = 0 # 新增：回合計數器
+
+# 初始化最佳模型追蹤
+best_reward = -np.inf # 新增：追蹤歷史最佳回合獎勵
+best_model_path = f"best_{MODEL_NAME}.pth" # 新增：最佳模型檔案路徑
 
 
 # =================================================================
@@ -122,7 +128,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     done = terminated or truncated
     
     # 累積回合獎勵
-    episode_reward_sum += reward #
+    episode_reward_sum += reward 
 
     # 狀態轉換
     next_state_np = Preprocessor().modify_state(next_obs, info)[0]
@@ -152,37 +158,47 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         critic_loss, actor_loss = ddpg_agent.model_update(states, actions, rewards, next_states, dones)
         
         # 紀錄損失
-        logger.set_step(t) #
-        logger.log_scalar("Loss/Critic_Loss", critic_loss) #
-        logger.log_scalar("Loss/Actor_Loss", actor_loss) #
+        logger.set_step(t) 
+        logger.log_scalar("Loss/Critic_Loss", critic_loss) 
+        logger.log_scalar("Loss/Actor_Loss", actor_loss) 
 
     # 4. 準備下一循環
     if done:
+        episode_count += 1 # 回合計數器增加
+
         # 紀錄回合總獎勵
-        logger.log_scalar("Train/Episode_Reward", episode_reward_sum, step=t) #
+        logger.log_scalar("Train/Episode_Reward", episode_reward_sum, step=t) 
         
+        # *** 檢查是否為最佳模型並保存 (Check Pointing Logic) ***
+        if episode_reward_sum > best_reward:
+            best_reward = episode_reward_sum
+            torch.save(ddpg_agent.state_dict(), best_model_path)
+            print(f"--- 儲存最佳模型 ({best_model_path})，回合獎勵: {best_reward:.2f} (Timestep: {t}) ---")
+        # ******************************************************
+        
+        # 重置環境和狀態
         current_obs, info = env.reset()
         state = Preprocessor().modify_state(current_obs, info)[0]
         state = torch.tensor(state).float().to(device)
         noise_process.reset()
         
         # 重設回合獎勵
-        episode_reward_sum = 0 #
+        episode_reward_sum = 0 
     else:
         state = next_state
     
     if t % 50000 == 0:
-        print(f"Time Step: {t}/{TOTAL_TIMESTEPS} | Buffer Size: {replay_buffer.size}")
+        print(f"Time Step: {t}/{TOTAL_TIMESTEPS} | Buffer Size: {replay_buffer.size} | Best Reward: {best_reward:.2f}")
 
 # =================================================================
 # 5. 模型儲存和評估
 # =================================================================
 # DDPG 自製模型需要手動保存其 Actor 和 Critic 的狀態
-torch.save(ddpg_agent.state_dict(), f"{MODEL_NAME}.pth")
-print(f"模型已保存為 {MODEL_NAME}.pth")
+final_model_path = f"final_{MODEL_NAME}.pth"
+torch.save(ddpg_agent.state_dict(), final_model_path)
+print(f"最終模型已保存為 {final_model_path}")
 
 # 由於 sai.benchmark 不支持自定義模型，我們將嘗試提交 Actor 模型進行評估
-# **已修改為傳遞 ddpg_agent 實例，以使用內建的 .cpu() 處理**
 try:
     sai.benchmark(ddpg_agent, action_function, Preprocessor) 
 except Exception as e:
@@ -193,4 +209,4 @@ except Exception as e:
 # 關閉環境
 env.close()
 # 關閉 Logger
-logger.close() #
+logger.close()
