@@ -59,3 +59,31 @@ class Preprocessor():
 
         # 最終輸出是 45 維
         return np.hstack((base_state_42, task_onehot))
+
+def calculate_potential(state_45: np.ndarray) -> float:
+    """
+    計算基於保持直立和站穩的勢能函數 Phi(s)。
+    
+    輸入: 45 維的 Agent 狀態向量 (來自 Preprocessor.modify_state 的輸出)。
+    輸出: 浮點數勢能值。
+    """
+    
+    # 1. 重力投影 (Projected Gravity) 勢能: 鼓勵直立
+    # 正確索引: [24:27]
+    proj_grav = state_45[24:27] 
+    target_grav = np.array([0.0, 0.0, -1.0])
+    # 點積: 越直立 (越接近 -1)，值越接近 1.0 (正勢能)
+    grav_potential = np.dot(proj_grav, target_grav) 
+    
+    
+    # 2. 線速度 (Robot Velocimeter) 勢能: 鼓勵站穩
+    # 正確索引: [33:36]
+    robot_velo = state_45[33:36] 
+    # 懲罰速度平方 L2 範數
+    velo_penalty = -0.5 * np.sum(robot_velo**2)
+    
+    
+    # 3. 總勢能
+    total_potential = np.clip(grav_potential + velo_penalty, -10.0, 1.0)
+    
+    return total_potential

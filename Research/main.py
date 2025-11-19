@@ -7,6 +7,7 @@ from sai_rl import SAIClient
 from ddpg_model import DDPG_FF, ReplayBuffer # 匯入 DDPG 類和 Replay Buffer 類
 from utils import Preprocessor # 負責將原始 obs 做處理
 from logger import TensorBoardLogger # 匯入 TensorBoard 紀錄器
+from utils import calculate_potential
 
 # =================================================================
 # 1. 初始化 SAIClient 和環境
@@ -135,12 +136,26 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     next_state_np = Preprocessor().modify_state(next_obs, info)[0]
     next_state = torch.tensor(next_state_np).float().to(device)
 
+    # --- 修正 PBRS 邏輯開始 ---
+
+    # 1. 計算當前狀態的勢能: 必須將 torch.tensor 轉為 NumPy Array
+    phi_s = calculate_potential(state.cpu().numpy())
+
+    # 2. 計算下一狀態的勢能: 可以直接使用 NumPy Array (next_state_np)
+    phi_next_s = calculate_potential(next_state_np)
+
+    gamma = 0.99 
+    pbrs_reward = gamma * phi_next_s - phi_s
+    shaped_reward = reward + pbrs_reward
+
+    # --- 修正 PBRS 邏輯結束 ---
+
     # 2. 儲存經驗到 Buffer
     # 注意：儲存的 action 是未經 action_function 處理的 [-1, 1] 範圍的 raw_action
     replay_buffer.add(
         state.cpu().numpy(), 
         raw_action, 
-        reward, 
+        shaped_reward, 
         next_state_np, 
         done
     )
