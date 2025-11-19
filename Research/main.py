@@ -9,6 +9,7 @@ from ddpg_model import DDPG_FF, ReplayBuffer
 from utils import Preprocessor  # 不導入calculate_potential
 from logger import TensorBoardLogger
 from curiosity_module import CuriosityDrivenExploration
+from gdrive_utils import SimpleGDriveSync
 
 # =================================================================
 # 1. 初始化 SAIClient 和環境
@@ -71,10 +72,97 @@ curiosity_explorer = CuriosityDrivenExploration(
     intrinsic_reward_scale=INTRINSIC_REWARD_SCALE
 )
 
+# =================================================================
+# 🔄 模型載入選擇和Google Drive設置
+# =================================================================
+
+# 初始化Google Drive同步
+gdrive_sync = SimpleGDriveSync()
+
+# 詢問是否載入舊模型
+def choose_model_loading():
+    print("\n" + "="*50)
+    print("🤔 訓練模式選擇")
+    print("="*50)
+    
+    # 檢查本地已有模型
+    import glob
+    local_models = glob.glob(f"*{MODEL_NAME}*.pth") + glob.glob(f"best_*.pth") + glob.glob(f"final_*.pth")
+    
+    # 檢查Google Drive模型
+    gdrive_models = gdrive_sync.list_saved_models(MODEL_NAME.replace("-", "_"))
+    
+    if local_models or gdrive_models:
+        print("📂 發現已存在的模型:")
+        
+        all_models = []
+        if local_models:
+            print("\n本地模型:")
+            for i, model in enumerate(local_models):
+                print(f"  {i+1}. {model}")
+                all_models.append(('local', model))
+        
+        if gdrive_models:
+            print(f"\nGoogle Drive模型 (前5個):")
+            for i, model in enumerate(gdrive_models[:5]):
+                print(f"  {len(local_models)+i+1}. {model['name']} ({model['modified'].strftime('%Y-%m-%d %H:%M')})")
+                all_models.append(('gdrive', model['path']))
+        
+        print(f"\n{len(all_models)+1}. 🆕 從頭開始訓練")
+        
+        while True:
+            try:
+                choice = input("\n選擇要載入的模型 (輸入數字): ").strip()
+                choice_num = int(choice)
+                
+                if choice_num == len(all_models) + 1:
+                    return None, None  # 從頭開始
+                elif 1 <= choice_num <= len(all_models):
+                    model_type, model_path = all_models[choice_num - 1]
+                    return model_type, model_path
+                else:
+                    print("❌ 無效選擇，請重新輸入")
+            except ValueError:
+                print("❌ 請輸入有效數字")
+    else:
+        print("📂 未發現已存在的模型，將從頭開始訓練")
+        return None, None
+
+model_type, model_path = choose_model_loading()
+
 # GPU設置
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ddpg_agent.to(device)
 curiosity_explorer.to(device)
+
+# 載入模型 (如果選擇了)
+start_episode = 0
+if model_path:
+    try:
+        if model_type == 'gdrive':
+            # 從Google Drive複製到本地
+            import shutil
+            local_path = f"loaded_{MODEL_NAME}.pth"
+            shutil.copy2(model_path, local_path)
+            model_path = local_path
+        
+        print(f"📥 正在載入模型: {model_path}")
+        checkpoint = torch.load(model_path, map_location=device)
+        
+        if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+            ddpg_agent.load_state_dict(checkpoint['model_state_dict'])
+            start_episode = checkpoint.get('episode', 0)
+            print(f"✅ 已載入模型 (從Episode {start_episode}繼續)")
+        else:
+            ddpg_agent.load_state_dict(checkpoint)
+            print(f"✅ 已載入模型 (狀態dict格式)")
+            
+    except Exception as e:
+        print(f"❌ 模型載入失敗: {e}")
+        print("🔄 將從頭開始訓練")
+        start_episode = 0
+
+print(f"🚀 開始訓練 (起始Episode: {start_episode})")
 
 # 初始化記錄器
 logger = TensorBoardLogger(model_name=MODEL_NAME) 
@@ -195,16 +283,41 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
             curiosity_ratio = episode_intrinsic_reward_sum / abs(episode_reward_sum)
             logger.log_scalar("Train/Curiosity_Contribution_Ratio", curiosity_ratio, step=t)
         
-        # 檢查最佳模型
+        # 檢查最佳模型並自動保存到Google Drive
         if episode_reward_sum > best_reward:
             best_reward = episode_reward_sum
-            torch.save(ddpg_agent.state_dict(), best_model_path)
+            
+            # 保存模型狀態 (包含元數據)
+            checkpoint = {
+                'model_state_dict': ddpg_agent.state_dict(),
+                'episode': episode_count + start_episode,
+                'timestep': t,
+                'best_reward': best_reward,
+                'total_reward': episode_reward_sum,
+                'intrinsic_reward': episode_intrinsic_reward_sum,
+                'episode_steps': episode_steps
+            }
+            
+            # 本地保存
+            torch.save(checkpoint, best_model_path)
+            
+            # 自動保存到Google Drive
+            metadata = {
+                'episode': episode_count + start_episode,
+                'timestep': t,
+                'reward': episode_reward_sum,
+                'intrinsic_reward': episode_intrinsic_reward_sum,
+                'steps': episode_steps
+            }
+            gdrive_sync.save_model(checkpoint, f"best_{MODEL_NAME}", metadata)
+            
             print(f"🏆 新最佳模型!")
             print(f"   總獎勵: {episode_reward_sum:.2f}")
             print(f"   原始獎勵: {episode_extrinsic_reward_sum:.2f}")
             print(f"   好奇心獎勵: {episode_intrinsic_reward_sum:.2f}")
             print(f"   回合步數: {episode_steps}")
             print(f"   訓練步數: {t}")
+            print(f"   📤 已自動備份到Google Drive")
         
         # 定期進度報告
         if episode_count % 5 == 0:
@@ -229,7 +342,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     else:
         state = next_state
     
-    # 大進度報告
+    # 大進度報告和定期備份
     if t % 100000 == 0:
         curiosity_stats = curiosity_explorer.get_statistics()
         print(f"\n🚀 === 訓練進度報告 (步數: {t}) ===")
@@ -239,13 +352,50 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         print(f"🧠 累計好奇心獎勵: {curiosity_stats['total_intrinsic_reward']:.2f}")
         print(f"📈 平均好奇心獎勵: {curiosity_stats['average_intrinsic_reward']:.4f}")
         print(f"🔄 好奇心更新次數: {curiosity_stats['update_count']}")
+        
+        # 定期自動備份到Google Drive
+        checkpoint_name = f"checkpoint_{t//1000}k"
+        checkpoint_data = {
+            'model_state_dict': ddpg_agent.state_dict(),
+            'episode': episode_count + start_episode,
+            'timestep': t,
+            'best_reward': best_reward
+        }
+        checkpoint_meta = {
+            'episode': episode_count + start_episode,
+            'timestep': t,
+            'best_reward': best_reward,
+            'checkpoint': True
+        }
+        
+        if gdrive_sync.save_model(checkpoint_data, checkpoint_name, checkpoint_meta):
+            print(f"📤 定期備份已保存到 Google Drive")
+        
         print("=" * 50)
 
 # =================================================================
 # 5. 訓練完成和總結
 # =================================================================
 final_model_path = f"final_{MODEL_NAME}.pth"
-torch.save(ddpg_agent.state_dict(), final_model_path)
+
+# 保存最終模型 (包含完整狀態)
+final_checkpoint = {
+    'model_state_dict': ddpg_agent.state_dict(),
+    'episode': episode_count + start_episode,
+    'timestep': TOTAL_TIMESTEPS,
+    'best_reward': best_reward,
+    'final_training': True
+}
+torch.save(final_checkpoint, final_model_path)
+
+# 自動保存最終模型到Google Drive
+final_metadata = {
+    'episode': episode_count + start_episode,
+    'timestep': TOTAL_TIMESTEPS, 
+    'best_reward': best_reward,
+    'training_completed': True
+}
+gdrive_sync.save_model(final_checkpoint, f"final_{MODEL_NAME}", final_metadata)
 
 curiosity_final_stats = curiosity_explorer.get_statistics()
 
