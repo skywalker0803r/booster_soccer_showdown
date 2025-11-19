@@ -6,29 +6,29 @@ import numpy as np
 import os
 from sai_rl import SAIClient
 
-# 從 main.py, td3_model.py, utils.py 匯入必要的類別和函數
+# Import necessary classes and functions from main.py, td3_model.py, utils.py
 from td3_model import TD3_FF
 from utils import Preprocessor
 
 # =================================================================
-# 1. 配置與輔助函數 (從 main.py 複製)
+# 1. Configuration and helper functions (copied from main.py)
 # =================================================================
 MODEL_NAME = "Booster-TD3-PureCuriosity-v1" 
-MODEL_PATH = "checkpoint_100k_20251119_210121.pth"
-N_FEATURES = 45 # Preprocessor 輸出的狀態維度
+MODEL_PATH = "checkpoint_300k_20251119_214742.pth"
+N_FEATURES = 45 # State dimension output by Preprocessor
 NEURONS = [256, 256] 
-LEARNING_RATE = 3e-4 # TD3_FF 初始化需要此參數
+LEARNING_RATE = 3e-4 # Required parameter for TD3_FF initialization
 
-# 初始化 SAIClient
+# Initialize SAIClient
 sai = SAIClient(
     comp_id="booster-soccer-showdown" , 
     api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv",
 )
-# 創建一個環境實例以獲取動作空間維度
+# Create an environment instance to get action space dimensions
 env = sai.make_env() 
 N_ACTIONS = env.action_space.shape[0]
 
-# 將原始 policy 輸出 [-1, 1] 映射到環境動作空間
+# Map original policy output [-1, 1] to environment action space
 def action_function(policy):
     expected_bounds = [-1, 1]
     action_percent = (policy - expected_bounds[0]) / (
@@ -41,20 +41,20 @@ def action_function(policy):
     )
 
 # =================================================================
-# 2. 載入模型
+# 2. Load model
 # =================================================================
 
 def load_td3_model(model_path):
-    """載入 TD3 模型權重"""
+    """Load TD3 model weights"""
     if not os.path.exists(model_path):
-        print(f"錯誤: 找不到模型檔案 {model_path}。請確認路徑或檔案名稱是否正確。")
-        print("可用的模型文件:")
+        print(f"Error: Model file {model_path} not found. Please check path or filename.")
+        print("Available model files:")
         pth_files = [f for f in os.listdir('.') if f.endswith('.pth')]
         for f in pth_files:
             print(f"  - {f}")
         return None
 
-    # 必須先初始化模型架構
+    # Initialize model architecture first
     td3_agent = TD3_FF(
         N_FEATURES, 
         env.action_space, 
@@ -63,73 +63,73 @@ def load_td3_model(model_path):
         LEARNING_RATE
     )
     
-    # 載入權重
+    # Load weights
     checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
     
-    # 檢查是否是新格式 (包含 model_state_dict)
+    # Check if new format (contains model_state_dict)
     if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
         td3_agent.load_state_dict(checkpoint['model_state_dict'])
-        print(f"成功載入模型權重 (新格式): {model_path}")
+        print(f"Successfully loaded model weights (new format): {model_path}")
         print(f"   - Episode: {checkpoint.get('episode', 'Unknown')}")
         print(f"   - Best reward: {checkpoint.get('best_reward', 'Unknown')}")
         print(f"   - Timestep: {checkpoint.get('timestep', 'Unknown')}")
     else:
-        # 舊格式，直接載入
+        # Old format, load directly
         td3_agent.load_state_dict(checkpoint)
-        print(f"成功載入模型權重 (舊格式): {model_path}")
+        print(f"Successfully loaded model weights (old format): {model_path}")
     
-    td3_agent.eval() # 設置為評估模式
+    td3_agent.eval() # Set to evaluation mode
     
-    # 關閉初始化的環境實例
+    # Close initialized environment instance
     env.close() 
     return td3_agent
 
 
 # =================================================================
-# 3. 執行操作
+# 3. Execute operations
 # =================================================================
 
 def main_flow():
-    """主執行流程"""
+    """Main execution flow"""
     
     loaded_model = load_td3_model(MODEL_PATH)
     if loaded_model is None:
         return
 
-    # --- 觀看模型表現 (Watch) ---
-    print("\n--- 正在觀看模型表現 (sai.watch) ---")
-    print("這將在您本地播放模型在環境中的運行情況...")
+    # --- Watch model performance (Watch) ---
+    print("\n--- Watching model performance (sai.watch) ---")
+    print("This will play the model running in the environment locally...")
     try:
         sai.watch(
             model=loaded_model,
             action_function=action_function,
             preprocessor_class=Preprocessor,
         )
-        print("觀看結束。")
+        print("Watching ended.")
     except Exception as e:
-        print(f"執行 sai.watch 失敗: {e}")
+        print(f"sai.watch execution failed: {e}")
     
-    # --- 評估模型效能 (Benchmark) ---
-    print("\n--- 正在評估模型效能 (sai.benchmark) ---")
+    # --- Evaluate model performance (Benchmark) ---
+    print("\n--- Evaluating model performance (sai.benchmark) ---")
     try:
         results = sai.benchmark(
             model=loaded_model.actor,
             action_function=action_function,
             preprocessor_class=Preprocessor,
         )
-        print("\n=== Benchmark 結果 ===")
+        print("\n=== Benchmark Results ===")
         print(results)
-        print("========================")
+        print("=========================")
     except Exception as e:
-        print(f"執行 sai.benchmark 失敗: {e}")
+        print(f"sai.benchmark execution failed: {e}")
 
 
-    # --- 提交模型 (Submit) ---
-    submit_prompt = input("\n您是否要提交模型到競賽中？(輸入 y 進行提交): ")
+    # --- Submit model (Submit) ---
+    submit_prompt = input("\nDo you want to submit the model to the competition? (Enter y to submit): ")
     
     if submit_prompt.lower() == 'y':
-        submission_name = input("請輸入本次提交的名稱 (例如 'TD3_Final_Tuning'): ")
-        print(f"--- 正在提交模型: {submission_name} ---")
+        submission_name = input("Please enter the submission name (e.g., 'TD3_Final_Tuning'): ")
+        print(f"--- Submitting model: {submission_name} ---")
         try:
             submission = sai.submit(
                 name=submission_name,
@@ -137,13 +137,13 @@ def main_flow():
                 action_function=action_function,
                 preprocessor_class=Preprocessor,
             )
-            print("\n=== 提交結果 ===")
+            print("\n=== Submission Results ===")
             print(submission)
-            print("=================")
+            print("==========================")
         except Exception as e:
-            print(f"執行 sai.submit 失敗: {e}")
+            print(f"sai.submit execution failed: {e}")
     else:
-        print("已取消模型提交。")
+        print("Model submission cancelled.")
 
 if __name__ == "__main__":
     main_flow()
