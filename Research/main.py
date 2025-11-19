@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-# main.py
+# main_pure_curiosity.py
+# 純好奇心驅動的DDPG訓練腳本 (不使用OU噪音和PBRS)
 
 import numpy as np
 import torch
 from sai_rl import SAIClient 
-from ddpg_model import DDPG_FF, ReplayBuffer # 匯入 DDPG 類和 Replay Buffer 類
-from utils import Preprocessor # 負責將原始 obs 做處理
-from logger import TensorBoardLogger # 匯入 TensorBoard 紀錄器
-from utils import calculate_potential
+from ddpg_model import DDPG_FF, ReplayBuffer
+from utils import Preprocessor  # 不導入calculate_potential
+from logger import TensorBoardLogger
+from curiosity_module import CuriosityDrivenExploration
 
 # =================================================================
 # 1. 初始化 SAIClient 和環境
@@ -17,20 +18,15 @@ sai = SAIClient(
     api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv",
 )
 
-# 創建環境
 env = sai.make_env()
 print(f"環境已創建。觀察空間: {env.observation_space} | 動作空間: {env.action_space}")
 
-# 狀態維度 (Preprocessor 輸出)
 N_FEATURES = 45 
-# 動作維度
 N_ACTIONS = env.action_space.shape[0]
 
 # =================================================================
-# 2. 輔助函數：動作轉換 和 探索噪音
+# 2. 輔助函數：動作轉換 (保持不變)
 # =================================================================
-
-# 將原始 policy 輸出 [-1, 1] 映射到環境動作空間
 def action_function(policy):
     expected_bounds = [-1, 1]
     action_percent = (policy - expected_bounds[0]) / (
@@ -42,127 +38,121 @@ def action_function(policy):
         + (env.action_space.high - env.action_space.low) * bounded_percent
     )
 
-# DDPG 標準的 Ornstein-Uhlenbeck 過程噪音
-class OUNoise:
-    def __init__(self, mu=0.0, sigma=0.15, theta=0.2, dt=1e-2, x0=None):
-        self.theta = theta
-        self.mu = mu
-        self.sigma = sigma
-        self.dt = dt
-        self.x0 = x0
-        self.reset()
-    def reset(self):
-        self.x_prev = self.x0 if self.x0 is not None else np.zeros(N_ACTIONS)
-    def __call__(self):
-        # Ornstein-Uhlenbeck 過程公式
-        x = self.x_prev + self.theta * (self.mu - self.x_prev) * self.dt + \
-            self.sigma * np.sqrt(self.dt) * np.random.normal(size=N_ACTIONS)
-        self.x_prev = x
-        return x
-
 # =================================================================
-# 3. 超參數和初始化
+# 3. 超參數和初始化 (純好奇心版)
 # =================================================================
-TOTAL_TIMESTEPS = 2000000 # 設定總訓練步數
-MODEL_NAME = "Booster-DDPG-FF-v1" 
+TOTAL_TIMESTEPS = 1000000
+MODEL_NAME = "Booster-DDPG-PureCuriosity-v1"
 BUFFER_CAPACITY = 1000000
 BATCH_SIZE = 256
-LEARNING_RATE = 3e-4 
+LEARNING_RATE = 1e-4
 NEURONS = [256, 256] 
-EXPLORE_STEPS = 5000 
-UPDATE_FREQ = 1 # 每採集一步經驗，更新模型一次
-SAVE_FREQ = 50 # 每 50 個回合 (Episode) 檢查一次是否保存最佳模型 (新增參數)
+UPDATE_FREQ = 1
+SAVE_FREQ = 50
 
-# 初始化模型和 Buffer
+# 好奇心模組參數 (關鍵設置)
+INTRINSIC_REWARD_SCALE = 1.0  # 增大係數，因為只依賴好奇心
+CURIOSITY_UPDATE_FREQ = 1
+
+# 初始化模型
 ddpg_agent = DDPG_FF(
     N_FEATURES, 
     env.action_space, 
     NEURONS, 
-    torch.nn.functional.relu, # 使用 ReLU 作為隱藏層激活函數
+    torch.nn.functional.relu,
     LEARNING_RATE
 )
 replay_buffer = ReplayBuffer(BUFFER_CAPACITY, (N_FEATURES,), N_ACTIONS)
-noise_process = OUNoise() 
 
-# 確保模型在 CUDA 上 (如果可用)
+# 初始化純好奇心模組
+curiosity_explorer = CuriosityDrivenExploration(
+    state_dim=N_FEATURES,
+    action_dim=N_ACTIONS, 
+    intrinsic_reward_scale=INTRINSIC_REWARD_SCALE
+)
+
+# GPU設置
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ddpg_agent.to(device)
+curiosity_explorer.to(device)
 
-# 初始化 TensorBoard 紀錄器
+# 初始化記錄器
 logger = TensorBoardLogger(model_name=MODEL_NAME) 
 
-# 初始化回合獎勵追蹤
+# 追蹤變量
 episode_reward_sum = 0
-episode_count = 0 # 新增：回合計數器
+episode_intrinsic_reward_sum = 0
+episode_extrinsic_reward_sum = 0  # 分別追蹤原始獎勵
+episode_count = 0
+episode_steps = 0
+best_reward = -np.inf
+best_model_path = f"best_{MODEL_NAME}.pth"
 
-# 初始化最佳模型追蹤
-best_reward = -np.inf # 新增：追蹤歷史最佳回合獎勵
-best_model_path = f"best_{MODEL_NAME}.pth" # 新增：最佳模型檔案路徑
-
+print(f"🧠 純好奇心DDPG訓練開始，設備：{device}")
+print(f"🔥 內在獎勵縮放係數：{INTRINSIC_REWARD_SCALE}")
+print(f"❌ OU噪音：已禁用")
+print(f"❌ PBRS獎勵：已禁用") 
+print(f"✅ 純好奇心探索：已啟用")
 
 # =================================================================
-# 4. 自定義 DDPG 訓練循環
+# 4. 純好奇心 DDPG 訓練循環
 # =================================================================
 current_obs, info = env.reset()
-# 使用 Preprocessor 轉換狀態
 state = Preprocessor().modify_state(current_obs, info)[0] 
 state = torch.tensor(state).float().to(device)
 
-print(f"DDPG 訓練開始，設備：{device}")
-
 for t in range(1, TOTAL_TIMESTEPS + 1):
-    # 1. 採集動作 (探索階段加噪音)
+    # 1. 採集動作 (不添加OU噪音，純依賴好奇心探索)
     with torch.no_grad():
-        raw_action_tensor = ddpg_agent(state.unsqueeze(0)) # 取得 Actor 輸出 [-1, 1] 範圍
+        raw_action_tensor = ddpg_agent(state.unsqueeze(0))
     raw_action = raw_action_tensor.cpu().numpy().flatten()
     
-    # 添加 Ornstein-Uhlenbeck 噪音進行探索
-    if t < EXPLORE_STEPS:
-        raw_action += noise_process()
-    else:
-        # 隨著訓練進行，噪音衰減
-        noise_process.sigma = max(0.01, 0.15 * (1 - (t - EXPLORE_STEPS) / (TOTAL_TIMESTEPS - EXPLORE_STEPS)))
-        raw_action += noise_process()
-
-    # 動作約束和環境執行
+    # 🚫 不添加OU噪音 - 純依賴好奇心驅動的探索
+    
+    # 執行動作
     action = action_function(raw_action)
     next_obs, reward, terminated, truncated, info = env.step(action)
     done = terminated or truncated
     
-    # 累積回合獎勵
-    episode_reward_sum += reward 
-
     # 狀態轉換
     next_state_np = Preprocessor().modify_state(next_obs, info)[0]
     next_state = torch.tensor(next_state_np).float().to(device)
 
-    # --- 修正 PBRS 邏輯開始 ---
+    # =================================================================
+    # 🧠 純好奇心獎勵計算
+    # =================================================================
+    
+    # 🚫 不使用PBRS獎勵
+    # 只使用：原始獎勵 + 好奇心獎勵
+    
+    final_reward, intrinsic_reward = curiosity_explorer.get_enhanced_reward(
+        state.cpu().numpy(),
+        raw_action,
+        next_state_np,
+        reward  # 直接使用原始獎勵，不加PBRS
+    )
+    
+    # 累積統計
+    episode_extrinsic_reward_sum += reward
+    episode_intrinsic_reward_sum += intrinsic_reward
+    episode_reward_sum += final_reward
+    episode_steps += 1
 
-    # 1. 計算當前狀態的勢能: 必須將 torch.tensor 轉為 NumPy Array
-    phi_s = calculate_potential(state.cpu().numpy())
-
-    # 2. 計算下一狀態的勢能: 可以直接使用 NumPy Array (next_state_np)
-    phi_next_s = calculate_potential(next_state_np)
-
-    gamma = 0.99 
-    pbrs_reward = gamma * phi_next_s - phi_s
-    shaped_reward = reward + pbrs_reward
-
-    # --- 修正 PBRS 邏輯結束 ---
-
-    # 2. 儲存經驗到 Buffer
-    # 注意：儲存的 action 是未經 action_function 處理的 [-1, 1] 範圍的 raw_action
+    # =================================================================
+    # 📚 經驗儲存和模型更新
+    # =================================================================
+    
+    # 儲存經驗 (使用好奇心增強獎勵)
     replay_buffer.add(
         state.cpu().numpy(), 
         raw_action, 
-        shaped_reward, 
+        final_reward,
         next_state_np, 
         done
     )
 
-    # 3. 模型更新
+    # DDPG 模型更新
     if replay_buffer.size > BATCH_SIZE and t % UPDATE_FREQ == 0:
-        # 從 Buffer 採樣，並移動到 GPU
         states, actions, rewards, next_states, dones = replay_buffer.sample(BATCH_SIZE)
         
         states = torch.tensor(states).float().to(device)
@@ -173,56 +163,100 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         
         critic_loss, actor_loss = ddpg_agent.model_update(states, actions, rewards, next_states, dones)
         
-        # 紀錄損失
+        # 更新好奇心模組
+        if t % CURIOSITY_UPDATE_FREQ == 0:
+            curiosity_stats = curiosity_explorer.update_curiosity(states, actions, next_states)
+            
+            # 記錄好奇心指標
+            logger.set_step(t)
+            logger.log_scalar("Curiosity/Forward_Loss", curiosity_stats['forward_loss'])
+            logger.log_scalar("Curiosity/Inverse_Loss", curiosity_stats['inverse_loss'])
+            logger.log_scalar("Curiosity/Avg_Intrinsic_Reward", curiosity_stats['avg_intrinsic_reward'])
+        
+        # 記錄訓練指標
         logger.set_step(t) 
         logger.log_scalar("Loss/Critic_Loss", critic_loss) 
         logger.log_scalar("Loss/Actor_Loss", actor_loss) 
 
-    # 4. 準備下一循環
+    # =================================================================
+    # 🔄 回合結束處理
+    # =================================================================
     if done:
-        episode_count += 1 # 回合計數器增加
+        episode_count += 1
 
-        # 紀錄回合總獎勵
-        logger.log_scalar("Train/Episode_Reward", episode_reward_sum, step=t) 
+        # 詳細記錄分解獎勵
+        logger.log_scalar("Train/Episode_Total_Reward", episode_reward_sum, step=t)
+        logger.log_scalar("Train/Episode_Extrinsic_Reward", episode_extrinsic_reward_sum, step=t)
+        logger.log_scalar("Train/Episode_Intrinsic_Reward", episode_intrinsic_reward_sum, step=t)
+        logger.log_scalar("Train/Episode_Steps", episode_steps, step=t)
         
-        # *** 檢查是否為最佳模型並保存 (Check Pointing Logic) ***
+        # 計算好奇心貢獻比例
+        if episode_reward_sum != 0:
+            curiosity_ratio = episode_intrinsic_reward_sum / abs(episode_reward_sum)
+            logger.log_scalar("Train/Curiosity_Contribution_Ratio", curiosity_ratio, step=t)
+        
+        # 檢查最佳模型
         if episode_reward_sum > best_reward:
             best_reward = episode_reward_sum
             torch.save(ddpg_agent.state_dict(), best_model_path)
-            print(f"--- 儲存最佳模型 ({best_model_path})，回合獎勵: {best_reward:.2f} (Timestep: {t}) ---")
-        # ******************************************************
+            print(f"🏆 新最佳模型!")
+            print(f"   總獎勵: {episode_reward_sum:.2f}")
+            print(f"   原始獎勵: {episode_extrinsic_reward_sum:.2f}")
+            print(f"   好奇心獎勵: {episode_intrinsic_reward_sum:.2f}")
+            print(f"   回合步數: {episode_steps}")
+            print(f"   訓練步數: {t}")
         
-        # 重置環境和狀態
+        # 定期進度報告
+        if episode_count % 5 == 0:
+            ratio = episode_intrinsic_reward_sum / max(abs(episode_extrinsic_reward_sum), 0.001)
+            print(f"🧠 Episode {episode_count:3d} | "
+                  f"總獎勵: {episode_reward_sum:6.2f} | "
+                  f"原始: {episode_extrinsic_reward_sum:6.2f} | "
+                  f"好奇心: {episode_intrinsic_reward_sum:5.2f} | "
+                  f"步數: {episode_steps:3d} | "
+                  f"比例: {ratio:.2f}")
+        
+        # 重置環境
         current_obs, info = env.reset()
         state = Preprocessor().modify_state(current_obs, info)[0]
         state = torch.tensor(state).float().to(device)
-        noise_process.reset()
         
-        # 重設回合獎勵
-        episode_reward_sum = 0 
+        # 重設變量
+        episode_reward_sum = 0
+        episode_intrinsic_reward_sum = 0
+        episode_extrinsic_reward_sum = 0
+        episode_steps = 0
     else:
         state = next_state
     
-    if t % 50000 == 0:
-        print(f"Time Step: {t}/{TOTAL_TIMESTEPS} | Buffer Size: {replay_buffer.size} | Best Reward: {best_reward:.2f}")
+    # 大進度報告
+    if t % 100000 == 0:
+        curiosity_stats = curiosity_explorer.get_statistics()
+        print(f"\n🚀 === 訓練進度報告 (步數: {t}) ===")
+        print(f"📊 回合總數: {episode_count}")
+        print(f"💾 Buffer大小: {replay_buffer.size}")
+        print(f"🏆 最佳總獎勵: {best_reward:.2f}")
+        print(f"🧠 累計好奇心獎勵: {curiosity_stats['total_intrinsic_reward']:.2f}")
+        print(f"📈 平均好奇心獎勵: {curiosity_stats['average_intrinsic_reward']:.4f}")
+        print(f"🔄 好奇心更新次數: {curiosity_stats['update_count']}")
+        print("=" * 50)
 
 # =================================================================
-# 5. 模型儲存和評估
+# 5. 訓練完成和總結
 # =================================================================
-# DDPG 自製模型需要手動保存其 Actor 和 Critic 的狀態
 final_model_path = f"final_{MODEL_NAME}.pth"
 torch.save(ddpg_agent.state_dict(), final_model_path)
-print(f"最終模型已保存為 {final_model_path}")
 
-# 由於 sai.benchmark 不支持自定義模型，我們將嘗試提交 Actor 模型進行評估
-try:
-    sai.benchmark(ddpg_agent, action_function, Preprocessor) 
-except Exception as e:
-    print(f"SAI Benchmark 失敗 (預期): {e}")
-    print("請嘗試直接將訓練好的模型權重提交給 SAI 平台。")
+curiosity_final_stats = curiosity_explorer.get_statistics()
 
+print(f"\n🎉 純好奇心訓練完成！")
+print(f"🏆 最佳回合獎勵: {best_reward:.2f}")
+print(f"🧠 總好奇心獎勵: {curiosity_final_stats['total_intrinsic_reward']:.2f}")
+print(f"📊 平均好奇心獎勵: {curiosity_final_stats['average_intrinsic_reward']:.4f}")
+print(f"🔄 總回合數: {episode_count}")
+print(f"💾 模型文件: {best_model_path}, {final_model_path}")
 
-# 關閉環境
+# 清理
 env.close()
-# 關閉 Logger
 logger.close()
+print("🏁 純好奇心實驗完成！")
