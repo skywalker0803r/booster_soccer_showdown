@@ -13,8 +13,8 @@ from utils import Preprocessor
 # =================================================================
 # 1. 配置與輔助函數 (從 main.py 複製)
 # =================================================================
-MODEL_NAME = "Booster-DDPG-FF-v1" 
-MODEL_PATH = f"best_{MODEL_NAME}.pth" # 預設載入最佳模型
+MODEL_NAME = "Booster-DDPG-PureCuriosity-v1" 
+MODEL_PATH = "checkpoint_200k_20251119_191313.pth"#f"best_{MODEL_NAME}.pth" # 預設載入最佳模型
 N_FEATURES = 45 # Preprocessor 輸出的狀態維度
 NEURONS = [256, 256] 
 LEARNING_RATE = 3e-4 # DDPG_FF 初始化需要此參數
@@ -48,6 +48,10 @@ def load_ddpg_model(model_path):
     """載入 DDPG 模型權重"""
     if not os.path.exists(model_path):
         print(f"錯誤: 找不到模型檔案 {model_path}。請確認路徑或檔案名稱是否正確。")
+        print("可用的模型文件:")
+        pth_files = [f for f in os.listdir('.') if f.endswith('.pth')]
+        for f in pth_files:
+            print(f"  - {f}")
         return None
 
     # 必須先初始化模型架構
@@ -60,9 +64,21 @@ def load_ddpg_model(model_path):
     )
     
     # 載入權重
-    ddpg_agent.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+    checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
+    
+    # 檢查是否是新格式 (包含 model_state_dict)
+    if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+        ddpg_agent.load_state_dict(checkpoint['model_state_dict'])
+        print(f"成功載入模型權重 (新格式): {model_path}")
+        print(f"   - Episode: {checkpoint.get('episode', 'Unknown')}")
+        print(f"   - Best reward: {checkpoint.get('best_reward', 'Unknown')}")
+        print(f"   - Timestep: {checkpoint.get('timestep', 'Unknown')}")
+    else:
+        # 舊格式，直接載入
+        ddpg_agent.load_state_dict(checkpoint)
+        print(f"成功載入模型權重 (舊格式): {model_path}")
+    
     ddpg_agent.eval() # 設置為評估模式
-    print(f"成功載入模型權重: {model_path}")
     
     # 關閉初始化的環境實例
     env.close() 
