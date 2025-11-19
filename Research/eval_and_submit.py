@@ -30,10 +30,6 @@ N_ACTIONS = env.action_space.shape[0]
 # 將原始 policy 輸出 [-1, 1] 映射到環境動作空間
 def action_function(policy):
     expected_bounds = [-1, 1]
-    # 如果 policy 是 tensor，需要先轉為 numpy
-    if isinstance(policy, torch.Tensor):
-        policy = policy.cpu().numpy().flatten()
-        
     action_percent = (policy - expected_bounds[0]) / (
         expected_bounds[1] - expected_bounds[0]
     )
@@ -88,10 +84,9 @@ def main_flow():
     print("這將在您本地播放模型在環境中的運行情況...")
     try:
         sai.watch(
-            model=loaded_model.actor, # watch 通常只需要 Actor 網路
+            model=loaded_model,
             action_function=action_function,
             preprocessor_class=Preprocessor,
-            num_runs=1, # 觀看一個回合
         )
         print("觀看結束。")
     except Exception as e:
@@ -104,8 +99,6 @@ def main_flow():
             model=loaded_model.actor,
             action_function=action_function,
             preprocessor_class=Preprocessor,
-            num_envs=3, # 可以在多個環境上同時運行
-            record=False, # 如果需要錄製影片，請設為 True
         )
         print("\n=== Benchmark 結果 ===")
         print(results)
@@ -123,7 +116,7 @@ def main_flow():
         try:
             submission = sai.submit(
                 name=submission_name,
-                model=loaded_model.actor,
+                model=loaded_model,
                 action_function=action_function,
                 preprocessor_class=Preprocessor,
             )
