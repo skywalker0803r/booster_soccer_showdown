@@ -6,18 +6,18 @@ import numpy as np
 import os
 from sai_rl import SAIClient
 
-# 從 main.py, ddpg_model.py, utils.py 匯入必要的類別和函數
-from ddpg_model import DDPG_FF
+# 從 main.py, td3_model.py, utils.py 匯入必要的類別和函數
+from td3_model import TD3_FF
 from utils import Preprocessor
 
 # =================================================================
 # 1. 配置與輔助函數 (從 main.py 複製)
 # =================================================================
-MODEL_NAME = "Booster-DDPG-PureCuriosity-v1" 
-MODEL_PATH = "checkpoint_200k_20251119_191313.pth"#f"best_{MODEL_NAME}.pth" # 預設載入最佳模型
+MODEL_NAME = "Booster-TD3-PureCuriosity-v1" 
+MODEL_PATH = "checkpoint_100k_20251119_210121.pth"
 N_FEATURES = 45 # Preprocessor 輸出的狀態維度
 NEURONS = [256, 256] 
-LEARNING_RATE = 3e-4 # DDPG_FF 初始化需要此參數
+LEARNING_RATE = 3e-4 # TD3_FF 初始化需要此參數
 
 # 初始化 SAIClient
 sai = SAIClient(
@@ -44,8 +44,8 @@ def action_function(policy):
 # 2. 載入模型
 # =================================================================
 
-def load_ddpg_model(model_path):
-    """載入 DDPG 模型權重"""
+def load_td3_model(model_path):
+    """載入 TD3 模型權重"""
     if not os.path.exists(model_path):
         print(f"錯誤: 找不到模型檔案 {model_path}。請確認路徑或檔案名稱是否正確。")
         print("可用的模型文件:")
@@ -55,7 +55,7 @@ def load_ddpg_model(model_path):
         return None
 
     # 必須先初始化模型架構
-    ddpg_agent = DDPG_FF(
+    td3_agent = TD3_FF(
         N_FEATURES, 
         env.action_space, 
         NEURONS, 
@@ -68,21 +68,21 @@ def load_ddpg_model(model_path):
     
     # 檢查是否是新格式 (包含 model_state_dict)
     if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
-        ddpg_agent.load_state_dict(checkpoint['model_state_dict'])
+        td3_agent.load_state_dict(checkpoint['model_state_dict'])
         print(f"成功載入模型權重 (新格式): {model_path}")
         print(f"   - Episode: {checkpoint.get('episode', 'Unknown')}")
         print(f"   - Best reward: {checkpoint.get('best_reward', 'Unknown')}")
         print(f"   - Timestep: {checkpoint.get('timestep', 'Unknown')}")
     else:
         # 舊格式，直接載入
-        ddpg_agent.load_state_dict(checkpoint)
+        td3_agent.load_state_dict(checkpoint)
         print(f"成功載入模型權重 (舊格式): {model_path}")
     
-    ddpg_agent.eval() # 設置為評估模式
+    td3_agent.eval() # 設置為評估模式
     
     # 關閉初始化的環境實例
     env.close() 
-    return ddpg_agent
+    return td3_agent
 
 
 # =================================================================
@@ -92,7 +92,7 @@ def load_ddpg_model(model_path):
 def main_flow():
     """主執行流程"""
     
-    loaded_model = load_ddpg_model(MODEL_PATH)
+    loaded_model = load_td3_model(MODEL_PATH)
     if loaded_model is None:
         return
 
@@ -128,7 +128,7 @@ def main_flow():
     submit_prompt = input("\n您是否要提交模型到競賽中？(輸入 y 進行提交): ")
     
     if submit_prompt.lower() == 'y':
-        submission_name = input("請輸入本次提交的名稱 (例如 'DDPG_Final_Tuning'): ")
+        submission_name = input("請輸入本次提交的名稱 (例如 'TD3_Final_Tuning'): ")
         print(f"--- 正在提交模型: {submission_name} ---")
         try:
             submission = sai.submit(
