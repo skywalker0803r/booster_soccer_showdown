@@ -233,16 +233,25 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     # 🧠 純好奇心獎勵計算
     # =================================================================
     
-    # 🎯 增強獎勵設計 - 調整關鍵事件權重
+    # 🎯 防止自殺行為的獎勵設計
     enhanced_extrinsic_reward = reward
     
-    # 根據info調整特定事件的獎勵權重
-    if 'robot_fallen' in str(info).lower() or (done and episode_steps < 50):  # 推測跌倒
-        enhanced_extrinsic_reward += -3.0  # 額外-3.0懲罰 (總共-4.5)
-    elif 'goal' in str(info).lower():  # 推測進球
-        enhanced_extrinsic_reward += 10.0  # 大幅獎勵進球
-    elif 'success' in str(info).lower():  # 推測任務成功
-        enhanced_extrinsic_reward += 5.0   # 獎勵任務成功
+    # 🚨 嚴厲懲罰早期結束 (防止自殺行為)
+    if done and episode_steps < 100:  # 過早結束嚴厲懲罰
+        early_death_penalty = -10.0 - (100 - episode_steps) * 0.1  # 越早死亡懲罰越重
+        enhanced_extrinsic_reward += early_death_penalty
+        print(f"🚨 早期結束懲罰: {early_death_penalty:.2f} (步數: {episode_steps})")
+    
+    # 🏆 只在長時間存活後才給正面獎勵
+    elif episode_steps > 200:  # 必須存活200步以上才有資格獲得額外獎勵
+        if 'goal' in str(info).lower():
+            enhanced_extrinsic_reward += 10.0
+        elif 'success' in str(info).lower():
+            enhanced_extrinsic_reward += 5.0
+    
+    # ⏰ 存活時間獎勵 (鼓勵長期生存)
+    survival_bonus = min(episode_steps * 0.01, 5.0)  # 每步0.01，最高5.0
+    enhanced_extrinsic_reward += survival_bonus
     
     final_reward, intrinsic_reward = curiosity_explorer.get_enhanced_reward(
         state.cpu().numpy(),
