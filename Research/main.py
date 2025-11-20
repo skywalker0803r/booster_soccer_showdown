@@ -233,14 +233,22 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     # 🧠 純好奇心獎勵計算
     # =================================================================
     
-    # 🚫 不使用PBRS獎勵
-    # 只使用：原始獎勵 + 好奇心獎勵
+    # 🎯 增強獎勵設計 - 調整關鍵事件權重
+    enhanced_extrinsic_reward = reward
+    
+    # 根據info調整特定事件的獎勵權重
+    if 'robot_fallen' in str(info).lower() or (done and episode_steps < 50):  # 推測跌倒
+        enhanced_extrinsic_reward += -3.0  # 額外-3.0懲罰 (總共-4.5)
+    elif 'goal' in str(info).lower():  # 推測進球
+        enhanced_extrinsic_reward += 10.0  # 大幅獎勵進球
+    elif 'success' in str(info).lower():  # 推測任務成功
+        enhanced_extrinsic_reward += 5.0   # 獎勵任務成功
     
     final_reward, intrinsic_reward = curiosity_explorer.get_enhanced_reward(
         state.cpu().numpy(),
         raw_action,
         next_state_np,
-        reward  # 直接使用原始獎勵，不加PBRS
+        enhanced_extrinsic_reward  # 使用增強的外在獎勵
     )
     
     # 累積統計
