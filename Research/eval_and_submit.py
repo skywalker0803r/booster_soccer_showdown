@@ -13,8 +13,8 @@ from utils import Preprocessor
 # =================================================================
 # 1. Configuration and helper functions (copied from main.py)
 # =================================================================
-MODEL_NAME = "Booster-TD3-A100-Optimized-v1" 
-MODEL_PATH = "best_Booster-TD3-A100-Optimized-v1.pth"
+MODEL_NAME = "Booster-TD3-A100-PureOriginal-v1" 
+MODEL_PATH = "best_Booster-TD3-A100-PureOriginal-v1.pth"
 N_FEATURES = 45 # State dimension output by Preprocessor
 NEURONS = [512, 512, 256]  # 🚀 A100優化的更大網絡架構
 LEARNING_RATE = 1e-3 # A100優化的學習率

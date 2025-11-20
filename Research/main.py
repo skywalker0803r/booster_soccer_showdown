@@ -84,8 +84,15 @@ curiosity_explorer = CuriosityDrivenExploration(
 # 🔄 模型載入選擇和Google Drive設置
 # =================================================================
 
-# 初始化Google Drive同步
-gdrive_sync = SimpleGDriveSync()
+# 初始化Google Drive同步 (帶錯誤處理)
+try:
+    gdrive_sync = SimpleGDriveSync()
+    gdrive_available = gdrive_sync.gdrive_path is not None
+    print(f"🔗 Google Drive狀態: {'✅ 已連接' if gdrive_available else '❌ 未連接 (僅本地保存)'}")
+except Exception as e:
+    print(f"⚠️ Google Drive初始化失敗: {e}")
+    gdrive_sync = None
+    gdrive_available = False
 
 # 詢問是否載入舊模型
 def choose_model_loading():
@@ -98,7 +105,7 @@ def choose_model_loading():
     local_models = glob.glob(f"*{MODEL_NAME}*.pth") + glob.glob(f"best_*.pth") + glob.glob(f"final_*.pth")
     
     # 檢查Google Drive模型
-    gdrive_models = gdrive_sync.list_saved_models(MODEL_NAME.replace("-", "_"))
+    gdrive_models = gdrive_sync.list_saved_models(MODEL_NAME.replace("-", "_")) if gdrive_sync else []
     
     if local_models or gdrive_models:
         print("📂 發現已存在的模型:")
@@ -342,7 +349,10 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
                 'steps': episode_steps,
                 'algorithm': 'TD3'
             }
-            gdrive_sync.save_model(checkpoint, f"best_{MODEL_NAME}", metadata)
+            if gdrive_sync and gdrive_available:
+                gdrive_sync.save_model(checkpoint, f"best_{MODEL_NAME}", metadata)
+            else:
+                print(f"⚠️ Google Drive不可用，僅本地保存")
             
             print(f"🏆 新最佳模型!")
             print(f"   總獎勵: {episode_reward_sum:.2f}")
@@ -408,8 +418,11 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
             'algorithm': 'TD3'
         }
         
-        if gdrive_sync.save_model(checkpoint_data, checkpoint_name, checkpoint_meta):
-            print(f"📤 定期備份已保存到 Google Drive")
+        if gdrive_sync and gdrive_available:
+            if gdrive_sync.save_model(checkpoint_data, checkpoint_name, checkpoint_meta):
+                print(f"📤 定期備份已保存到 Google Drive")
+        else:
+            print(f"⚠️ Google Drive不可用，跳過雲端備份")
         
         print("=" * 50)
 
@@ -437,7 +450,11 @@ final_metadata = {
     'training_completed': True,
     'algorithm': 'TD3'
 }
-gdrive_sync.save_model(final_checkpoint, f"final_{MODEL_NAME}", final_metadata)
+if gdrive_sync and gdrive_available:
+    gdrive_sync.save_model(final_checkpoint, f"final_{MODEL_NAME}", final_metadata)
+    print(f"📤 最終模型已保存到 Google Drive")
+else:
+    print(f"⚠️ Google Drive不可用，最終模型僅本地保存")
 
 curiosity_final_stats = curiosity_explorer.get_statistics()
 td3_final_stats = td3_agent.get_statistics()
