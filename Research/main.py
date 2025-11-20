@@ -377,8 +377,8 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     else:
         state = next_state
     
-    # 大進度報告和定期備份
-    if t % 100000 == 0:
+    # 大進度報告和定期備份 (🚀 A100優化: 更頻繁備份)
+    if t % 10000 == 0:
         curiosity_stats = curiosity_explorer.get_statistics()
         td3_stats = td3_agent.get_statistics()
         print(f"\n🚀 === TD3訓練進度報告 (步數: {t}) ===")
