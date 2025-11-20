@@ -13,11 +13,11 @@ from utils import Preprocessor
 # =================================================================
 # 1. Configuration and helper functions (copied from main.py)
 # =================================================================
-MODEL_NAME = "Booster-TD3-PureCuriosity-v1" 
-MODEL_PATH = "checkpoint_400k_20251119_221036.pth"
+MODEL_NAME = "Booster-TD3-A100-Optimized-v1" 
+MODEL_PATH = "best_Booster-TD3-A100-Optimized-v1.pth"
 N_FEATURES = 45 # State dimension output by Preprocessor
-NEURONS = [256, 256] 
-LEARNING_RATE = 3e-4 # Required parameter for TD3_FF initialization
+NEURONS = [512, 512, 256]  # 🚀 A100優化的更大網絡架構
+LEARNING_RATE = 1e-3 # A100優化的學習率
 
 # Initialize SAIClient
 sai = SAIClient(
