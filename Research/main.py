@@ -43,7 +43,7 @@ def action_function(policy):
 # 3. 🚀 A100最佳化超參數設置 (TD3 + 純好奇心版)
 # =================================================================
 TOTAL_TIMESTEPS = 2000000          # 增加總訓練步數，充分利用A100
-MODEL_NAME = "Booster-TD3-A100-Optimized-v1"
+MODEL_NAME = "Booster-TD3-A100-PureOriginal-v1"
 BUFFER_CAPACITY = 2000000          # 2M buffer，利用A100大VRAM
 BATCH_SIZE = 1024                  # 4倍batch size，大幅加速訓練
 LEARNING_RATE = 1e-3               # 提高學習率配合大batch
@@ -189,7 +189,7 @@ episode_steps = 0
 best_reward = -np.inf
 best_model_path = f"best_{MODEL_NAME}.pth"
 
-print(f"🚀 A100最佳化 TD3 + 純好奇心訓練開始，設備：{device}")
+print(f"🚀 A100最佳化 TD3 + 純原始獎勵訓練開始，設備：{device}")
 print(f"🎯 TD3改進特性：")
 print(f"   • Double Q-Learning: ✅")
 print(f"   • Delayed Policy Updates: ✅ (每{POLICY_DELAY}次)")
@@ -202,8 +202,10 @@ print(f"   • Learning Rate: {LEARNING_RATE} (配合大batch)")
 print(f"   • 內在獎勵縮放: {INTRINSIC_REWARD_SCALE}")
 print(f"   • 混合精度: ✅ (A100專用)")
 print(f"❌ OU噪音：已禁用")
-print(f"❌ PBRS獎勵：已禁用") 
-print(f"✅ 純好奇心探索：已啟用")
+print(f"❌ PBRS獎勵：已禁用")
+print(f"❌ 獎勵工程：已移除") 
+print(f"✅ 純原始環境獎勵：已啟用")
+print(f"✅ 好奇心輔助探索：已啟用")
 
 # =================================================================
 # 4. TD3 + 純好奇心 訓練循環
@@ -233,31 +235,12 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     # 🧠 純好奇心獎勵計算
     # =================================================================
     
-    # 🎯 防止自殺行為的獎勵設計
-    enhanced_extrinsic_reward = reward
-    
-    # 🚨 嚴厲懲罰早期結束 (防止自殺行為)
-    if done and episode_steps < 100:  # 過早結束嚴厲懲罰
-        early_death_penalty = -10.0 - (100 - episode_steps) * 0.1  # 越早死亡懲罰越重
-        enhanced_extrinsic_reward += early_death_penalty
-        print(f"🚨 早期結束懲罰: {early_death_penalty:.2f} (步數: {episode_steps})")
-    
-    # 🏆 只在長時間存活後才給正面獎勵
-    elif episode_steps > 200:  # 必須存活200步以上才有資格獲得額外獎勵
-        if 'goal' in str(info).lower():
-            enhanced_extrinsic_reward += 10.0
-        elif 'success' in str(info).lower():
-            enhanced_extrinsic_reward += 5.0
-    
-    # ⏰ 存活時間獎勵 (鼓勵長期生存)
-    survival_bonus = min(episode_steps * 0.01, 5.0)  # 每步0.01，最高5.0
-    enhanced_extrinsic_reward += survival_bonus
-    
+    # 🎯 純原始獎勵 + TD3 (移除所有獎勵工程)
     final_reward, intrinsic_reward = curiosity_explorer.get_enhanced_reward(
         state.cpu().numpy(),
         raw_action,
         next_state_np,
-        enhanced_extrinsic_reward  # 使用增強的外在獎勵
+        reward  # 直接使用環境原始獎勵，不做任何修改
     )
     
     # 累積統計
