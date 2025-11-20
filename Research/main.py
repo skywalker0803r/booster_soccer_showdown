@@ -40,24 +40,24 @@ def action_function(policy):
     )
 
 # =================================================================
-# 3. 超參數和初始化 (TD3 + 純好奇心版)
+# 3. 🚀 A100最佳化超參數設置 (TD3 + 純好奇心版)
 # =================================================================
-TOTAL_TIMESTEPS = 1000000
-MODEL_NAME = "Booster-TD3-PureCuriosity-v1"
-BUFFER_CAPACITY = 1000000
-BATCH_SIZE = 256
-LEARNING_RATE = 3e-4  # TD3通常使用稍高的學習率
-NEURONS = [256, 256] 
+TOTAL_TIMESTEPS = 2000000          # 增加總訓練步數，充分利用A100
+MODEL_NAME = "Booster-TD3-A100-Optimized-v1"
+BUFFER_CAPACITY = 2000000          # 2M buffer，利用A100大VRAM
+BATCH_SIZE = 1024                  # 4倍batch size，大幅加速訓練
+LEARNING_RATE = 1e-3               # 提高學習率配合大batch
+NEURONS = [512, 512, 256]          # 更大更深的網絡架構
 UPDATE_FREQ = 1
-SAVE_FREQ = 50
+SAVE_FREQ = 25                     # 更頻繁保存
 
 # TD3 特有參數
 POLICY_DELAY = 2      # 策略延遲更新頻率
-POLICY_NOISE = 0.2    # 目標策略噪音
-NOISE_CLIP = 0.5      # 噪音裁剪範圍
+POLICY_NOISE = 0.1    # 降低噪音提高穩定性
+NOISE_CLIP = 0.3      # 調整噪音範圍
 
-# 好奇心模組參數 (關鍵設置)
-INTRINSIC_REWARD_SCALE = 1.0  # 增大係數，因為只依賴好奇心
+# 好奇心模組參數 (A100優化設置)
+INTRINSIC_REWARD_SCALE = 0.8      # 稍微降低以平衡大batch效應
 CURIOSITY_UPDATE_FREQ = 1
 
 # 初始化TD3模型
@@ -138,10 +138,15 @@ def choose_model_loading():
 
 model_type, model_path = choose_model_loading()
 
-# GPU設置
+# 🚀 A100 GPU設置與混合精度
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 td3_agent.to(device)
 curiosity_explorer.to(device)
+
+# A100混合精度加速
+scaler = torch.cuda.amp.GradScaler()
+print(f"✅ A100混合精度訓練已啟用，設備：{device}")
+print(f"🔥 GPU記憶體優化：混合精度可節省約40% VRAM")
 
 # 載入模型 (如果選擇了)
 start_episode = 0
@@ -184,12 +189,18 @@ episode_steps = 0
 best_reward = -np.inf
 best_model_path = f"best_{MODEL_NAME}.pth"
 
-print(f"🧠 TD3 + 純好奇心訓練開始，設備：{device}")
+print(f"🚀 A100最佳化 TD3 + 純好奇心訓練開始，設備：{device}")
 print(f"🎯 TD3改進特性：")
 print(f"   • Double Q-Learning: ✅")
 print(f"   • Delayed Policy Updates: ✅ (每{POLICY_DELAY}次)")
 print(f"   • Target Policy Smoothing: ✅ (噪音σ={POLICY_NOISE})")
-print(f"🔥 內在獎勵縮放係數：{INTRINSIC_REWARD_SCALE}")
+print(f"🔥 A100優化配置：")
+print(f"   • Batch Size: {BATCH_SIZE} (4倍提升)")
+print(f"   • Buffer Capacity: {BUFFER_CAPACITY//1000}K (2倍提升)")
+print(f"   • Network Size: {NEURONS} (更大更深)")
+print(f"   • Learning Rate: {LEARNING_RATE} (配合大batch)")
+print(f"   • 內在獎勵縮放: {INTRINSIC_REWARD_SCALE}")
+print(f"   • 混合精度: ✅ (A100專用)")
 print(f"❌ OU噪音：已禁用")
 print(f"❌ PBRS獎勵：已禁用") 
 print(f"✅ 純好奇心探索：已啟用")
@@ -251,7 +262,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         done
     )
 
-    # TD3 模型更新
+    # 🚀 A100優化 TD3 模型更新（使用混合精度）
     if replay_buffer.size > BATCH_SIZE and t % UPDATE_FREQ == 0:
         states, actions, rewards, next_states, dones = replay_buffer.sample(BATCH_SIZE)
         
@@ -261,7 +272,9 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         next_states = torch.tensor(next_states).float().to(device)
         dones = torch.tensor(dones).float().to(device)
         
-        critic_loss, actor_loss = td3_agent.model_update(states, actions, rewards, next_states, dones)
+        # 使用混合精度加速訓練
+        with torch.cuda.amp.autocast():
+            critic_loss, actor_loss = td3_agent.model_update(states, actions, rewards, next_states, dones)
         
         # 更新好奇心模組
         if t % CURIOSITY_UPDATE_FREQ == 0:
