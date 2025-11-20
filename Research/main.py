@@ -19,7 +19,30 @@ sai = SAIClient(
     api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv",
 )
 
+# 🎯 創建無時間懲罰的環境
 env = sai.make_env()
+
+# 🚫 移除時間懲罰 - 修改獎勵配置
+print("🎯 正在移除時間懲罰...")
+try:
+    # 嘗試訪問和修改獎勵配置
+    if hasattr(env, 'reward_config') or hasattr(env.unwrapped, 'reward_config'):
+        reward_config = getattr(env, 'reward_config', None) or getattr(env.unwrapped, 'reward_config', None)
+        if reward_config and isinstance(reward_config, dict):
+            # 移除所有時間相關懲罰
+            if 'steps' in reward_config:
+                original_steps = reward_config['steps']
+                reward_config['steps'] = 0.0  # 設為0移除時間懲罰
+                print(f"✅ 時間懲罰已移除: {original_steps} → 0.0")
+            if 'step_penalty' in reward_config:
+                reward_config['step_penalty'] = 0.0
+                print(f"✅ 步數懲罰已移除")
+        else:
+            print("⚠️ 無法訪問reward_config，將通過後處理移除時間懲罰")
+    else:
+        print("⚠️ 環境不支持reward_config修改，將通過後處理移除時間懲罰")
+except Exception as e:
+    print(f"⚠️ 修改獎勵配置失敗: {e}，將通過後處理移除時間懲罰")
 print(f"環境已創建。觀察空間: {env.observation_space} | 動作空間: {env.action_space}")
 
 N_FEATURES = 45 
@@ -211,6 +234,7 @@ print(f"   • 混合精度: ✅ (A100專用)")
 print(f"❌ OU噪音：已禁用")
 print(f"❌ PBRS獎勵：已禁用")
 print(f"❌ 獎勵工程：已移除") 
+print(f"❌ 時間懲罰：已移除")
 print(f"✅ 純原始環境獎勵：已啟用")
 print(f"✅ 好奇心輔助探索：已啟用")
 
@@ -242,12 +266,25 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     # 🧠 純好奇心獎勵計算
     # =================================================================
     
-    # 🎯 純原始獎勵 + TD3 (移除所有獎勵工程)
+    # 🚫 後處理移除時間懲罰 (如果環境配置修改失敗)
+    processed_reward = reward
+    
+    # 檢測並移除可能的時間懲罰模式
+    if episode_steps > 10:  # 避免初期誤判
+        # 如果reward是固定的小負值，可能是時間懲罰
+        if -1.5 <= reward <= -0.1:  # 典型的時間懲罰範圍
+            # 檢查是否為純時間懲罰（沒有其他事件）
+            if not any(keyword in str(info).lower() for keyword in ['goal', 'fallen', 'success', 'offside']):
+                processed_reward = 0.0  # 移除時間懲罰
+                if t % 10000 == 0:  # 偶爾提示
+                    print(f"🚫 檢測到時間懲罰 {reward:.3f}，已移除")
+    
+    # 🎯 純原始獎勵 + TD3 (移除時間懲罰)
     final_reward, intrinsic_reward = curiosity_explorer.get_enhanced_reward(
         state.cpu().numpy(),
         raw_action,
         next_state_np,
-        reward  # 直接使用環境原始獎勵，不做任何修改
+        processed_reward  # 使用處理後的獎勵
     )
     
     # 累積統計
