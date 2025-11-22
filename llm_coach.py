@@ -75,13 +75,18 @@ class LLMCoach:
             self.api_calls_count += 1
             
             # 構建給 LLM 的提示詞
+            # 確保數值是標量而不是 numpy array
+            avg_steps = float(stats.get('avg_steps', 0))
+            avg_reward = float(stats.get('avg_reward', 0))
+            fall_rate = float(stats.get('fall_rate', 1.0))
+            
             prompt = f"""
 你是一個強化學習教練，正在訓練一個足球機器人。你需要根據當前的訓練統計數據，決定訓練階段和獎勵權重。
 
 ## 當前狀況
-- 平均存活步數: {stats.get('avg_steps', 0):.1f}
-- 平均獎勵: {stats.get('avg_reward', 0):.2f}  
-- 跌倒率: {stats.get('fall_rate', 1.0):.3f}
+- 平均存活步數: {avg_steps:.1f}
+- 平均獎勵: {avg_reward:.2f}  
+- 跌倒率: {fall_rate:.3f}
 - 當前階段: {self.phase}
 - 當前權重: {self.current_weights}
 
@@ -241,8 +246,8 @@ class LLMCoach:
             else:
                 print(f"🧠 啟發式規則：階段變化 [{previous_phase}] → [{self.phase}]")
                 
-            steps = stats.get('avg_steps', 0)
-            fall_rate = stats.get('fall_rate', 1.0)
+            steps = float(stats.get('avg_steps', 0))
+            fall_rate = float(stats.get('fall_rate', 1.0))
             print(f"   觸發條件：步數={steps:.1f}, 跌倒率={fall_rate:.3f}")
             print(f"   新權重：{self.current_weights}")
             print(f"   決策來源：{decision_source}")

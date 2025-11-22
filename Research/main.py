@@ -420,7 +420,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
             # 記錄教練決策
             print(f"🧠 LLM Coach 第{episode_count}回合更新:")
             print(f"   當前階段: {llm_coach.phase}")
-            print(f"   統計數據: 步數={avg_steps:.1f}, 跌倒率={fall_rate:.3f}, 平均獎勵={avg_reward:.2f}")
+            print(f"   統計數據: 步數={float(avg_steps):.1f}, 跌倒率={float(fall_rate):.3f}, 平均獎勵={float(avg_reward):.2f}")
             print(f"   權重變化: {previous_weights} → {current_weights}")
             
             # 記錄到 TensorBoard
