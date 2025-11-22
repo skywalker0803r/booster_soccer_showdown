@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # main_td3_curiosity.py
-# 使用TD3改進的純好奇心驅動訓練腳本
+# 使用TD3改進的純好奇心驅動訓練腳本 + LLM輔助獎勵塑形
 
 import numpy as np
 import torch
@@ -10,6 +10,11 @@ from utils import Preprocessor
 from logger import TensorBoardLogger
 from curiosity_module import CuriosityDrivenExploration
 from gdrive_utils import SimpleGDriveSync
+# [AI-Integrate] 導入LLM輔助模組
+import sys
+sys.path.append('..')  # 添加上級目錄到路徑
+from llm_coach import LLMCoach
+from reward_shaper import RewardShaper
 
 # =================================================================
 # 1. 初始化 SAIClient 和環境
@@ -102,6 +107,14 @@ curiosity_explorer = CuriosityDrivenExploration(
     action_dim=N_ACTIONS, 
     intrinsic_reward_scale=INTRINSIC_REWARD_SCALE
 )
+
+# [AI-Integrate] 初始化LLM輔助模組
+# 使用 Gemini API 進行智能決策
+GEMINI_API_KEY = "AIzaSyDUOIGCWDJkY98gi5QcrKtWkxxB61Qhmi0"
+llm_coach = LLMCoach(api_key=GEMINI_API_KEY, use_llm=True)
+reward_shaper = RewardShaper()
+current_weights = llm_coach.current_weights
+episode_stats_buffer = []  # 用於存儲最近幾個回合的表現
 
 # =================================================================
 # 🔄 模型載入選擇和Google Drive設置
@@ -214,6 +227,7 @@ logger = TensorBoardLogger(model_name=MODEL_NAME)
 episode_reward_sum = 0
 episode_intrinsic_reward_sum = 0
 episode_extrinsic_reward_sum = 0  # 分別追蹤原始獎勵
+episode_shaped_reward_sum = 0     # [AI-Integrate] 追蹤LLM塑形獎勵
 episode_count = 0
 episode_steps = 0
 best_reward = -np.inf
@@ -263,7 +277,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     next_state = torch.tensor(next_state_np).float().to(device)
 
     # =================================================================
-    # 🧠 純好奇心獎勵計算
+    # 🧠 LLM輔助獎勵塑形 + 好奇心獎勵計算
     # =================================================================
     
     # 🚫 後處理移除時間懲罰 (如果環境配置修改失敗)
@@ -279,12 +293,19 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
                 if t % 10000 == 0:  # 偶爾提示
                     print(f"🚫 檢測到時間懲罰 {reward:.3f}，已移除")
     
-    # 🎯 純原始獎勵 + TD3 (移除時間懲罰)
+    # [AI-Integrate] 計算LLM引導的Shaped Reward
+    shaped_reward = reward_shaper.compute_reward(info, next_obs, current_weights)
+    
+    # [AI-Integrate] 融合獎勵：原始獎勵 + LLM塑形獎勵
+    # 根據prompt.txt建議調整比例
+    total_step_reward = processed_reward + shaped_reward
+    
+    # 🎯 LLM增強獎勵 + 好奇心模組
     final_reward, intrinsic_reward = curiosity_explorer.get_enhanced_reward(
         state.cpu().numpy(),
         raw_action,
         next_state_np,
-        processed_reward  # 使用處理後的獎勵
+        total_step_reward  # 使用LLM增強後的獎勵
     )
     
     # 累積統計
@@ -292,6 +313,11 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     episode_intrinsic_reward_sum += intrinsic_reward
     episode_reward_sum += final_reward
     episode_steps += 1
+    
+    # [AI-Integrate] 累積LLM塑形獎勵統計
+    if 'episode_shaped_reward_sum' not in locals():
+        episode_shaped_reward_sum = 0.0
+    episode_shaped_reward_sum += shaped_reward
 
     # =================================================================
     # 📚 經驗儲存和模型更新
@@ -347,16 +373,72 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     if done:
         episode_count += 1
 
+        # [AI-Integrate] 收集數據給LLM教練
+        # 檢測是否跌倒（根據步數和獎勵判斷）
+        fell_down = episode_steps < 20 or episode_extrinsic_reward_sum < -5.0
+        episode_stats_buffer.append({
+            'steps': episode_steps,
+            'reward': episode_reward_sum,
+            'extrinsic_reward': episode_extrinsic_reward_sum,
+            'shaped_reward': episode_shaped_reward_sum,
+            'fell_down': fell_down
+        })
+
         # 詳細記錄分解獎勵
         logger.log_scalar("Train/Episode_Total_Reward", episode_reward_sum, step=t)
         logger.log_scalar("Train/Episode_Extrinsic_Reward", episode_extrinsic_reward_sum, step=t)
         logger.log_scalar("Train/Episode_Intrinsic_Reward", episode_intrinsic_reward_sum, step=t)
+        logger.log_scalar("Train/Episode_Shaped_Reward", episode_shaped_reward_sum, step=t)
         logger.log_scalar("Train/Episode_Steps", episode_steps, step=t)
         
         # 計算好奇心貢獻比例
         if episode_reward_sum != 0:
             curiosity_ratio = episode_intrinsic_reward_sum / abs(episode_reward_sum)
             logger.log_scalar("Train/Curiosity_Contribution_Ratio", curiosity_ratio, step=t)
+        
+        # [AI-Integrate] 每50個Episode讓LLM教練調整策略
+        if episode_count % 50 == 0 and len(episode_stats_buffer) >= 10:
+            # 計算統計數據
+            recent_episodes = episode_stats_buffer[-50:] if len(episode_stats_buffer) >= 50 else episode_stats_buffer
+            
+            avg_steps = np.mean([ep['steps'] for ep in recent_episodes])
+            avg_reward = np.mean([ep['reward'] for ep in recent_episodes])
+            fall_rate = np.mean([ep['fell_down'] for ep in recent_episodes])
+            avg_shaped_reward = np.mean([ep['shaped_reward'] for ep in recent_episodes])
+            
+            stats_summary = {
+                'avg_steps': avg_steps,
+                'avg_reward': avg_reward,
+                'fall_rate': fall_rate,
+                'avg_shaped_reward': avg_shaped_reward
+            }
+            
+            # 更新權重
+            previous_weights = current_weights.copy()
+            current_weights = llm_coach.consult(stats_summary)
+            
+            # 記錄教練決策
+            print(f"🧠 LLM Coach 第{episode_count}回合更新:")
+            print(f"   當前階段: {llm_coach.phase}")
+            print(f"   統計數據: 步數={avg_steps:.1f}, 跌倒率={fall_rate:.3f}, 平均獎勵={avg_reward:.2f}")
+            print(f"   權重變化: {previous_weights} → {current_weights}")
+            
+            # 記錄到 TensorBoard
+            logger.log_scalar("Coach/Weight_Balance", current_weights.get('balance', 0), step=t)
+            logger.log_scalar("Coach/Weight_Progress", current_weights.get('progress', 0), step=t)
+            logger.log_scalar("Coach/Weight_Energy", current_weights.get('energy', 0), step=t)
+            logger.log_scalar("Coach/Avg_Steps", avg_steps, step=t)
+            logger.log_scalar("Coach/Fall_Rate", fall_rate, step=t)
+            logger.log_scalar("Coach/Phase_ID", hash(llm_coach.phase) % 1000, step=t)  # 簡單的相位編碼
+            
+            # 記錄 LLM API 統計
+            api_stats = llm_coach.get_api_statistics()
+            logger.log_scalar("LLM_API/Total_Calls", api_stats['total_calls'], step=t)
+            logger.log_scalar("LLM_API/Success_Rate", api_stats['success_rate'], step=t)
+            logger.log_scalar("LLM_API/Errors", api_stats['errors'], step=t)
+            
+            # 清空部分緩衝以保持記憶體效率
+            episode_stats_buffer = episode_stats_buffer[-100:]  # 保留最近100個回合
         
         # 檢查最佳模型並自動保存到Google Drive
         if episode_reward_sum > best_reward:
@@ -402,13 +484,15 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         # 定期進度報告
         if episode_count % 5 == 0:
             ratio = episode_intrinsic_reward_sum / max(abs(episode_extrinsic_reward_sum), 0.001)
+            shaped_ratio = episode_shaped_reward_sum / max(abs(episode_extrinsic_reward_sum), 0.001)
             td3_stats = td3_agent.get_statistics()
             print(f"🎯 Episode {episode_count:3d} | "
                   f"總獎勵: {episode_reward_sum:6.2f} | "
                   f"原始: {episode_extrinsic_reward_sum:6.2f} | "
+                  f"塑形: {episode_shaped_reward_sum:5.2f} | "
                   f"好奇心: {episode_intrinsic_reward_sum:5.2f} | "
                   f"步數: {episode_steps:3d} | "
-                  f"比例: {ratio:.2f} | "
+                  f"階段: {llm_coach.phase[:8]} | "
                   f"TD3更新: {td3_stats['update_counter']}")
         
         # 重置環境
@@ -420,6 +504,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         episode_reward_sum = 0
         episode_intrinsic_reward_sum = 0
         episode_extrinsic_reward_sum = 0
+        episode_shaped_reward_sum = 0  # [AI-Integrate] 重設LLM塑形獎勵
         episode_steps = 0
     else:
         state = next_state
@@ -496,12 +581,24 @@ else:
 curiosity_final_stats = curiosity_explorer.get_statistics()
 td3_final_stats = td3_agent.get_statistics()
 
-print(f"\n🎉 TD3 + 純好奇心訓練完成！")
+print(f"\n🎉 TD3 + LLM輔助 + 好奇心訓練完成！")
 print(f"🏆 最佳回合獎勵: {best_reward:.2f}")
 print(f"🧠 總好奇心獎勵: {curiosity_final_stats['total_intrinsic_reward']:.2f}")
 print(f"📊 平均好奇心獎勵: {curiosity_final_stats['average_intrinsic_reward']:.4f}")
 print(f"🔄 總回合數: {episode_count}")
 print(f"🎯 TD3總更新次數: {td3_final_stats['update_counter']}")
+print(f"🧠 LLM教練最終階段: {llm_coach.phase}")
+print(f"⚖️ 最終權重配置: {current_weights}")
+print(f"📈 階段變化次數: {len(llm_coach.phase_history)}")
+
+# LLM API 統計報告
+llm_api_stats = llm_coach.get_api_statistics()
+print(f"🤖 LLM API統計:")
+print(f"   總調用次數: {llm_api_stats['total_calls']}")
+print(f"   錯誤次數: {llm_api_stats['errors']}")
+print(f"   成功率: {llm_api_stats['success_rate']:.2%}")
+print(f"   LLM啟用: {'✅' if llm_api_stats['llm_enabled'] else '❌'}")
+
 print(f"💾 模型文件: {best_model_path}, {final_model_path}")
 
 # 清理
