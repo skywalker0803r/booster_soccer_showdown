@@ -211,7 +211,7 @@ if model_path:
             model_path = local_path
         
         print(f"📥 正在載入模型: {model_path}")
-        checkpoint = torch.load(model_path, map_location=device)
+        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
         
         if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
             td3_agent.load_state_dict(checkpoint['model_state_dict'])

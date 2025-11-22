@@ -63,7 +63,7 @@ def collect_expert_trajectory_from_model(model_path, num_episodes=10):
     # 加載模型
     try:
         model = ImprovedDreamerV3(obs_dim=89, action_dim=12)
-        model.load_state_dict(torch.load(model_path, map_location='cpu'))
+        model.load_state_dict(torch.load(model_path, map_location='cpu', weights_only=False))
         model.eval()
         print("✅ 模型加載成功")
     except Exception as e:

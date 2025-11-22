@@ -63,8 +63,9 @@ def load_td3_model(model_path):
         LEARNING_RATE
     )
     
-    # Load weights
-    checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
+    # Load weights (PyTorch 2.6+ 兼容性修復)
+    # 設置 weights_only=False 以載入包含 numpy 數組的模型文件
+    checkpoint = torch.load(model_path, map_location=torch.device('cpu'), weights_only=False)
     
     # Check if new format (contains model_state_dict)
     if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
