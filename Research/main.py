@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-# main_td3_curiosity.py
-# 使用TD3改進的純好奇心驅動訓練腳本 + LLM輔助獎勵塑形
+# main_ppo_cma_curiosity.py
+# 使用PPO-CMA改進的純好奇心驅動訓練腳本 + LLM輔助獎勵塑形
 
 import numpy as np
 import torch
 from sai_rl import SAIClient 
-from td3_model import TD3_FF, ReplayBuffer  # 使用TD3替代DDPG
+from ppo_cma_model import PPOCMA  # 使用PPO-CMA替代TD3
 from utils import Preprocessor
 from logger import TensorBoardLogger
 from curiosity_module import CuriosityDrivenExploration
@@ -76,38 +76,52 @@ def action_function(policy):
     )
 
 # =================================================================
-# 3. 🚀 A100最佳化超參數設置 (TD3 + 純好奇心版)
+# 3. 🚀 A100最佳化超參數設置 (PPO-CMA + 純好奇心版)
 # =================================================================
 TOTAL_TIMESTEPS = 2000000          # 增加總訓練步數，充分利用A100
-MODEL_NAME = "Booster-TD3-A100-PureOriginal-v1"
-BUFFER_CAPACITY = 2000000          # 2M buffer，利用A100大VRAM
-BATCH_SIZE = 1024                  # 4倍batch size，大幅加速訓練
-LEARNING_RATE = 1e-3               # 提高學習率配合大batch
+MODEL_NAME = "Booster-PPOCMA-A100-PureOriginal-v1"
+BUFFER_CAPACITY = 2048             # PPO buffer，通常較小但更頻繁更新
+BATCH_SIZE = 64                    # PPO適中的batch size
+LEARNING_RATE_ACTOR = 3e-4         # Actor學習率
+LEARNING_RATE_CRITIC = 1e-3        # Critic學習率
 NEURONS = [512, 512, 256]          # 更大更深的網絡架構
-UPDATE_FREQ = 1
+UPDATE_FREQ = BUFFER_CAPACITY      # PPO在buffer滿時更新
 SAVE_FREQ = 25                     # 更頻繁保存
 
-# TD3 特有參數
-POLICY_DELAY = 2      # 策略延遲更新頻率
-POLICY_NOISE = 0.1    # 降低噪音提高穩定性
-NOISE_CLIP = 0.3      # 調整噪音範圍
+# PPO-CMA 特有參數
+GAMMA = 0.99                       # 折扣因子
+GAE_LAMBDA = 0.95                  # GAE lambda參數
+CLIP_EPSILON = 0.2                 # PPO裁切係數
+ENTROPY_COEF = 0.01               # 熵正則化係數
+PPO_EPOCHS = 10                    # 每次更新的PPO epoch數
+MAX_GRAD_NORM = 0.5               # 梯度裁切
+CMA_POPULATION_SIZE = None         # CMA-ES種群大小（None=自動）
+CMA_SIGMA = 0.1                    # CMA-ES初始步長
+CMA_UPDATE_FREQ = 10               # CMA-ES更新頻率
 
 # 好奇心模組參數 (A100優化設置)
 INTRINSIC_REWARD_SCALE = 0.8      # 稍微降低以平衡大batch效應
 CURIOSITY_UPDATE_FREQ = 1
 
-# 初始化TD3模型
-td3_agent = TD3_FF(
-    N_FEATURES, 
-    env.action_space, 
-    NEURONS, 
-    torch.nn.functional.relu,
-    LEARNING_RATE,
-    policy_delay=POLICY_DELAY,
-    policy_noise=POLICY_NOISE,
-    noise_clip=NOISE_CLIP
+# 初始化PPO-CMA模型
+ppo_cma_agent = PPOCMA(
+    state_dim=N_FEATURES,
+    action_dim=N_ACTIONS,
+    hidden_dims=NEURONS,
+    lr_actor=LEARNING_RATE_ACTOR,
+    lr_critic=LEARNING_RATE_CRITIC,
+    gamma=GAMMA,
+    gae_lambda=GAE_LAMBDA,
+    clip_epsilon=CLIP_EPSILON,
+    entropy_coef=ENTROPY_COEF,
+    max_grad_norm=MAX_GRAD_NORM,
+    ppo_epochs=PPO_EPOCHS,
+    batch_size=BATCH_SIZE,
+    buffer_capacity=BUFFER_CAPACITY,
+    cma_population_size=CMA_POPULATION_SIZE,
+    cma_sigma=CMA_SIGMA,
+    cma_update_freq=CMA_UPDATE_FREQ
 )
-replay_buffer = ReplayBuffer(BUFFER_CAPACITY, (N_FEATURES,), N_ACTIONS)
 
 # 初始化純好奇心模組
 curiosity_explorer = CuriosityDrivenExploration(
@@ -141,7 +155,7 @@ except Exception as e:
 # 詢問是否載入舊模型
 def choose_model_loading():
     print("\n" + "="*50)
-    print("🤔 TD3訓練模式選擇")
+    print("🤔 PPO-CMA訓練模式選擇")
     print("="*50)
     
     # 檢查本地已有模型
@@ -191,7 +205,7 @@ model_type, model_path = choose_model_loading()
 
 # 🚀 A100 GPU設置與混合精度
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-td3_agent.to(device)
+ppo_cma_agent.to(device)
 curiosity_explorer.to(device)
 
 # A100混合精度加速
@@ -214,11 +228,11 @@ if model_path:
         checkpoint = torch.load(model_path, map_location=device, weights_only=False)
         
         if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
-            td3_agent.load_state_dict(checkpoint['model_state_dict'])
+            ppo_cma_agent.load_state_dict(checkpoint['model_state_dict'])
             start_episode = checkpoint.get('episode', 0)
             print(f"✅ 已載入模型 (從Episode {start_episode}繼續)")
         else:
-            td3_agent.load_state_dict(checkpoint)
+            ppo_cma_agent.load_state_dict(checkpoint)
             print(f"✅ 已載入模型 (狀態dict格式)")
             
     except Exception as e:
@@ -241,19 +255,21 @@ episode_steps = 0
 best_reward = -np.inf
 best_model_path = f"best_{MODEL_NAME}.pth"
 
-print(f"🚀 A100最佳化 TD3 + 純原始獎勵訓練開始，設備：{device}")
-print(f"🎯 TD3改進特性：")
-print(f"   • Double Q-Learning: ✅")
-print(f"   • Delayed Policy Updates: ✅ (每{POLICY_DELAY}次)")
-print(f"   • Target Policy Smoothing: ✅ (噪音σ={POLICY_NOISE})")
+print(f"🚀 A100最佳化 PPO-CMA + 純原始獎勵訓練開始，設備：{device}")
+print(f"🎯 PPO-CMA改進特性：")
+print(f"   • PPO Clipped Surrogate: ✅ (ε={CLIP_EPSILON})")
+print(f"   • CMA-ES Parameter Evolution: ✅ (σ={CMA_SIGMA})")
+print(f"   • Generalized Advantage Estimation: ✅ (λ={GAE_LAMBDA})")
+print(f"   • Entropy Regularization: ✅ (β={ENTROPY_COEF})")
 print(f"🔥 A100優化配置：")
-print(f"   • Batch Size: {BATCH_SIZE} (4倍提升)")
-print(f"   • Buffer Capacity: {BUFFER_CAPACITY//1000}K (2倍提升)")
+print(f"   • Batch Size: {BATCH_SIZE}")
+print(f"   • Buffer Capacity: {BUFFER_CAPACITY}")
 print(f"   • Network Size: {NEURONS} (更大更深)")
-print(f"   • Learning Rate: {LEARNING_RATE} (配合大batch)")
+print(f"   • Actor LR: {LEARNING_RATE_ACTOR}, Critic LR: {LEARNING_RATE_CRITIC}")
+print(f"   • PPO Epochs: {PPO_EPOCHS}")
+print(f"   • CMA Update Freq: {CMA_UPDATE_FREQ}")
 print(f"   • 內在獎勵縮放: {INTRINSIC_REWARD_SCALE}")
 print(f"   • 混合精度: ✅ (A100專用)")
-print(f"❌ OU噪音：已禁用")
 print(f"❌ PBRS獎勵：已禁用")
 print(f"❌ 獎勵工程：已移除") 
 print(f"❌ 時間懲罰：已移除")
@@ -261,19 +277,15 @@ print(f"✅ 純原始環境獎勵：已啟用")
 print(f"✅ 好奇心輔助探索：已啟用")
 
 # =================================================================
-# 4. TD3 + 純好奇心 訓練循環
+# 4. PPO-CMA + 純好奇心 訓練循環
 # =================================================================
 current_obs, info = env.reset()
 state = Preprocessor().modify_state(current_obs, info)[0] 
 state = torch.tensor(state).float().to(device)
 
 for t in range(1, TOTAL_TIMESTEPS + 1):
-    # 1. 採集動作 (不添加OU噪音，純依賴好奇心探索)
-    with torch.no_grad():
-        raw_action_tensor = td3_agent(state.unsqueeze(0))
-    raw_action = raw_action_tensor.cpu().numpy().flatten()
-    
-    # 🚫 不添加OU噪音 - 純依賴好奇心驅動的探索
+    # 1. PPO-CMA動作採樣 (包含隨機探索)
+    raw_action, log_prob, value = ppo_cma_agent.get_action(state.cpu().numpy())
     
     # 執行動作
     action = action_function(raw_action)
@@ -331,49 +343,52 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     # 📚 經驗儲存和模型更新
     # =================================================================
     
-    # 儲存經驗 (使用好奇心增強獎勵)
-    replay_buffer.add(
+    # 儲存經驗到PPO-CMA緩衝區 (使用好奇心增強獎勵)
+    ppo_cma_agent.store_transition(
         state.cpu().numpy(), 
         raw_action, 
         final_reward,
         next_state_np, 
-        done
+        done,
+        log_prob,
+        value
     )
 
-    # 🚀 A100優化 TD3 模型更新（使用混合精度）
-    if replay_buffer.size > BATCH_SIZE and t % UPDATE_FREQ == 0:
-        states, actions, rewards, next_states, dones = replay_buffer.sample(BATCH_SIZE)
-        
-        states = torch.tensor(states).float().to(device)
-        actions = torch.tensor(actions).float().to(device)
-        rewards = torch.tensor(rewards).float().to(device)
-        next_states = torch.tensor(next_states).float().to(device)
-        dones = torch.tensor(dones).float().to(device)
-        
+    # 🚀 A100優化 PPO-CMA 模型更新（buffer滿時更新）
+    if t % UPDATE_FREQ == 0:
         # 使用混合精度加速訓練
         with torch.cuda.amp.autocast():
-            critic_loss, actor_loss = td3_agent.model_update(states, actions, rewards, next_states, dones)
+            actor_loss, critic_loss = ppo_cma_agent.update()
         
         # 更新好奇心模組
         if t % CURIOSITY_UPDATE_FREQ == 0:
-            curiosity_stats = curiosity_explorer.update_curiosity(states, actions, next_states)
-            
-            # 記錄好奇心指標
-            logger.set_step(t)
-            logger.log_scalar("Curiosity/Forward_Loss", curiosity_stats['forward_loss'])
-            logger.log_scalar("Curiosity/Inverse_Loss", curiosity_stats['inverse_loss'])
-            logger.log_scalar("Curiosity/Avg_Intrinsic_Reward", curiosity_stats['avg_intrinsic_reward'])
+            # 從PPO-CMA buffer中獲取一些樣本用於好奇心更新
+            buffer_data = ppo_cma_agent.buffer.get_all_data()
+            if buffer_data is not None:
+                states = buffer_data['states'].to(device)
+                actions = buffer_data['actions'].to(device)
+                next_states = torch.FloatTensor(ppo_cma_agent.buffer.next_states[:ppo_cma_agent.buffer.size]).to(device)
+                
+                curiosity_stats = curiosity_explorer.update_curiosity(states, actions, next_states)
+                
+                # 記錄好奇心指標
+                logger.set_step(t)
+                logger.log_scalar("Curiosity/Forward_Loss", curiosity_stats['forward_loss'])
+                logger.log_scalar("Curiosity/Inverse_Loss", curiosity_stats['inverse_loss'])
+                logger.log_scalar("Curiosity/Avg_Intrinsic_Reward", curiosity_stats['avg_intrinsic_reward'])
         
         # 記錄訓練指標
-        logger.set_step(t) 
-        logger.log_scalar("Loss/Critic_Loss", critic_loss) 
-        if actor_loss is not None and actor_loss != 0.0:  # TD3的延遲更新
+        if actor_loss is not None and critic_loss is not None:
+            logger.set_step(t) 
             logger.log_scalar("Loss/Actor_Loss", actor_loss)
+            logger.log_scalar("Loss/Critic_Loss", critic_loss)
         
-        # 記錄TD3特定指標
-        td3_stats = td3_agent.get_statistics()
-        logger.log_scalar("TD3/Update_Counter", td3_stats['update_counter'])
-        logger.log_scalar("TD3/Next_Actor_Update", td3_stats['next_actor_update'])
+        # 記錄PPO-CMA特定指標
+        ppo_cma_stats = ppo_cma_agent.get_statistics()
+        logger.log_scalar("PPOCMA/Update_Counter", ppo_cma_stats['update_counter'])
+        logger.log_scalar("PPOCMA/CMA_Updates", ppo_cma_stats['cma_updates'])
+        logger.log_scalar("PPOCMA/CMA_Sigma", ppo_cma_stats['cma_sigma'])
+        logger.log_scalar("PPOCMA/CMA_Generation", ppo_cma_stats['cma_generation'])
 
     # =================================================================
     # 🔄 回合結束處理
@@ -454,14 +469,15 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
             
             # 保存模型狀態 (包含元數據)
             checkpoint = {
-                'model_state_dict': td3_agent.state_dict(),
+                'model_state_dict': ppo_cma_agent.state_dict(),
                 'episode': episode_count + start_episode,
                 'timestep': t,
                 'best_reward': best_reward,
                 'total_reward': episode_reward_sum,
                 'intrinsic_reward': episode_intrinsic_reward_sum,
                 'episode_steps': episode_steps,
-                'td3_update_counter': td3_agent.update_counter
+                'ppo_cma_update_counter': ppo_cma_agent.update_counter,
+                'cma_updates': ppo_cma_agent.cma_updates
             }
             
             # 本地保存
@@ -474,7 +490,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
                 'reward': episode_reward_sum,
                 'intrinsic_reward': episode_intrinsic_reward_sum,
                 'steps': episode_steps,
-                'algorithm': 'TD3'
+                'algorithm': 'PPO-CMA'
             }
             if gdrive_sync and gdrive_available:
                 gdrive_sync.save_model(checkpoint, f"best_{MODEL_NAME}", metadata)
@@ -493,7 +509,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         if episode_count % 5 == 0:
             ratio = episode_intrinsic_reward_sum / max(abs(episode_extrinsic_reward_sum), 0.001)
             shaped_ratio = episode_shaped_reward_sum / max(abs(episode_extrinsic_reward_sum), 0.001)
-            td3_stats = td3_agent.get_statistics()
+            ppo_cma_stats = ppo_cma_agent.get_statistics()
             print(f"🎯 Episode {episode_count:3d} | "
                   f"總獎勵: {safe_float(episode_reward_sum):6.2f} | "
                   f"原始: {safe_float(episode_extrinsic_reward_sum):6.2f} | "
@@ -501,7 +517,8 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
                   f"好奇心: {safe_float(episode_intrinsic_reward_sum):5.2f} | "
                   f"步數: {episode_steps:3d} | "
                   f"階段: {llm_coach.phase[:8]} | "
-                  f"TD3更新: {td3_stats['update_counter']}")
+                  f"PPO更新: {ppo_cma_stats['update_counter']} | "
+                  f"CMA: {ppo_cma_stats['cma_updates']}")
         
         # 重置環境
         current_obs, info = env.reset()
@@ -520,32 +537,35 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     # 大進度報告和定期備份 (🚀 A100優化: 更頻繁備份)
     if t % 10000 == 0:
         curiosity_stats = curiosity_explorer.get_statistics()
-        td3_stats = td3_agent.get_statistics()
-        print(f"\n🚀 === TD3訓練進度報告 (步數: {t}) ===")
+        ppo_cma_stats = ppo_cma_agent.get_statistics()
+        print(f"\n🚀 === PPO-CMA訓練進度報告 (步數: {t}) ===")
         print(f"📊 回合總數: {episode_count}")
-        print(f"💾 Buffer大小: {replay_buffer.size}")
+        print(f"💾 Buffer大小: {ppo_cma_stats['buffer_size']}")
         print(f"🏆 最佳總獎勵: {safe_float(best_reward):.2f}")
         print(f"🧠 累計好奇心獎勵: {safe_float(curiosity_stats['total_intrinsic_reward']):.2f}")
         print(f"📈 平均好奇心獎勵: {safe_float(curiosity_stats['average_intrinsic_reward']):.4f}")
         print(f"🔄 好奇心更新次數: {curiosity_stats['update_count']}")
-        print(f"🎯 TD3更新次數: {td3_stats['update_counter']}")
-        print(f"⏰ 下次Actor更新: {td3_stats['next_actor_update']}步後")
+        print(f"🎯 PPO更新次數: {ppo_cma_stats['update_counter']}")
+        print(f"🧬 CMA-ES更新次數: {ppo_cma_stats['cma_updates']}")
+        print(f"📏 CMA-ES步長σ: {ppo_cma_stats['cma_sigma']:.6f}")
+        print(f"🌱 CMA-ES世代: {ppo_cma_stats['cma_generation']}")
         
         # 定期自動備份到Google Drive
         checkpoint_name = f"checkpoint_{t//1000}k"
         checkpoint_data = {
-            'model_state_dict': td3_agent.state_dict(),
+            'model_state_dict': ppo_cma_agent.state_dict(),
             'episode': episode_count + start_episode,
             'timestep': t,
             'best_reward': best_reward,
-            'td3_update_counter': td3_agent.update_counter
+            'ppo_cma_update_counter': ppo_cma_agent.update_counter,
+            'cma_updates': ppo_cma_agent.cma_updates
         }
         checkpoint_meta = {
             'episode': episode_count + start_episode,
             'timestep': t,
             'best_reward': best_reward,
             'checkpoint': True,
-            'algorithm': 'TD3'
+            'algorithm': 'PPO-CMA'
         }
         
         if gdrive_sync and gdrive_available:
@@ -563,12 +583,13 @@ final_model_path = f"final_{MODEL_NAME}.pth"
 
 # 保存最終模型 (包含完整狀態)
 final_checkpoint = {
-    'model_state_dict': td3_agent.state_dict(),
+    'model_state_dict': ppo_cma_agent.state_dict(),
     'episode': episode_count + start_episode,
     'timestep': TOTAL_TIMESTEPS,
     'best_reward': best_reward,
     'final_training': True,
-    'td3_update_counter': td3_agent.update_counter
+    'ppo_cma_update_counter': ppo_cma_agent.update_counter,
+    'cma_updates': ppo_cma_agent.cma_updates
 }
 torch.save(final_checkpoint, final_model_path)
 
@@ -578,7 +599,7 @@ final_metadata = {
     'timestep': TOTAL_TIMESTEPS, 
     'best_reward': best_reward,
     'training_completed': True,
-    'algorithm': 'TD3'
+    'algorithm': 'PPO-CMA'
 }
 if gdrive_sync and gdrive_available:
     gdrive_sync.save_model(final_checkpoint, f"final_{MODEL_NAME}", final_metadata)
@@ -587,14 +608,17 @@ else:
     print(f"⚠️ Google Drive不可用，最終模型僅本地保存")
 
 curiosity_final_stats = curiosity_explorer.get_statistics()
-td3_final_stats = td3_agent.get_statistics()
+ppo_cma_final_stats = ppo_cma_agent.get_statistics()
 
-print(f"\n🎉 TD3 + LLM輔助 + 好奇心訓練完成！")
+print(f"\n🎉 PPO-CMA + LLM輔助 + 好奇心訓練完成！")
 print(f"🏆 最佳回合獎勵: {safe_float(best_reward):.2f}")
 print(f"🧠 總好奇心獎勵: {safe_float(curiosity_final_stats['total_intrinsic_reward']):.2f}")
 print(f"📊 平均好奇心獎勵: {safe_float(curiosity_final_stats['average_intrinsic_reward']):.4f}")
 print(f"🔄 總回合數: {episode_count}")
-print(f"🎯 TD3總更新次數: {td3_final_stats['update_counter']}")
+print(f"🎯 PPO總更新次數: {ppo_cma_final_stats['update_counter']}")
+print(f"🧬 CMA-ES總更新次數: {ppo_cma_final_stats['cma_updates']}")
+print(f"📏 最終CMA-ES步長σ: {ppo_cma_final_stats['cma_sigma']:.6f}")
+print(f"🌱 最終CMA-ES世代: {ppo_cma_final_stats['cma_generation']}")
 print(f"🧠 LLM教練最終階段: {llm_coach.phase}")
 print(f"⚖️ 最終權重配置: {current_weights}")
 print(f"📈 階段變化次數: {len(llm_coach.phase_history)}")
@@ -612,4 +636,4 @@ print(f"💾 模型文件: {best_model_path}, {final_model_path}")
 # 清理
 env.close()
 logger.close()
-print("🏁 TD3純好奇心實驗完成！")
+print("🏁 PPO-CMA純好奇心實驗完成！")

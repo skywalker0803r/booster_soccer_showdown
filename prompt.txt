@@ -1,211 +1,41 @@
-這是一份專為 AI 協作設計的開發指南。請將此指南分享給任何協助您撰寫程式碼的 AI（或是人類開發者）。這份文件明確定義了架構、整合點，以及所有需要查閱 SAI 環境文檔來確認的 TODO 項目。
+我目前的工作流程是
+在colab終端機執行run_training.sh裡面的步驟
 
-📘 LLM-Augmented RL 開發指南：SAI 足球機器人專案
-🎯 目標
-本專案旨在解決傳統 RL 在稀疏獎勵環境（足球機器人）中「站不穩、踢不到球」的問題。我們將引入 LLM (作為教練) 與 Reward Shaper (作為執行者) 來實施動態課程學習。
+# 下載代碼庫
+git clone https://github.com/skywalker0803r/booster_soccer_showdown.git
+cd booster_soccer_showdown
 
-📂 模組架構概覽
-我們需要新增兩個 Python 檔案，並修改一個現有檔案：
+# 安裝 conda（使用 Mambaforge：輕量且快速）
+# -----------------------------------------------
+# 下載 mambaforge (包含 conda)
+wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh
+# 執行安裝腳本，使用 -b 批次模式，-p 指定安裝路徑到當前用戶的 /usr/local/
+bash Mambaforge-Linux-x86_64.sh -b -p /usr/local
+# 初始化 conda 環境
+/usr/local/bin/conda init bash
+# 重新載入 shell 設定，讓 conda 指令生效
+source ~/.bashrc
+# -----------------------------------------------
 
-llm_coach.py: 策略層。根據訓練統計數據（跌倒率、移動距離），決定當前訓練階段（Phase）和獎勵權重（Weights）。
+# 建立虛擬環境
+conda create -n booster-ssl python=3.11 -y && conda activate booster-ssl
 
-reward_shaper.py: 物理層。接收 env 的原始數據，根據權重計算密集的 Shaped Reward。
+# 安裝依賴
+pip install -r requirements.txt
 
-main.py: 整合層。在訓練迴圈中調用上述模組。
+# 訓練
+cd Research
+python main.py
 
-🛠️ 模組 1: llm_coach.py (新建)
-職責：這是「大腦」。它不需要知道物理引擎的細節，只需要知道 Agent 表現得「好不好」。
+目前這個版本的main.py 感覺不錯 足球機器人會站 但是一直沒辦法踢到球
+我想問題可能是因為獎勵稀疏問題 實際上 作獎勵設計可能導致獎勵駭客行為 在我設計的獎勵上收斂到局部最優 但是實際上原始分數還是很低
+但是不作獎勵設計靠現在的 TD3 搭配 好奇心模組 + LLM輔助獎勵塑形 依然無法踢到球
+我在想是不是可以把 TD3換成PPO_CMA算法 相關文件我放在PPO_CMA.MD 然後比賽官方文檔我放在docs資料夾內
+目前主要實作都發生在Research資料夾內
+我希望你修改完之後
+我只要在colab終端機一樣執行run_training.sh裡面的步驟
+就可以看到原本的使用TD3改進的純好奇心驅動訓練腳本 + LLM輔助獎勵塑形
+變成改用PPO_CMA算法
+也許你該做的只是新增一個PPO_CMA模組之後導入到main.py作使用
 
-Python
-
-# llm_coach.py
-import numpy as np
-
-class LLMCoach:
-    def __init__(self):
-        # 定義初始權重 (Phase 1: 站立)
-        self.current_weights = {
-            "balance": 1.0,   # 高度重視平衡
-            "progress": 0.0,  # 暫時忽略移動
-            "energy": 0.1     # 節省能量
-        }
-        self.phase = "Stance"
-
-    def consult(self, stats):
-        """
-        stats (dict): {
-            'avg_steps': 平均存活步數,
-            'avg_reward': 平均回合獎勵
-            'fall_rate': 跌倒頻率 (0.0~1.0)
-        }
-        """
-        # TODO: 如果有 API Key，這裡可以接入 OpenAI/Gemini API 進行動態推理
-        
-        # Heuristic 規則 (模擬 LLM 思維):
-        steps = stats.get('avg_steps', 0)
-        
-        # 階段 1: 學走路 (當存活步數少於 50)
-        if steps < 50:
-            self.phase = "Stance & Survival"
-            self.current_weights = {
-                "balance": 2.0, 
-                "progress": 0.1, 
-                "energy": 0.05
-            }
-        # 階段 2: 學踢球 (當能穩定行走)
-        else:
-            self.phase = "Dribbling"
-            self.current_weights = {
-                "balance": 0.5, 
-                "progress": 1.5, # 加大移動權重
-                "energy": 0.01
-            }
-            
-        return self.current_weights
-🛠️ 模組 2: reward_shaper.py (新建) ⚠️ 重點關注
-職責：這是「計算機」。它需要深入訪問 env 的物理數據。 注意：以下代碼中標記 TODO 的變數名稱，必須查閱 SAI 環境文檔或通過 print(info.keys()) 來確認。
-
-Python
-
-# reward_shaper.py
-import numpy as np
-
-class RewardShaper:
-    def __init__(self):
-        pass
-
-    def compute_reward(self, info, obs, weights):
-        """
-        計算密集獎勵 (Dense Reward)
-        :param info: env.step() 返回的 info 字典
-        :param obs: env.step() 返回的 raw observation
-        :param weights: LLMCoach 返回的權重字典
-        """
-        reward = 0.0
-        
-        # 1. 平衡獎勵 (Balance Reward)
-        # utils.py 確認 info 中包含 'robot_gyro'
-        if 'robot_gyro' in info:
-            # 懲罰角速度過大 (晃動)
-            gyro_penalty = np.sum(np.square(info['robot_gyro']))
-            reward -= weights.get('balance', 0) * gyro_penalty * 0.1
-
-        # TODO: 確認 info 中是否有 'project_gravity' 或類似變數
-        # 根據 utils.py，它是通過 modify_state 計算的，可能不在原始 info 裡。
-        # 如果 info 裡沒有，需要重新計算或由 main.py 傳入 state。
-        # 假設我們想獎勵上半身保持直立：
-        # z_axis = ... (需要確認四元數計算邏輯)
-        
-        # TODO: 確認如何獲取機器人「質心高度 (Center of Mass Z)」
-        # 我們需要獎勵機器人保持站立高度。
-        # 檢查: info['robot_pos']? info['com_pos']? 還是 obs 的第 0-2 位?
-        robot_height = 0.0 # DEFAULT
-        if 'robot_pos' in info: # 假設變數名
-             robot_height = info['robot_pos'][2] 
-        elif 'com_pos' in info: # 假設變數名
-             robot_height = info['com_pos'][2]
-             
-        if robot_height > 0.3: # 假設 0.3m 是跌倒閾值
-            reward += weights.get('balance', 0) * 1.0
-            
-        # 2. 進度獎勵 (Progress Reward)
-        # utils.py 指出 obs[:, 24:27] 是球相對機器人的位置
-        # 注意: obs 可能是 (45,) 或 (1, 45)，需處理維度
-        try:
-            # 假設 obs 是 numpy array
-            obs_flat = obs.flatten()
-            # TODO: 再次確認 obs 索引 24:27 是否絕對正確對應 ball_pos
-            ball_relative_pos = obs_flat[24:27] 
-            dist_to_ball = np.linalg.norm(ball_relative_pos)
-            
-            # 距離越近獎勵越高
-            reward += weights.get('progress', 0) * (1.0 / (1.0 + dist_to_ball))
-        except Exception as e:
-            # 防止索引錯誤導致訓練崩潰
-            print(f"Warning in RewardShaper: {e}")
-            
-        return reward
-🛠️ 模組 3: 整合至 main.py
-請依照以下步驟在 main.py 中插入代碼。
-
-步驟 1: 導入模組
-在文件最上方導入：
-
-Python
-
-from llm_coach import LLMCoach
-from reward_shaper import RewardShaper
-步驟 2: 初始化
-在 env 創建之後，td3_agent 初始化之前：
-
-Python
-
-# ... (環境創建代碼) ...
-
-# [AI-Integrate] 初始化輔助模組
-llm_coach = LLMCoach()
-reward_shaper = RewardShaper()
-current_weights = llm_coach.current_weights
-episode_stats_buffer = [] # 用於存儲最近幾個回合的表現
-步驟 3: 替換獎勵計算
-在主要的訓練迴圈 for t in range(...) 內部，env.step() 之後，獎勵計算部分：
-
-Python
-
-    # ... env.step(action) ...
-
-    # [AI-Integrate] 計算 LLM 引導的 Shaped Reward
-    # 注意: 我們傳入 info 和 raw_obs
-    shaped_reward = reward_shaper.compute_reward(info, next_obs, current_weights)
-    
-    # [AI-Integrate] 融合獎勵
-    # 我們保留 env 原始獎勵 (reward)，但主要靠 shaped_reward 引導
-    # TODO: 根據實際測試調整比例。例如: reward * 10 + shaped_reward
-    total_step_reward = reward + shaped_reward
-
-    # 修改這裡: 將 total_step_reward 傳給好奇心模組
-    final_reward, intrinsic_reward = curiosity_explorer.get_enhanced_reward(
-        state.cpu().numpy(),
-        raw_action,
-        next_state_np,
-        total_step_reward  # <--- 替換原本的 processed_reward
-    )
-    
-    # ... (後續存儲到 replay_buffer) ...
-步驟 4: 更新教練 (Episode End)
-在 if done: 區塊內：
-
-Python
-
-    if done:
-        # ... (原有統計代碼) ...
-        
-        # [AI-Integrate] 收集數據給教練
-        episode_stats_buffer.append({
-            'steps': episode_steps,
-            'reward': episode_reward_sum
-        })
-        
-        # 每 50 個 Episode 讓教練調整一次策略
-        if episode_count % 50 == 0:
-            avg_steps = np.mean([x['steps'] for x in episode_stats_buffer])
-            stats_summary = {'avg_steps': avg_steps}
-            
-            # 更新權重
-            current_weights = llm_coach.consult(stats_summary)
-            print(f"🧠 LLM Coach 更新策略: {llm_coach.phase}, 權重: {current_weights}")
-            
-            # 記錄到 Tensorboard
-            logger.log_scalar("Coach/Weight_Balance", current_weights.get('balance', 0), step=t)
-            
-            episode_stats_buffer = [] # 清空緩衝
-✅ 實作檢查清單 (Checklist)
-在運行代碼前，請開發者確認以下項目：
-
-[ ] 變數名稱確認 (reward_shaper.py): 運行一個簡單的腳本 print(env.step(action)[4].keys())，確認 info 字典裡到底有哪些 Key（例如 robot_pos, com_pos, robot_gyro）。
-
-[ ] Observation 索引確認: 再次確認 obs 向量中，哪幾個 index 確實代表球的位置（目前假設是 24-27）。
-
-[ ] 維度匹配: 確保 reward_shaper 處理 numpy array 時，有考慮到 batch dimension (例如 (1, 45) vs (45,))。
-
-[ ] 權重範圍: 確保 shaped_reward 的數值大小不會過大（例如幾千），這會破壞 TD3 的 Critic 估計。建議將其標準化到 -1 到 +1 或 0 到 10 的範圍內。
+實作前有任何問題要釐清嗎?
