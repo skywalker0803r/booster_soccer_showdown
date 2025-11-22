@@ -1,57 +1,47 @@
-既然沒有低階模型，那麼我們必須按照分層強化學習 (HRL) 的設計，依序完成以下三個階段的訓練：
-
-Move (移動) 技能訓練：使用強化後的 PBRS 框架。
-
-Kick (踢球) 技能訓練：使用強化後的 PBRS （包含角度引導 k3） 框架。
-
-HRL (分層) 高階策略訓練：載入前面兩個模型，訓練 HL 策略進行技能切換。
-
-請按照以下順序在您的 Colab 終端機中執行指令：
-
-🛠️ 第一階段：訓練 Move (移動) 技能
-這個階段會訓練一個低階策略，目標是讓機器人能快速移動到球附近。模型會儲存在 ./low_level_models/。
-
-Bash
-
-# 訓練 Move 技能
-# --stage move: 使用 PBRS 接近球的獎勵引導 (k1, k2)
-# --num_envs 4: 建議使用 4 個或更多環境並行，加速訓練
-python ppo_with_pbrs.py --stage move --mode new --num_envs 4
-預計結果： 訓練完成後，您會看到文件 ./low_level_models/ppo_move_..._final.zip 和 ./low_level_models/vec_normalize_move.pkl。
-
-目標： 讓平均獎勵穩定上升，並達到您滿意的性能。
-
-⚽ 第二階段：訓練 Kick (踢球) 技能
-這個階段會訓練一個低階策略，目標是將球踢向目標。由於您的程式碼加入了 k3 角度引導，這個模型應該會學到更好的踢球位置。
-
-Bash
-
-# 訓練 Kick 技能
-# --stage kick: 使用 PBRS 包含角度引導 (k1, k2, k3)
-# --num_envs 4: 建議使用 4 個或更多環境並行
-python ppo_with_pbrs.py --stage kick --mode new --num_envs 4
-預計結果： 訓練完成後，您會看到文件 ./low_level_models/ppo_kick_..._final.zip 和 ./low_level_models/vec_normalize_kick.pkl。
-
-重命名： 為了讓 HRL 訓練腳本（hrl_wrapper.py）能順利找到這兩個模型，您必須將它們重命名為預期的檔名：
-
-Bash
-
-# 範例：將最新的 move final model 重命名為 move_policy_final.zip
-# 請將 'YOUR_MOVE_MODEL_FILE' 替換為實際的檔名
-mv low_level_models/ppo_move_YOUR_MOVE_MODEL_FILE_final.zip low_level_models/move_policy_final.zip
-
-# 範例：將最新的 kick final model 重命名為 kick_policy_final.zip
-# 請將 'YOUR_KICK_MODEL_FILE' 替換為實際的檔名
-mv low_level_models/ppo_kick_YOUR_KICK_MODEL_FILE_final.zip low_level_models/kick_policy_final.zip
-
-# 💡 提示：您也可以手動將 'move_policy_final.zip' 和 'kick_policy_final.zip' 重新命名為您的最佳模型。
-🔗 第三階段：訓練 HRL (分層) 策略
-一旦兩個低階模型準備就緒並正確重命名後，就可以開始訓練高階策略了。
-
-Bash
-
-# 訓練 HRL 高階策略
-# --stage hrl: 載入並使用前面訓練好的 move/kick 模型
-# --num_envs 4: 建議使用 4 個或更多環境並行
-python ppo_with_pbrs.py --stage hrl --mode new --num_envs 4
-請從第一階段開始，訓練完成後記得進行第二階段，最終進行第三階段。祝您訓練順利！
+TypeError: unsupported format /content/booster_soccer_showdown/Researc│ │                                  (target_actor): NeuralNetwork(                              │ │
+│ │                                │   (layers): ModuleList(                                     │ │
+│ │                                │     (0): Linear(in_features=45, out_features=512,           │ │
+│ │                                bias=True)                                                    │ │
+│ │                                │     (1): Linear(in_features=512, out_features=512,          │ │
+│ │                                bias=True)                                                    │ │
+│ │                                │     (2): Linear(in_features=512, out_features=256,          │ │
+│ │                                bias=True)                                                    │ │
+│ │                                │     (3): Linear(in_features=256, out_features=12,           │ │
+│ │                                bias=True)                                                    │ │
+│ │                                │   )                                                         │ │
+│ │                                  )                                                           │ │
+│ │                                  (target_critic1): NeuralNetwork(                            │ │
+│ │                                │   (layers): ModuleList(                                     │ │
+│ │                                │     (0): Linear(in_features=57, out_features=512,           │ │
+│ │                                bias=True)                                                    │ │
+│ │                                │     (1): Linear(in_features=512, out_features=512,          │ │
+│ │                                bias=True)                                                    │ │
+│ │                                │     (2): Linear(in_features=512, out_features=256,          │ │
+│ │                                bias=True)                                                    │ │
+│ │                                │     (3): Linear(in_features=256, out_features=1, bias=True) │ │
+│ │                                │   )                                                         │ │
+│ │                                  )                                                           │ │
+│ │                                  (target_critic2): NeuralNetwork(                            │ │
+│ │                                │   (layers): ModuleList(                                     │ │
+│ │                                │     (0): Linear(in_features=57, out_features=512,           │ │
+│ │                                bias=True)                                                    │ │
+│ │                                │     (1): Linear(in_features=512, out_features=512,          │ │
+│ │                                bias=True)                                                    │ │
+│ │                                │     (2): Linear(in_features=512, out_features=256,          │ │
+│ │                                bias=True)                                                    │ │
+│ │                                │     (3): Linear(in_features=256, out_features=1, bias=True) │ │
+│ │                                │   )                                                         │ │
+│ │                                  )                                                           │ │
+│ │                                )                                                             │ │
+│ │                   terminated = True                                                          │ │
+│ │                        torch = <module 'torch' from                                          │ │
+│ │                                '/usr/local/lib/python3.12/dist-packages/torch/__init__.py'>  │ │
+│ │            total_step_reward = array([-3.84175327])                                          │ │
+│ │              TOTAL_TIMESTEPS = 2000000                                                       │ │
+│ │                    truncated = False                                                         │ │
+│ │                  UPDATE_FREQ = 1                                                             │ │
+│ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+TypeError: unsupported format string passed to numpy.ndarray.__format__
+/content/booster_soccer_showdown/Researc
+/content/booster_soccer_showdown/Research# 

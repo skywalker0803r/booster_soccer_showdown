@@ -16,6 +16,14 @@ sys.path.append('..')  # 添加上級目錄到路徑
 from llm_coach import LLMCoach
 from reward_shaper import RewardShaper
 
+# [AI-Integrate] 幫助函數：安全提取標量值
+def safe_float(value):
+    """安全地將 numpy array 或標量轉換為 float，避免 deprecation 警告"""
+    if hasattr(value, 'item'):
+        return value.item()  # numpy array -> scalar
+    else:
+        return float(value)  # 已經是標量
+
 # =================================================================
 # 1. 初始化 SAIClient 和環境
 # =================================================================
@@ -420,7 +428,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
             # 記錄教練決策
             print(f"🧠 LLM Coach 第{episode_count}回合更新:")
             print(f"   當前階段: {llm_coach.phase}")
-            print(f"   統計數據: 步數={float(avg_steps):.1f}, 跌倒率={float(fall_rate):.3f}, 平均獎勵={float(avg_reward):.2f}")
+            print(f"   統計數據: 步數={safe_float(avg_steps):.1f}, 跌倒率={safe_float(fall_rate):.3f}, 平均獎勵={safe_float(avg_reward):.2f}")
             print(f"   權重變化: {previous_weights} → {current_weights}")
             
             # 記錄到 TensorBoard
@@ -474,9 +482,9 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
                 print(f"⚠️ Google Drive不可用，僅本地保存")
             
             print(f"🏆 新最佳模型!")
-            print(f"   總獎勵: {episode_reward_sum:.2f}")
-            print(f"   原始獎勵: {episode_extrinsic_reward_sum:.2f}")
-            print(f"   好奇心獎勵: {episode_intrinsic_reward_sum:.2f}")
+            print(f"   總獎勵: {safe_float(episode_reward_sum):.2f}")
+            print(f"   原始獎勵: {safe_float(episode_extrinsic_reward_sum):.2f}")
+            print(f"   好奇心獎勵: {safe_float(episode_intrinsic_reward_sum):.2f}")
             print(f"   回合步數: {episode_steps}")
             print(f"   訓練步數: {t}")
             print(f"   📤 已自動備份到Google Drive")
@@ -487,10 +495,10 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
             shaped_ratio = episode_shaped_reward_sum / max(abs(episode_extrinsic_reward_sum), 0.001)
             td3_stats = td3_agent.get_statistics()
             print(f"🎯 Episode {episode_count:3d} | "
-                  f"總獎勵: {episode_reward_sum:6.2f} | "
-                  f"原始: {episode_extrinsic_reward_sum:6.2f} | "
-                  f"塑形: {episode_shaped_reward_sum:5.2f} | "
-                  f"好奇心: {episode_intrinsic_reward_sum:5.2f} | "
+                  f"總獎勵: {safe_float(episode_reward_sum):6.2f} | "
+                  f"原始: {safe_float(episode_extrinsic_reward_sum):6.2f} | "
+                  f"塑形: {safe_float(episode_shaped_reward_sum):5.2f} | "
+                  f"好奇心: {safe_float(episode_intrinsic_reward_sum):5.2f} | "
                   f"步數: {episode_steps:3d} | "
                   f"階段: {llm_coach.phase[:8]} | "
                   f"TD3更新: {td3_stats['update_counter']}")
@@ -516,9 +524,9 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         print(f"\n🚀 === TD3訓練進度報告 (步數: {t}) ===")
         print(f"📊 回合總數: {episode_count}")
         print(f"💾 Buffer大小: {replay_buffer.size}")
-        print(f"🏆 最佳總獎勵: {best_reward:.2f}")
-        print(f"🧠 累計好奇心獎勵: {curiosity_stats['total_intrinsic_reward']:.2f}")
-        print(f"📈 平均好奇心獎勵: {curiosity_stats['average_intrinsic_reward']:.4f}")
+        print(f"🏆 最佳總獎勵: {safe_float(best_reward):.2f}")
+        print(f"🧠 累計好奇心獎勵: {safe_float(curiosity_stats['total_intrinsic_reward']):.2f}")
+        print(f"📈 平均好奇心獎勵: {safe_float(curiosity_stats['average_intrinsic_reward']):.4f}")
         print(f"🔄 好奇心更新次數: {curiosity_stats['update_count']}")
         print(f"🎯 TD3更新次數: {td3_stats['update_counter']}")
         print(f"⏰ 下次Actor更新: {td3_stats['next_actor_update']}步後")
@@ -582,9 +590,9 @@ curiosity_final_stats = curiosity_explorer.get_statistics()
 td3_final_stats = td3_agent.get_statistics()
 
 print(f"\n🎉 TD3 + LLM輔助 + 好奇心訓練完成！")
-print(f"🏆 最佳回合獎勵: {best_reward:.2f}")
-print(f"🧠 總好奇心獎勵: {curiosity_final_stats['total_intrinsic_reward']:.2f}")
-print(f"📊 平均好奇心獎勵: {curiosity_final_stats['average_intrinsic_reward']:.4f}")
+print(f"🏆 最佳回合獎勵: {safe_float(best_reward):.2f}")
+print(f"🧠 總好奇心獎勵: {safe_float(curiosity_final_stats['total_intrinsic_reward']):.2f}")
+print(f"📊 平均好奇心獎勵: {safe_float(curiosity_final_stats['average_intrinsic_reward']):.4f}")
 print(f"🔄 總回合數: {episode_count}")
 print(f"🎯 TD3總更新次數: {td3_final_stats['update_counter']}")
 print(f"🧠 LLM教練最終階段: {llm_coach.phase}")
@@ -596,7 +604,7 @@ llm_api_stats = llm_coach.get_api_statistics()
 print(f"🤖 LLM API統計:")
 print(f"   總調用次數: {llm_api_stats['total_calls']}")
 print(f"   錯誤次數: {llm_api_stats['errors']}")
-print(f"   成功率: {llm_api_stats['success_rate']:.2%}")
+print(f"   成功率: {safe_float(llm_api_stats['success_rate']):.2%}")
 print(f"   LLM啟用: {'✅' if llm_api_stats['llm_enabled'] else '❌'}")
 
 print(f"💾 模型文件: {best_model_path}, {final_model_path}")
