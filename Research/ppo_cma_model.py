@@ -447,7 +447,7 @@ class PPOCMA:
                 
                 # 更新 Actor
                 self.actor_optimizer.zero_grad()
-                actor_loss.backward()
+                actor_loss.backward(retain_graph=True)
                 torch.nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
                 self.actor_optimizer.step()
                 

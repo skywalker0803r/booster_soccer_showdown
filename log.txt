@@ -1,16 +1,30 @@
-/content/booster_soccer_showdown/Research/ppo_cma_model.py:397 in update                         │
 │                                                                                                  │
-│   394 │   │   with torch.no_grad():                                                              │
-│   395 │   │   │   if self.buffer.size > 0:                                                       │
-│   396 │   │   │   │   last_state = torch.FloatTensor(self.buffer.next_states[self.buffer.size    │
-│ ❱ 397 │   │   │   │   last_value = self.critic(last_state).item()                                │
-│   398 │   │   │   else:                                                                          │
-│   399 │   │   │   │   last_value = 0                                                             │
-│   400                                                                                            │
-│                                                                          
+│ /content/booster_soccer_showdown/Research/ppo_cma_model.py:456 in update                         │
+│                                                                                                  │
+│   453 │   │   │   │                                                                              │
+│   454 │   │   │   │   # 更新 Critic                                                              │
+│   455 │   │   │   │   self.critic_optimizer.zero_grad()                                          │
+│ ❱ 456 │   │   │   │   critic_loss.backward()                                                     │
+│   457 │   │   │   │   torch.nn.utils.clip_grad_norm_(self.critic.parameters(), self.max_grad_n   │
+│   458 │   │   │   │   self.critic_optimizer.step()                                               │
+│   459
 
-
-
-RuntimeError: Expected all tensors to be on the same device, but got mat1 is on cpu, different from other tensors on cuda:0 (when checking 
-argument in method wrapper_CUDA_addmm)
+│ /usr/local/lib/python3.12/dist-packages/torch/autograd/graph.py:841 in _engine_run_backward      │
+│                                                                                                  │
+│   838 │   if attach_logging_hooks:                                                               │
+│   839 │   │   unregister_hooks = _register_logging_hooks_on_whole_graph(t_outputs)               │
+│   840 │   try:                                                                                   │
+│ ❱ 841 │   │   return Variable._execution_engine.run_backward(  # Calls into the C++ engine to    │
+│   842 │   │   │   t_outputs, *args, **kwargs                                                     │
+│   843 │   │   )  # Calls into the C++ engine to run the backward pass                            │
+│   844 │   finally:                                                                               │
+│                                                                                                  │
+│ ╭────────────────────────────────── locals ───────────────────────────────────╮                  │
+│ │                 args = ((None,), False, False, ())                          │                  │
+│ │ attach_logging_hooks = False                                                │                  │
+│ │               kwargs = {'allow_unreachable': True, 'accumulate_grad': True} │                  │
+│ │            t_outputs = (tensor(3879.8250, device='cuda:0'),)                │                  │
+│ ╰─────────────────────────────────────────────────────────────────────────────╯                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn
 /content/booster_soccer_showdown/Research# 
