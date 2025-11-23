@@ -23,7 +23,7 @@ try:
     MODEL_PATH = latest_file
     print(f"✅ Automatically found the latest best model: {MODEL_PATH}")
 except (ValueError, FileNotFoundError):
-    MODEL_PATH = "best_model.pth" # Fallback
+    MODEL_PATH = "checkpoint_550k_20251123_101533.pth" # Fallback
     print(f"⚠️ Could not find a model automatically. Using fallback: {MODEL_PATH}")
 
 

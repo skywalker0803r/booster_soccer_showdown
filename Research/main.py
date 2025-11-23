@@ -307,7 +307,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     # [使用者自訂規則] 當原始獎勵過低時，給予一個小的步數獎勵以鼓勵探索
     # 當獎勵都小於0的時候 大步奔跑吧
     if reward <= 0.9:
-        step_encouragement_reward = 0.1  # 可以調整的步數獎勵值
+        step_encouragement_reward = 0.0   # 移除步數獎勵
         processed_reward += step_encouragement_reward
     
     # # 檢測並移除可能的時間懲罰模式
@@ -320,12 +320,12 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     #             if t % 10000 == 0:  # 偶爾提示
     #                 print(f"🚫 檢測到時間懲罰 {reward:.3f}，已移除")
     
-    # [AI-Integrate] 計算LLM引導的Shaped Reward (已禁用)
-    shaped_reward = 0.0
+    # [AI-Integrate] 計算LLM引導的Shaped Reward (已啟用)
+    shaped_reward = reward_shaper.compute_reward(info, next_obs, current_weights)
     
-    # [AI-Integrate] 融合獎勵：原始獎勵 + LLM塑形獎勵 (Shaped Reward 已禁用)
+    # [AI-Integrate] 融合獎勵：原始獎勵 + LLM塑形獎勵
     # 根據prompt.txt建議調整比例
-    total_step_reward = processed_reward
+    total_step_reward = processed_reward + shaped_reward
     
     # 🎯 LLM增強獎勵 + 好奇心模組
     final_reward, intrinsic_reward = curiosity_explorer.get_enhanced_reward(
