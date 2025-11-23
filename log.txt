@@ -1,16 +1,69 @@
-│ /content/booster_soccer_showdown/Research/ppo_cma_model.py:53 in forward    │
-│                                                                             │
-│    50 │                                                                     │
-│    51 │   def forward(self, state):                                         │
-│    52 │   │   features = self.backbone(state)                               │
-│ ❱  53 │   │   mean = torch.tanh(self.mean_head(features))  # 限制在 [-1, 1] │
-│    54 │   │   log_std = self.log_std_head(features)                         │
-│    55 │   │   log_std = torch.clamp(log_std, -20, 2)  # 防止數值不穩定      │
-│    56                                                                       │
-│            
+> 好現在完整看一遍整個main.py說訓練過程是怎樣
 
-╰─────────────────────────────────────────────────────────────────────────────╯
-RuntimeError: Expected all tensors to be on the same device, but got mat1 is on
-cuda:0, different from other tensors on cpu (when checking argument in method 
-wrapper_CUDA_addmm)
-/content/booster_soccer_showdown/Research# 
+✦ 好的，沒有問題。我將為您完整地梳理一遍當前 Research/main.py 的整個訓練流程。
+
+  首先，我會重新讀取一次檔案，確保我的解釋是基於最新的程式碼。
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  ReadFile Research\main.py                                                                                         │
+│                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+✦ 好的，這就為您解說目前 main.py 的完整訓練流程。經過我們一系列的修改，現在的流程非常清晰，專注於您的核心策略。
+
+  整個過程可以分為以下幾個主要步驟：
+
+  第一步：初始化與設定
+
+   1. 環境與超參數：
+       * 腳本啟動後，首先初始化
+         SAIClient，並創建足球機器人環境。根據您的最新要求，程式現在會保留官方原始的時間懲罰，不再將其移除。
+       * 接著，載入我們為 A100 優化的超參數，包括為最大化 GPU 利用率而設定的大批次（`BATCH_SIZE =
+         1024`）和大緩衝區（`BUFFER_CAPACITY = 8192`）。
+
+   2. 模型與設備：
+       * 初始化兩個核心模型：PPOCMA（負責決策和學習）和 CuriosityDrivenExploration（好奇心模塊）。
+       * 將這兩個模型都轉移到 GPU (cuda) 上運行，以利用 A100 的加速能力。
+       * LLMCoach 模塊雖然仍會初始化，但其計算出的 shaped_reward 已被我們禁用，不會影響訓練。
+
+  第二步：主訓練循環與互動
+
+  程式進入一個總步數為 200 萬步的龐大循環中。在每一個時間步（timestep），會發生以下事情：
+
+   1. 動作選擇：PPOCMA 的決策腦（Actor）根據當前的 state（狀態），決定出一個要執行的動作 raw_action。
+   2. 環境互動：將這個動作發送給環境，環境執行後，返回四個重要的資訊：next_obs（下一個觀察值）、reward（官方的原始獎勵）
+      、terminated（是否結束）、truncated（是否超時）。
+
+  第三步：獎勵計算（目前策略的核心）
+
+  這是我們修改最多的部分，現在的獎勵計算流程如下：
+
+   1. 獲取原始獎勵：程式直接採用環境返回的 reward 作為基礎。
+   2. 應用自訂規則：程式會檢查您設定的規則，如果 reward 小於或等於
+      -2.49（表示可能陷入了持續懲罰的困境），就會為其加上一個 0.1 的「步數獎勵」，鼓勵它脫困。這個結果被稱為
+      processed_reward。
+   3. 計算好奇心獎勵：CuriosityDrivenExploration 模塊會判斷 next_state 對於模型來說有多「新穎」或「意外」，並產生一個
+      intrinsic_reward（內在好奇心獎勵）。Agent 越是探索未知的狀態，這個獎勵就越高。
+   4. 計算最終獎勵：最終用來訓練模型的 final_reward，是以上兩者的總和。公式為：
+      final_reward = processed_reward + intrinsic_reward
+      （即：`final_reward` = (官方原始獎勵 + 可能的脫困步數獎勵) + 好奇心獎勵）
+
+  第四步：儲存經驗與模型更新
+
+   1. 儲存：包含 state、action、final_reward 等資訊的完整經驗，被存儲到容量為 8192 的 PPOCMABuffer 中。
+   2. 更新：當緩衝區集滿 8192 筆經驗後，觸發一次大規模的模型更新。
+       * PPO 更新：模型會使用這 8192 筆數據，以 1024 的批次大小，重複學習 15 個輪次（PPO
+         Epochs）。這是主要的學習步驟，透過梯度下降來優化 Actor 和 Critic 網絡。
+       * CMA-ES 更新：每進行 10 次 PPO 更新，CMA-ES
+         演算法會啟動一次，它不依賴梯度，而是透過在參數空間中「撒點」的方式來探索可能更好的 Actor 模型參數，幫助 PPO
+         擺脫局部最優。
+       * 好奇心更新：同時，好奇心模塊自身也會利用收集到的數據進行更新，使其能更準確地判斷什麼是「新穎」的狀態。
+
+  第五步：回合結束與記錄
+
+  當一個回合（episode）結束時：
+   * 程式會將這回合的各種獎勵（總獎勵、原始獎勵、好奇心獎勵等）和步數記錄到 TensorBoard 中，供您後續分析。
+   * 如果這回合的總獎勵超過了歷史最佳記錄，模型會被保存下來，並同步到您的 Google Drive。
+   * 最後，環境重置，開始一個新的回合。
+
+  總結來說，目前的訓練策略是： 拋棄了人工設計的 shaped_reward，完全相信 CMA-ES
+  的參數空間探索能力和好奇心模塊的狀態空間探索能力，用這「雙探索引擎」去尋找並放大稀疏的「官方原始獎勵」信號，再由 PPO
+  進行學習和收斂。同時，一個簡單的脫困獎勵規則可以防止 Agent 在初期完全「躺平」。
