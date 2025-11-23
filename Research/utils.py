@@ -58,4 +58,5 @@ class Preprocessor():
             task_onehot = np.expand_dims(task_onehot, axis=0)
 
         # Final output is 45 dimensions
-        return np.hstack((base_state_42, task_onehot))
+        final_state = np.hstack((base_state_42, task_onehot))
+        return final_state.astype(np.float32)
