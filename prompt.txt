@@ -1,41 +1,27 @@
 我目前的工作流程是
-在colab終端機執行run_training.sh裡面的步驟
+在colab終端機執行run_training.sh
+其實run_training.sh前面就是跑一大堆安裝最後執行Research\main.py
+而這個main.py中其實是實現了PPO_CMAES算法去解這個足球機器人RL比賽
+這個足球機器人RL比賽的資料你可以參考docs資料夾裡面的文件
+主要實作都在Research資料夾裡面
+我通常都是執行Research\main.py
+其他模組就放在Research資料夾裡面
+在Research\main.py用import的方式使用
+跑在colab終端機上
+但是我會把模型下載下來本地端電腦
+使用Research\eval_and_submit.py作觀看和評估並判斷是否要提交
+好那你清楚整個工作流程之後我跟你講一下第一件事情
 
-# 下載代碼庫
-git clone https://github.com/skywalker0803r/booster_soccer_showdown.git
-cd booster_soccer_showdown
+請你先幫我看一下Research\main.py整個pipeline到底在幹嘛用到那些模組
+哪些模組彼此搭配是必要的 那些非必要甚至是衝突的
+然後目前的實作對 狀態空間 動作空間 獎勵空間 一一比對官方文件 確保沒有低級錯誤 
+例如明明官方文件說這個地方是腳部關節的索引 實作成手部關節這種低級錯誤
+最後我知道現在學術研究很多學者使用PPO CMAES來解決 高維 連續空間 獎勵稀疏 的RL問題
+利用CMAES在參數空檢廣泛灑點的原理確保在獎勵稀疏導致PPO無法藉由梯度更新的情況下
+依然能利用大量撒點找到一組不錯的基礎Policy 例如找到一組能初步行走 接近球的policy
+再去用PPO訓練其實會比一開始連站都站不穩直接用PPO訓練來的有效 因為如果直接用PPO訓練
+他絕大部分時間都是在原地抖動 獎勵為0 沒辦法計算梯度方向作更新
+所以我打算用PPO搭配CMAES然後在colab開A100 GPU加速運算 反正打比賽得名有獎金 開A100GPU 燒的錢不是問題
 
-# 安裝 conda（使用 Mambaforge：輕量且快速）
-# -----------------------------------------------
-# 下載 mambaforge (包含 conda)
-wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh
-# 執行安裝腳本，使用 -b 批次模式，-p 指定安裝路徑到當前用戶的 /usr/local/
-bash Mambaforge-Linux-x86_64.sh -b -p /usr/local
-# 初始化 conda 環境
-/usr/local/bin/conda init bash
-# 重新載入 shell 設定，讓 conda 指令生效
-source ~/.bashrc
-# -----------------------------------------------
+請問我講這些東西你有什麼想法嗎?
 
-# 建立虛擬環境
-conda create -n booster-ssl python=3.11 -y && conda activate booster-ssl
-
-# 安裝依賴
-pip install -r requirements.txt
-
-# 訓練
-cd Research
-python main.py
-
-目前這個版本的main.py 感覺不錯 足球機器人會站 但是一直沒辦法踢到球
-我想問題可能是因為獎勵稀疏問題 實際上 作獎勵設計可能導致獎勵駭客行為 在我設計的獎勵上收斂到局部最優 但是實際上原始分數還是很低
-但是不作獎勵設計靠現在的 TD3 搭配 好奇心模組 + LLM輔助獎勵塑形 依然無法踢到球
-我在想是不是可以把 TD3換成PPO_CMA算法 相關文件我放在PPO_CMA.MD 然後比賽官方文檔我放在docs資料夾內
-目前主要實作都發生在Research資料夾內
-我希望你修改完之後
-我只要在colab終端機一樣執行run_training.sh裡面的步驟
-就可以看到原本的使用TD3改進的純好奇心驅動訓練腳本 + LLM輔助獎勵塑形
-變成改用PPO_CMA算法
-也許你該做的只是新增一個PPO_CMA模組之後導入到main.py作使用
-
-實作前有任何問題要釐清嗎?

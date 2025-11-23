@@ -332,17 +332,12 @@ class PPOCMA:
         actor_param_count = sum(p.numel() for p in last_layer_params)
         print(f"CMA-ES參數數量: {actor_param_count}")
         
-        if actor_param_count > 1000:  # 如果參數太多，禁用CMA-ES
-            print("⚠️ 參數數量過多，禁用CMA-ES以節省內存")
-            self.cma = None
-            self.use_cma = False
-        else:
-            self.cma = CovarianceMatrixAdaptation(
-                actor_param_count, 
-                population_size=cma_population_size,
-                sigma=cma_sigma
-            )
-            self.use_cma = True
+        self.cma = CovarianceMatrixAdaptation(
+            actor_param_count, 
+            population_size=cma_population_size,
+            sigma=cma_sigma
+        )
+        self.use_cma = True
         
         # 統計變量
         self.update_counter = 0
