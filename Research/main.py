@@ -81,8 +81,8 @@ def action_function(policy):
 # =================================================================
 TOTAL_TIMESTEPS = 2000000          # 增加總訓練步數，充分利用A100
 MODEL_NAME = "Booster-PPOCMA-A100-PureOriginal-v1"
-BUFFER_CAPACITY = 8192             # PPO緩衝區，為發揮A100效能，設為BATCH_SIZE的倍數
-BATCH_SIZE = 1024                  # 加大批次以最大化A100 GPU利用率
+BUFFER_CAPACITY = 64*8             # PPO緩衝區，為發揮A100效能，設為BATCH_SIZE的倍數
+BATCH_SIZE = 64                  # 加大批次以最大化A100 GPU利用率
 LEARNING_RATE_ACTOR = 3e-4         # Actor學習率
 LEARNING_RATE_CRITIC = 1e-3        # Critic學習率
 NEURONS = [512, 512, 256]          # 更大更深的網絡架構
