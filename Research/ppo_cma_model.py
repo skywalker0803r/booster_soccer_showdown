@@ -483,7 +483,7 @@ class PPOCMA:
         self.cma.update(current_params, candidate_params, np.array(fitness_values))
         
         # 可選：使用CMA建議的最佳參數更新actor
-        if self.cma_updates % 5 == 0:  # 每5次CMA更新才真正應用
+        if self.cma_updates % 1 == 0:  # 每1次CMA更新才真正應用
             best_params = self.cma.mean
             self._unflatten_parameters(self.actor, best_params)
         
