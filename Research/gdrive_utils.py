@@ -32,14 +32,17 @@ class SimpleGDriveSync:
         else:
             print("⚠️ Google Drive 未找到，將只保存到本地")
     
-    def save_model(self, model_state, model_name, metadata=None):
+    def save_model(self, model_state, model_name, metadata=None, add_timestamp=True): # <--- Modified signature
         """保存模型到Google Drive"""
         if not self.gdrive_path:
             return False
             
         try:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{model_name}_{timestamp}.pth"
+            if add_timestamp: # <--- New logic
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"{model_name}_{timestamp}.pth"
+            else:
+                filename = f"{model_name}.pth" # <--- Fixed name
             
             # 本地臨時保存
             local_path = filename

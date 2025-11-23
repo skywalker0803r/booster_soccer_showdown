@@ -630,7 +630,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         print(f"🌱 CMA-ES世代: {ppo_cma_stats['cma_generation']}")
         
         # 定期自動備份到Google Drive
-        checkpoint_name = f"checkpoint_{t//1000}k"
+        checkpoint_name = f"latest_checkpoint_{MODEL_NAME}" # 固定檔案名
         checkpoint_data = {
             'model_state_dict': ppo_cma_agent.state_dict(),
             'episode': episode_count + start_episode,
@@ -648,7 +648,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         }
         
         if gdrive_sync and gdrive_available:
-            if gdrive_sync.save_model(checkpoint_data, checkpoint_name, checkpoint_meta):
+            if gdrive_sync.save_model(checkpoint_data, checkpoint_name, checkpoint_meta, add_timestamp=False): # 不添加時間戳
                 print(f"📤 定期備份已保存到 Google Drive")
         else:
             print(f"⚠️ Google Drive不可用，跳過雲端備份")
