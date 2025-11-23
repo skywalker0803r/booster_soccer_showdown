@@ -81,8 +81,8 @@ def action_function(policy):
 # =================================================================
 TOTAL_TIMESTEPS = 2000000          # 增加總訓練步數，充分利用A100
 MODEL_NAME = "Booster-PPOCMA-A100-PureOriginal-v1"
-BUFFER_CAPACITY = 64*8             # PPO緩衝區，為發揮A100效能，設為BATCH_SIZE的倍數
-BATCH_SIZE = 64                  # 加大批次以最大化A100 GPU利用率
+BUFFER_CAPACITY = 8192             # PPO緩衝區，為發揮A100效能，設為BATCH_SIZE的倍數
+BATCH_SIZE = 1024                  # 加大批次以最大化A100 GPU利用率
 LEARNING_RATE_ACTOR = 3e-4         # Actor學習率
 LEARNING_RATE_CRITIC = 1e-3        # Critic學習率
 NEURONS = [512, 512, 256]          # 更大更深的網絡架構
@@ -94,11 +94,11 @@ GAMMA = 0.99                       # 折扣因子
 GAE_LAMBDA = 0.95                  # GAE lambda參數
 CLIP_EPSILON = 0.2                 # PPO裁切係數
 ENTROPY_COEF = 0.01               # 熵正則化係數
-PPO_EPOCHS = 4                    # 每次更新的PPO epoch數
+PPO_EPOCHS = 10                    # 每次更新的PPO epoch數
 MAX_GRAD_NORM = 0.5               # 梯度裁切
 CMA_POPULATION_SIZE = 64           # CMA-ES種群大小（手動設置以加強探索）
 CMA_SIGMA = 0.1                    # CMA-ES初始步長
-CMA_UPDATE_FREQ = 4               # CMA-ES更新頻率
+CMA_UPDATE_FREQ = 8                # CMA-ES更新頻率 (平衡PPO與CMA的節奏)
 
 # 好奇心模組參數 (A100優化設置)
 INTRINSIC_REWARD_SCALE = 0.8      # 稍微降低以平衡大batch效應
