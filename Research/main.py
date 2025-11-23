@@ -306,8 +306,8 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     
     # [使用者自訂規則] 當原始獎勵過低時，給予一個小的步數獎勵以鼓勵探索
     # 當獎勵都小於0的時候 大步奔跑吧
-    if reward <= 0:
-        step_encouragement_reward = 1  # 可以調整的步數獎勵值
+    if reward <= 0.9:
+        step_encouragement_reward = 0.1  # 可以調整的步數獎勵值
         processed_reward += step_encouragement_reward
     
     # # 檢測並移除可能的時間懲罰模式
@@ -406,8 +406,8 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
                         # --- 計算總獎勵 (同主循環邏輯) ---
                         # 1. 處理原始獎勵 (加上自訂規則)
                         processed_eval_reward = eval_reward
-                        if eval_reward <= 0:
-                            processed_eval_reward += 1
+                        if eval_reward <= 0.9:
+                            processed_eval_reward += 0.1
                         
                         # 2. 獲取增強獎勵 (原始+好奇心)
                         eval_next_state_np = Preprocessor().modify_state(eval_obs, eval_info)[0]
