@@ -235,6 +235,9 @@ class CovarianceMatrixAdaptation:
     def generate_offspring(self, mean):
         """生成子代個體"""
         # 確保協方差矩陣正定
+        # 為避免 "SVD did not converge" 錯誤，增加一點 jitter
+        self.C += np.eye(self.n) * 1e-8
+        
         eigenvals, eigenvecs = np.linalg.eigh(self.C)
         eigenvals = np.maximum(eigenvals, 1e-14)
         self.C = eigenvecs @ np.diag(eigenvals) @ eigenvecs.T
