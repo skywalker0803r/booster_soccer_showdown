@@ -356,9 +356,8 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
 
     # 🚀 A100優化 PPO-CMA 模型更新（buffer滿時更新）
     if t % UPDATE_FREQ == 0:
-        # 使用混合精度加速訓練
-        with torch.cuda.amp.autocast():
-            actor_loss, critic_loss = ppo_cma_agent.update()
+        # 使用混合精度加速訓練 (autocast 已暫時禁用以修復梯度錯誤)
+        actor_loss, critic_loss = ppo_cma_agent.update()
         
         # 更新好奇心模組
         if t % CURIOSITY_UPDATE_FREQ == 0:
