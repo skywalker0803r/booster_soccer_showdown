@@ -378,7 +378,7 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
                 temp_actor.to(device)
                 temp_actor.eval() # 設置為評估模式
 
-                # 2. 執行一個完整的 episode 來評估 fitness
+                # 2. 執行一個完整的 episode 來評估 fitness (總獎勵 = 原始獎勵 + 好奇心獎勵)
                 eval_episode_reward = 0
                 eval_obs, eval_info = env.reset()
                 eval_done = False
@@ -389,8 +389,8 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
                         if eval_done:
                             break
                         # 準備狀態
-                        eval_state_np = Preprocessor().modify_state(eval_obs, eval_info)[0]
-                        eval_state = torch.tensor(eval_state_np).float().unsqueeze(0).to(device)
+                        pre_step_state_np = Preprocessor().modify_state(eval_obs, eval_info)[0]
+                        eval_state = torch.tensor(pre_step_state_np).float().unsqueeze(0).to(device)
                         
                         # 從臨時 actor 獲取動作
                         eval_action_tensor, _, _, _ = temp_actor.get_action_and_log_prob(eval_state)
@@ -402,10 +402,25 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
                         # 與環境互動
                         eval_obs, eval_reward, terminated, truncated, eval_info = env.step(scaled_action)
                         eval_done = terminated or truncated
-                        eval_episode_reward += eval_reward
+                        
+                        # --- 計算總獎勵 (同主循環邏輯) ---
+                        # 1. 處理原始獎勵 (加上自訂規則)
+                        processed_eval_reward = eval_reward
+                        if eval_reward <= 0:
+                            processed_eval_reward += 1
+                        
+                        # 2. 獲取增強獎勵 (原始+好奇心)
+                        eval_next_state_np = Preprocessor().modify_state(eval_obs, eval_info)[0]
+                        step_fitness, _ = curiosity_explorer.get_enhanced_reward(
+                            pre_step_state_np,
+                            eval_action_np,
+                            eval_next_state_np,
+                            processed_eval_reward
+                        )
+                        eval_episode_reward += step_fitness
                 
                 fitness_values.append(eval_episode_reward)
-                print(f"   候選者 {i+1}/{len(candidate_params)} Fitness: {eval_episode_reward:.2f}")
+                print(f"   候選者 {i+1}/{len(candidate_params)} Fitness (總獎勵): {eval_episode_reward:.2f}")
 
             # 3. 完成 CMA-ES 更新
             ppo_cma_agent.finalize_cma_update(candidate_params, fitness_values)
