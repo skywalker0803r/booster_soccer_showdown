@@ -377,7 +377,8 @@ class PPOCMA:
     
     def _unflatten_parameters(self, model, flat_params):
         """將一維參數向量重新設置到模型最後一層中"""
-        flat_params = torch.FloatTensor(flat_params)
+        device = next(model.parameters()).device
+        flat_params = torch.FloatTensor(flat_params).to(device)
         idx = 0
         target_params = list(model.mean_head.parameters()) + list(model.log_std_head.parameters())
         for param in target_params:

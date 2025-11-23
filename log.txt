@@ -1,26 +1,16 @@
-│ /content/booster_soccer_showdown/Research/ppo_cma_model.py:456 in update                         │
-│                                                                                                  │
-│   453 │   │   │   │                                                                              │
-│   454 │   │   │   │   # 更新 Critic                                                              │
-│   455 │   │   │   │   self.critic_optimizer.zero_grad()                                          │
-│ ❱ 456 │   │   │   │   critic_loss.backward()                                                     │
-│   457 │   │   │   │   torch.nn.utils.clip_grad_norm_(self.critic.parameters(), self.max_grad_n   │
-│   458 │   │   │   │   self.critic_optimizer.step() 
+│ /content/booster_soccer_showdown/Research/ppo_cma_model.py:53 in forward    │
+│                                                                             │
+│    50 │                                                                     │
+│    51 │   def forward(self, state):                                         │
+│    52 │   │   features = self.backbone(state)                               │
+│ ❱  53 │   │   mean = torch.tanh(self.mean_head(features))  # 限制在 [-1, 1] │
+│    54 │   │   log_std = self.log_std_head(features)                         │
+│    55 │   │   log_std = torch.clamp(log_std, -20, 2)  # 防止數值不穩定      │
+│    56                                                                       │
+│            
 
-
-│   839 │   │   unregister_hooks = _register_logging_hooks_on_whole_graph(t_outputs)               │
-│   840 │   try:                                                                                   │
-│ ❱ 841 │   │   return Variable._execution_engine.run_backward(  # Calls into the C++ engine to    │
-│   842 │   │   │   t_outputs, *args, **kwargs                                                     │
-│   843 │   │   )  # Calls into the C++ engine to run the backward pass                            │
-│   844 │   finally:                                                                               │
-│                                                                                                  │
-│ ╭────────────────────────────────── locals ───────────────────────────────────╮                  │
-│ │                 args = ((None,), False, False, ())                          │                  │
-│ │ attach_logging_hooks = False                                                │                  │
-│ │               kwargs = {'allow_unreachable': True, 'accumulate_grad': True} │                  │
-│ │            t_outputs = (tensor(4695.1880, device='cuda:0'),)                │                  │
-│ ╰─────────────────────────────────────────────────────────────────────────────╯                  │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn
+╰─────────────────────────────────────────────────────────────────────────────╯
+RuntimeError: Expected all tensors to be on the same device, but got mat1 is on
+cuda:0, different from other tensors on cpu (when checking argument in method 
+wrapper_CUDA_addmm)
 /content/booster_soccer_showdown/Research# 
