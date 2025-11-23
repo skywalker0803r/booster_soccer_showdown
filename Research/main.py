@@ -304,8 +304,9 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     processed_reward = reward
     
     # [使用者自訂規則] 當原始獎勵過低時，給予一個小的步數獎勵以鼓勵探索
-    if reward <= -2.49:
-        step_encouragement_reward = 0.1  # 可以調整的步數獎勵值
+    # 當獎勵都小於0的時候 大步奔跑吧
+    if reward <= 0:
+        step_encouragement_reward = 1  # 可以調整的步數獎勵值
         processed_reward += step_encouragement_reward
     
     # # 檢測並移除可能的時間懲罰模式
