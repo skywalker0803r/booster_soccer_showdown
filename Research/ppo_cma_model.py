@@ -393,7 +393,8 @@ class PPOCMA:
         # 計算最後的 value 估計
         with torch.no_grad():
             if self.buffer.size > 0:
-                last_state = torch.FloatTensor(self.buffer.next_states[self.buffer.size - 1:self.buffer.size])
+                device = next(self.critic.parameters()).device
+                last_state = torch.FloatTensor(self.buffer.next_states[self.buffer.size - 1:self.buffer.size]).to(device)
                 last_value = self.critic(last_state).item()
             else:
                 last_value = 0
@@ -418,13 +419,14 @@ class PPOCMA:
                 end_idx = start_idx + self.batch_size
                 batch_indices = indices[start_idx:end_idx]
                 
-                # 提取批次數據
-                states = batch_data['states'][batch_indices]
-                actions = batch_data['actions'][batch_indices]
-                old_log_probs = batch_data['log_probs'][batch_indices]
-                advantages = batch_data['advantages'][batch_indices]
-                returns = batch_data['returns'][batch_indices]
-                old_values = batch_data['values'][batch_indices]
+                # 提取批次數據並發送到正確的設備
+                device = next(self.actor.parameters()).device
+                states = batch_data['states'][batch_indices].to(device)
+                actions = batch_data['actions'][batch_indices].to(device)
+                old_log_probs = batch_data['log_probs'][batch_indices].to(device)
+                advantages = batch_data['advantages'][batch_indices].to(device)
+                returns = batch_data['returns'][batch_indices].to(device)
+                old_values = batch_data['values'][batch_indices].to(device)
                 
                 # 計算新的 log_probs 和 values
                 new_log_probs, entropy = self.actor.evaluate_actions(states, actions)

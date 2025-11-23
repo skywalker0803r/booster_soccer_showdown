@@ -285,7 +285,7 @@ state = torch.tensor(state).float().to(device)
 
 for t in range(1, TOTAL_TIMESTEPS + 1):
     # 1. PPO-CMA動作採樣 (包含隨機探索)
-    raw_action, log_prob, value = ppo_cma_agent.get_action(state.cpu().numpy())
+    raw_action, log_prob, value = ppo_cma_agent.get_action(state)
     
     # 執行動作
     action = action_function(raw_action)
