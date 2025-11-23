@@ -1,34 +1,10 @@
-🏆 最佳總獎勵 : 21.43
-🧠 累計好奇心獎勵 : 20442.31
-📈 平均好奇心獎勵 : 0.0000
-🔄 好奇心更新次數 : 0
-🎯 PPO更新次數 : 14
-🧬 CMA-ES更新次數 : 1
-📏 CMA-ES步長σ : 0.099780
-🌱 CMA-ES世代 : 1
-💾 模型已保存到  Google Drive: checkpoint_120k_20251123_111043.pth
-📤 定期備份已保存到  Google Drive
-==================================================
-⚠️ JSON解析錯誤: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
-   回應內容: 根據目前的統計數據和決策原則：
+Evaluating on device: cpu
+CMA-ES參數數量: 6168
+❌ Error loading model: Weights only load failed. This file can still be loaded, to do so you have two options, do those steps only if you trust the source of the checkpoint.
+        (1) In PyTorch 2.6, we changed the default value of the `weights_only` argument in `torch.load` from `False` to `True`. Re-running `torch.load` with `weights_only` set to `False` will likely succeed, but it can result in arbitrary code execution. Do it only if you got the file from a trusted source.
+        (2) Alternatively, to load with `weights_only=True` please check the recommended steps in the following error message.
+        WeightsUnpickler error: Unsupported global: GLOBAL numpy._core.multiarray._reconstruct was not an allowed global by default. Please use `torch.serialization.add_safe_globals([numpy._core.multiarray._reconstruct])` or the `torch.serialization.safe_globals([numpy._core.multiarray._reconstruct])` context manager to allowlist this global if you trust this class/function.
 
-1.  **評估跌倒率和步數：** `跌倒率` 為 0.000，`平均存活步數` 為 214.2。這表示機器人非常穩定，完全沒有跌倒，並且能夠長時間存活和移動。因此，它已經掌握了
- "Stance & Survival" 和 "Basic Movement"。
+Check the documentation of torch.load to learn more about types accepted by default with weights_only https://pytorch.org/docs/stable/generated/torch.load.html.
 
-2.  **應用決策原則：** 由於機器人`移動穩定` (高步數，零跌倒)，應專注於`技能`。這對應的階...
-🔄 LLM推理失敗，回退到啟發式規則
-🧠 LLM Coach 第600回合更新 :
-   當前階段: Dribbling & Skills
-   統計數據: 步數=214.2, 跌倒率=0.000, 平均獎勵=-49.23
-   權重變化: {'balance': 0.3, 'progress': 1.8, 'energy': 0.01} → {'balance': 0.8, 'progress': 1.2, 'energy': 0.01}
-🎯 Episode 600 | 總獎勵:  -6.23 | 原始:  -2.49 | 塑形: -27.87 | 好奇心: 24.13 | 步數: 165 | 階段: Dribblin | PPO更新 : 14 | CMA: 1
-🎯 Episode 605 | 總獎勵: -183.70 | 原始:  -2.49 | 塑形: -205.00 | 好奇心: 23.80 | 步數: 182 | 階段: Dribblin | PPO更新 : 14 | CMA: 1
-🎯 Episode 610 | 總獎勵: -191.75 | 原始:  -2.49 | 塑形: -218.84 | 好奇心: 29.59 | 步數: 201 | 階段: Dribblin | PPO更新 : 14 | CMA: 1
-🎯 Episode 615 | 總獎勵: -69.79 | 原始:  -2.49 | 塑形: -85.17 | 好奇心: 17.87 | 步數: 153 | 階段: Dribblin | PPO更新 : 15 | CMA: 1
-🎯 Episode 620 | 總獎勵: -125.76 | 原始:  -2.49 | 塑形: -147.57 | 好奇心: 24.30 | 步數: 185 | 階段: Dribblin | PPO更新 : 15 | CMA: 1
-🎯 Episode 625 | 總獎勵: -192.46 | 原始:  -2.49 | 塑形: -225.38 | 好奇心: 35.41 | 步數: 237 | 階段: Dribblin | PPO更新 : 15 | CMA: 1
-🎯 Episode 630 | 總獎勵: -180.75 | 原始:  -2.49 | 塑形: -209.24 | 好奇心: 30.98 | 步數: 221 | 階段: Dribblin | PPO更新 : 15 | CMA: 1
-🎯 Episode 635 | 總獎勵: -233.06 | 原始:  -2.49 | 塑形: -255.75 | 好奇心: 25.18 | 步數: 162 | 階段: Dribblin | PPO更新 : 15 | CMA: 1
-🎯 Episode 640 | 總獎勵: -98.83 | 原始:  -2.49 | 塑形: -118.54 | 好奇心: 22.20 | 步數: 163 | 階段: Dribblin | PPO更新 : 15 | CMA: 1
-
-為何會出現JSON解析錯誤和LLM推理失敗，回退到啟發式規則 請找出原因 並修正
+(Vedanta) C:\Users\ricky\Desktop\booster_soccer_showdown\Research>

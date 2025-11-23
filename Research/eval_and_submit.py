@@ -18,12 +18,12 @@ from utils import Preprocessor
 # =================================================================
 # Find the latest best model automatically
 try:
-    list_of_files = glob.glob('best_Booster-PPOCMA-A100-*.pth')
+    list_of_files = glob.glob('latest_checkpoint_Booster-PPOCMA-A100-PureOriginal-v1.pth')
     latest_file = max(list_of_files, key=os.path.getctime)
     MODEL_PATH = latest_file
     print(f"✅ Automatically found the latest best model: {MODEL_PATH}")
 except (ValueError, FileNotFoundError):
-    MODEL_PATH = "checkpoint_550k_20251123_101533.pth" # Fallback
+    MODEL_PATH = "latest_checkpoint_Booster-PPOCMA-A100-PureOriginal-v1.pth" # Fallback
     print(f"⚠️ Could not find a model automatically. Using fallback: {MODEL_PATH}")
 
 
@@ -117,7 +117,7 @@ def load_ppocma_model(model_path):
 
     try:
         # 2. Load the checkpoint
-        checkpoint = torch.load(model_path, map_location=device)
+        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
         
         # 3. Load weights into the agent
         if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
