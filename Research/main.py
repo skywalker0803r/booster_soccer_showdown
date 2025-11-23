@@ -101,7 +101,7 @@ CMA_SIGMA = 0.1                    # CMA-ES初始步長
 CMA_UPDATE_FREQ = 8                # CMA-ES更新頻率 (平衡PPO與CMA的節奏)
 
 # 好奇心模組參數 (A100優化設置)
-INTRINSIC_REWARD_SCALE = 0.8      # 稍微降低以平衡大batch效應
+INTRINSIC_REWARD_SCALE = 0.4      # 稍微降低以平衡大batch效應
 CURIOSITY_UPDATE_FREQ = 1
 
 # 初始化PPO-CMA模型
