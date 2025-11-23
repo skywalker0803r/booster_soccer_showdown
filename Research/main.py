@@ -98,7 +98,7 @@ PPO_EPOCHS = 4                    # 每次更新的PPO epoch數
 MAX_GRAD_NORM = 0.5               # 梯度裁切
 CMA_POPULATION_SIZE = 64           # CMA-ES種群大小（手動設置以加強探索）
 CMA_SIGMA = 0.1                    # CMA-ES初始步長
-CMA_UPDATE_FREQ = 1               # CMA-ES更新頻率
+CMA_UPDATE_FREQ = 4               # CMA-ES更新頻率
 
 # 好奇心模組參數 (A100優化設置)
 INTRINSIC_REWARD_SCALE = 0.8      # 稍微降低以平衡大batch效應
