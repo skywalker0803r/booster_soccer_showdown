@@ -4,6 +4,7 @@
 
 import numpy as np
 import torch
+import copy
 from sai_rl import SAIClient 
 from ppo_cma_model import PPOCMA  # 使用PPO-CMA替代TD3
 from utils import Preprocessor
@@ -362,12 +363,61 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
 
     # 🚀 A100優化 PPO-CMA 模型更新（buffer滿時更新）
     if t % UPDATE_FREQ == 0:
-        # 使用混合精度加速訓練 (autocast 已暫時禁用以修復梯度錯誤)
-        actor_loss, critic_loss = ppo_cma_agent.update()
+        # --- PPO 更新 ---
+        actor_loss, critic_loss, candidate_params = ppo_cma_agent.update()
         
-        # 更新好奇心模組
+        # --- CMA-ES 評估與更新 (如果需要) ---
+        if candidate_params is not None:
+            print(f"\n🧬 開始 CMA-ES 第 {ppo_cma_agent.cma_updates + 1} 代評估...")
+            fitness_values = []
+            
+            for i, params in enumerate(candidate_params):
+                # 1. 創建臨時 Actor
+                temp_actor = copy.deepcopy(ppo_cma_agent.actor)
+                ppo_cma_agent._unflatten_parameters(temp_actor, params)
+                temp_actor.to(device)
+                temp_actor.eval() # 設置為評估模式
+
+                # 2. 執行一個完整的 episode 來評估 fitness
+                eval_episode_reward = 0
+                eval_obs, eval_info = env.reset()
+                eval_done = False
+                
+                with torch.no_grad():
+                    # 限制評估回合的最大步數，避免無限循環
+                    for _ in range(3000): 
+                        if eval_done:
+                            break
+                        # 準備狀態
+                        eval_state_np = Preprocessor().modify_state(eval_obs, eval_info)[0]
+                        eval_state = torch.tensor(eval_state_np).float().unsqueeze(0).to(device)
+                        
+                        # 從臨時 actor 獲取動作
+                        eval_action_tensor, _, _, _ = temp_actor.get_action_and_log_prob(eval_state)
+                        eval_action_np = eval_action_tensor.cpu().numpy().flatten()
+                        
+                        # 應用動作縮放
+                        scaled_action = action_function(eval_action_np)
+                        
+                        # 與環境互動
+                        eval_obs, eval_reward, terminated, truncated, eval_info = env.step(scaled_action)
+                        eval_done = terminated or truncated
+                        eval_episode_reward += eval_reward
+                
+                fitness_values.append(eval_episode_reward)
+                print(f"   候選者 {i+1}/{len(candidate_params)} Fitness: {eval_episode_reward:.2f}")
+
+            # 3. 完成 CMA-ES 更新
+            ppo_cma_agent.finalize_cma_update(candidate_params, fitness_values)
+            print(f"   CMA-ES 第 {ppo_cma_agent.cma_updates} 代更新完成。")
+            
+            # 4. 重置主循環的環境，因為評估循環用掉了它
+            current_obs, info = env.reset()
+            state = Preprocessor().modify_state(current_obs, info)[0]
+            state = torch.tensor(state).float().to(device)
+
+        # --- 好奇心模組更新 ---
         if t % CURIOSITY_UPDATE_FREQ == 0:
-            # 從PPO-CMA buffer中獲取一些樣本用於好奇心更新
             buffer_data = ppo_cma_agent.buffer.get_all_data()
             if buffer_data is not None:
                 states = buffer_data['states'].to(device)
@@ -382,13 +432,12 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
                 logger.log_scalar("Curiosity/Inverse_Loss", curiosity_stats['inverse_loss'])
                 logger.log_scalar("Curiosity/Avg_Intrinsic_Reward", curiosity_stats['avg_intrinsic_reward'])
         
-        # 記錄訓練指標
+        # --- 記錄訓練指標 ---
         if actor_loss is not None and critic_loss is not None:
             logger.set_step(t) 
             logger.log_scalar("Loss/Actor_Loss", actor_loss)
             logger.log_scalar("Loss/Critic_Loss", critic_loss)
         
-        # 記錄PPO-CMA特定指標
         ppo_cma_stats = ppo_cma_agent.get_statistics()
         logger.log_scalar("PPOCMA/Update_Counter", ppo_cma_stats['update_counter'])
         logger.log_scalar("PPOCMA/CMA_Updates", ppo_cma_stats['cma_updates'])

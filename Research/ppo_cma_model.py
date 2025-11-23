@@ -344,10 +344,6 @@ class PPOCMA:
         self.total_steps = 0
         self.cma_updates = 0
         
-        # 存儲 CMA 相關的候選策略和其適應度
-        self.candidate_actors = []
-        self.candidate_fitness = []
-        
     def get_action(self, state):
         """根據當前策略選擇動作"""
         with torch.no_grad():
@@ -387,9 +383,9 @@ class PPOCMA:
             idx += param_length
     
     def update(self):
-        """執行PPO-CMA更新"""
+        """執行PPO更新，並在需要時返回CMA候選者"""
         if self.buffer.size < self.batch_size:
-            return None, None
+            return None, None, None
         
         # 計算最後的 value 估計
         with torch.no_grad():
@@ -406,7 +402,7 @@ class PPOCMA:
         # 獲取訓練數據
         batch_data = self.buffer.get_all_data()
         if batch_data is None:
-            return None, None
+            return None, None, None
         
         # PPO 更新
         actor_losses = []
@@ -461,39 +457,27 @@ class PPOCMA:
                 actor_losses.append(actor_loss.item())
                 critic_losses.append(critic_loss.item())
         
-        # CMA-ES 更新 (每隔一定步數)
-        if self.use_cma and self.update_counter % self.cma_update_freq == 0:
-            self._cma_update()
-        
         self.update_counter += 1
         
         # 清空緩衝區
         self.buffer.clear()
         
-        return np.mean(actor_losses) if actor_losses else 0, np.mean(critic_losses) if critic_losses else 0
-    
-    def _cma_update(self):
-        """執行CMA-ES參數更新"""
-        # 獲取當前策略參數
+        # 檢查是否需要觸發CMA-ES更新
+        candidate_params = None
+        if self.use_cma and self.update_counter % self.cma_update_freq == 0:
+            candidate_params = self.sample_cma_offspring()
+        
+        return np.mean(actor_losses) if actor_losses else 0, np.mean(critic_losses) if critic_losses else 0, candidate_params
+
+    def sample_cma_offspring(self):
+        """生成CMA-ES候選策略參數"""
         current_params = self._flatten_parameters(self.actor)
-        
-        # 生成候選策略參數
         candidate_params, _ = self.cma.generate_offspring(current_params)
-        
-        # 評估每個候選策略（這裡使用簡化版本）
-        fitness_values = []
-        
-        for params in candidate_params:
-            # 創建臨時actor並設置參數
-            temp_actor = copy.deepcopy(self.actor)
-            self._unflatten_parameters(temp_actor, params)
-            
-            # 簡化的適應度評估（實際中可能需要完整的episode評估）
-            # 這裡使用參數與當前最優參數的距離作為近似
-            param_diff = np.linalg.norm(params - current_params)
-            fitness = -param_diff  # 負距離作為適應度
-            
-            fitness_values.append(fitness)
+        return candidate_params
+
+    def finalize_cma_update(self, candidate_params, fitness_values):
+        """根據 fitness 值更新 CMA-ES 並注入最佳參數"""
+        current_params = self._flatten_parameters(self.actor)
         
         # 更新CMA參數
         self.cma.update(current_params, candidate_params, np.array(fitness_values))
