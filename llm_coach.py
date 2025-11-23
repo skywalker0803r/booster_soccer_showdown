@@ -89,6 +89,8 @@ class LLMCoach:
             prompt = f"""
 你是一個強化學習教練，正在訓練一個足球機器人。你需要根據當前的訓練統計數據，決定訓練階段和獎勵權重。
 
+你必須嚴格遵守以下格式要求：你的回應只能是**單一的JSON物件**，不能包含任何額外的解釋性文字、前言或後語。這個JSON物件必須包含 "phase" 和 "weights" 兩個鍵。
+
 ## 當前狀況
 - 平均存活步數: {avg_steps:.1f}
 - 平均獎勵: {avg_reward:.2f}  
@@ -114,10 +116,13 @@ class LLMCoach:
 
 請根據統計數據，選擇最適合的階段和權重配置。
 
-要求：返回JSON格式，包含 "phase" 和 "weights" 兩個鍵。
-例如: {{"phase": "Basic Movement", "weights": {{"balance": 1.5, "progress": 0.3, "energy": 0.03}}}}
+你的回應**必須**是一個單一的JSON物件，且只包含該JSON物件。
+JSON格式範例:
+```json
+{{"phase": "Basic Movement", "weights": {{"balance": 1.5, "progress": 0.3, "energy": 0.03}}}}
+```
 
-決策：
+現在，請輸出你的決策JSON物件：
 """
 
             # 調用 Gemini API
