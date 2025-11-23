@@ -35,27 +35,27 @@ sai = SAIClient(
 # 🎯 創建無時間懲罰的環境
 env = sai.make_env()
 
-# 🚫 移除時間懲罰 - 修改獎勵配置
-print("🎯 正在移除時間懲罰...")
-try:
-    # 嘗試訪問和修改獎勵配置
-    if hasattr(env, 'reward_config') or hasattr(env.unwrapped, 'reward_config'):
-        reward_config = getattr(env, 'reward_config', None) or getattr(env.unwrapped, 'reward_config', None)
-        if reward_config and isinstance(reward_config, dict):
-            # 移除所有時間相關懲罰
-            if 'steps' in reward_config:
-                original_steps = reward_config['steps']
-                reward_config['steps'] = 0.0  # 設為0移除時間懲罰
-                print(f"✅ 時間懲罰已移除: {original_steps} → 0.0")
-            if 'step_penalty' in reward_config:
-                reward_config['step_penalty'] = 0.0
-                print(f"✅ 步數懲罰已移除")
-        else:
-            print("⚠️ 無法訪問reward_config，將通過後處理移除時間懲罰")
-    else:
-        print("⚠️ 環境不支持reward_config修改，將通過後處理移除時間懲罰")
-except Exception as e:
-    print(f"⚠️ 修改獎勵配置失敗: {e}，將通過後處理移除時間懲罰")
+# # 🚫 移除時間懲罰 - 修改獎勵配置
+# print("🎯 正在移除時間懲罰...")
+# try:
+#     # 嘗試訪問和修改獎勵配置
+#     if hasattr(env, 'reward_config') or hasattr(env.unwrapped, 'reward_config'):
+#         reward_config = getattr(env, 'reward_config', None) or getattr(env.unwrapped, 'reward_config', None)
+#         if reward_config and isinstance(reward_config, dict):
+#             # 移除所有時間相關懲罰
+#             if 'steps' in reward_config:
+#                 original_steps = reward_config['steps']
+#                 reward_config['steps'] = 0.0  # 設為0移除時間懲罰
+#                 print(f"✅ 時間懲罰已移除: {original_steps} → 0.0")
+#             if 'step_penalty' in reward_config:
+#                 reward_config['step_penalty'] = 0.0
+#                 print(f"✅ 步數懲罰已移除")
+#         else:
+#             print("⚠️ 無法訪問reward_config，將通過後處理移除時間懲罰")
+#     else:
+#         print("⚠️ 環境不支持reward_config修改，將通過後處理移除時間懲罰")
+# except Exception as e:
+#     print(f"⚠️ 修改獎勵配置失敗: {e}，將通過後處理移除時間懲罰")
 print(f"環境已創建。觀察空間: {env.observation_space} | 動作空間: {env.action_space}")
 
 N_FEATURES = 45 
@@ -303,22 +303,22 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     # 🚫 後處理移除時間懲罰 (如果環境配置修改失敗)
     processed_reward = reward
     
-    # 檢測並移除可能的時間懲罰模式
-    if episode_steps > 10:  # 避免初期誤判
-        # 如果reward是固定的小負值，可能是時間懲罰
-        if -1.5 <= reward <= -0.1:  # 典型的時間懲罰範圍
-            # 檢查是否為純時間懲罰（沒有其他事件）
-            if not any(keyword in str(info).lower() for keyword in ['goal', 'fallen', 'success', 'offside']):
-                processed_reward = 0.0  # 移除時間懲罰
-                if t % 10000 == 0:  # 偶爾提示
-                    print(f"🚫 檢測到時間懲罰 {reward:.3f}，已移除")
+    # # 檢測並移除可能的時間懲罰模式
+    # if episode_steps > 10:  # 避免初期誤判
+    #     # 如果reward是固定的小負值，可能是時間懲罰
+    #     if -1.5 <= reward <= -0.1:  # 典型的時間懲罰範圍
+    #         # 檢查是否為純時間懲罰（沒有其他事件）
+    #         if not any(keyword in str(info).lower() for keyword in ['goal', 'fallen', 'success', 'offside']):
+    #             processed_reward = 0.0  # 移除時間懲罰
+    #             if t % 10000 == 0:  # 偶爾提示
+    #                 print(f"🚫 檢測到時間懲罰 {reward:.3f}，已移除")
     
-    # [AI-Integrate] 計算LLM引導的Shaped Reward
-    shaped_reward = reward_shaper.compute_reward(info, next_obs, current_weights)
+    # [AI-Integrate] 計算LLM引導的Shaped Reward (已禁用)
+    shaped_reward = 0.0
     
-    # [AI-Integrate] 融合獎勵：原始獎勵 + LLM塑形獎勵
+    # [AI-Integrate] 融合獎勵：原始獎勵 + LLM塑形獎勵 (Shaped Reward 已禁用)
     # 根據prompt.txt建議調整比例
-    total_step_reward = processed_reward + shaped_reward
+    total_step_reward = processed_reward
     
     # 🎯 LLM增強獎勵 + 好奇心模組
     final_reward, intrinsic_reward = curiosity_explorer.get_enhanced_reward(
