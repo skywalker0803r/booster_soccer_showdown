@@ -294,6 +294,9 @@ class CovarianceMatrixAdaptation:
         
     def _matrix_sqrt_inv(self, matrix):
         """計算矩陣的逆平方根"""
+        # 為避免 "SVD did not converge" 錯誤，增加一點 jitter
+        matrix += np.eye(matrix.shape[0]) * 1e-8
+        
         eigenvals, eigenvecs = np.linalg.eigh(matrix)
         eigenvals = np.maximum(eigenvals, 1e-14)  # 避免數值問題
         return eigenvecs @ np.diag(1.0 / np.sqrt(eigenvals)) @ eigenvecs.T
