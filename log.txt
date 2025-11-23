@@ -1,16 +1,392 @@
-UnpicklingError: Weights only load failed. This file can still be loaded, to do so you have two options, [1mdo those
-steps only if you trust the source of the checkpoint[0m.
-        (1) In PyTorch 2.6, we changed the default value of the `weights_only` argument in `torch.load` from `False` to
-`True`. Re-running `torch.load` with `weights_only` set to `False` will likely succeed, but it can result in arbitrary
-code execution. Do it only if you got the file from a trusted source.
-        (2) Alternatively, to load with `weights_only=True` please check the recommended steps in the following error
-message.
-        WeightsUnpickler error: Unsupported global: GLOBAL numpy._core.multiarray._reconstruct was not an allowed global
-by default. Please use `torch.serialization.add_safe_globals([numpy._core.multiarray._reconstruct])` or the
-`torch.serialization.safe_globals([numpy._core.multiarray._reconstruct])` context manager to allowlist this global if
-you trust this class/function.
-
-Check the documentation of torch.load to learn more about types accepted by default with weights_only
-https://pytorch.org/docs/stable/generated/torch.load.html.
-
-(Vedanta) C:\Users\ricky\Desktop\booster_soccer_showdown\Research>
+╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
+│ /content/booster_soccer_showdown/Research/main.py:288 in <module>                                │
+│                                                                                                  │
+│   285                                                                                            │
+│   286 for t in range(1, TOTAL_TIMESTEPS + 1):                                                    │
+│   287 │   # 1. PPO-CMA動作採樣 (包含隨機探索)                                                    │
+│ ❱ 288 │   raw_action, log_prob, value = ppo_cma_agent.get_action(state.cpu().numpy())            │
+│   289 │                                                                                          │
+│   290 │   # 執行動作                                                                             │
+│   291 │   action = action_function(raw_action)                                                   │
+│                                                                                                  │
+│ ╭─────────────────────────────────────────── locals ───────────────────────────────────────────╮ │
+│ │                   BATCH_SIZE = 64                                                            │ │
+│ │              best_model_path = 'best_Booster-PPOCMA-A100-PureOriginal-v1.pth'                │ │
+│ │                  best_reward = -inf                                                          │ │
+│ │              BUFFER_CAPACITY = 2048                                                          │ │
+│ │                 CLIP_EPSILON = 0.2                                                           │ │
+│ │          CMA_POPULATION_SIZE = None                                                          │ │
+│ │                    CMA_SIGMA = 0.1                                                           │ │
+│ │              CMA_UPDATE_FREQ = 10                                                            │ │
+│ │           curiosity_explorer = <curiosity_module.CuriosityDrivenExploration object at        │ │
+│ │                                0x7d98182a7770>                                               │ │
+│ │        CURIOSITY_UPDATE_FREQ = 1                                                             │ │
+│ │                  current_obs = array([  0.  ,   0.  ,   0.  ,   0.  ,   0.  ,   0.  ,   0.   │ │
+│ │                                ,   0.  ,                                                     │ │
+│ │                                │   │    0.  ,   0.  ,   0.  ,   0.  ,   0.  ,   0.  ,   0.   │ │
+│ │                                ,   0.  ,                                                     │ │
+│ │                                │   │    0.  ,   0.  ,   0.  ,   0.  ,   0.  ,   0.  ,   0.   │ │
+│ │                                ,   0.  ,                                                     │ │
+│ │                                │   │    5.  ,   0.  ,  -0.7 ,   0.  ,   0.  ,   0.  ,   0.   │ │
+│ │                                ,   0.  ,                                                     │ │
+│ │                                │   │    0.  ,  -5.97,   0.  ,  -0.7 , -10.97,   0.  ,   0.   │ │
+│ │                                ,  -5.97,                                                     │ │
+│ │                                │   │    0.  ,  -0.5 ,   0.  ,   0.  ,   0.  ],               │ │
+│ │                                dtype=float32)                                                │ │
+│ │              current_weights = {'balance': 1.0, 'progress': 0.0, 'energy': 0.1}              │ │
+│ │                       device = device(type='cuda')                                           │ │
+│ │                 ENTROPY_COEF = 0.01                                                          │ │
+│ │                          env = <CustomEvaluationWrapper<TimeLimit<OrderEnforcing<PassiveEnv… │ │
+│ │                episode_count = 0                                                             │ │
+│ │ episode_extrinsic_reward_sum = 0                                                             │ │
+│ │ episode_intrinsic_reward_sum = 0                                                             │ │
+│ │           episode_reward_sum = 0                                                             │ │
+│ │    episode_shaped_reward_sum = 0                                                             │ │
+│ │         episode_stats_buffer = []                                                            │ │
+│ │                episode_steps = 0                                                             │ │
+│ │                   GAE_LAMBDA = 0.95                                                          │ │
+│ │                        GAMMA = 0.99                                                          │ │
+│ │             gdrive_available = True                                                          │ │
+│ │                  gdrive_sync = <gdrive_utils.SimpleGDriveSync object at 0x7d9818ac7d70>      │ │
+│ │               GEMINI_API_KEY = 'AIzaSyDUOIGCWDJkY98gi5QcrKtWkxxB61Qhmi0'                     │ │
+│ │                         info = {                                                             │ │
+│ │                                │   'length': 10.97,                                          │ │
+│ │                                │   'width': 6.87,                                            │ │
+│ │                                │   'goal_width': 1.6,                                        │ │
+│ │                                │   'goal_height': 1.9,                                       │ │
+│ │                                │   'goal_depth': 1.6,                                        │ │
+│ │                                │   'goal_team_0_rel_robot': array([-4.2,  0. , -0.7]),       │ │
+│ │                                │   'goal_team_1_rel_robot': array([17.74,  0.  , -0.7 ]),    │ │
+│ │                                │   'goal_team_0_rel_ball': array([-2.2,  0. ,  0. ]),        │ │
+│ │                                │   'goal_team_1_rel_ball': array([19.74,  0.  ,  0.  ]),     │ │
+│ │                                │   'ball_xpos_rel_robot': array([-2. ,  0. , -0.7]),         │ │
+│ │                                │   ... +16                                                   │ │
+│ │                                }                                                             │ │
+│ │       INTRINSIC_REWARD_SCALE = 0.8                                                           │ │
+│ │          LEARNING_RATE_ACTOR = 0.0003                                                        │ │
+│ │         LEARNING_RATE_CRITIC = 0.001                                                         │ │
+│ │                    llm_coach = <llm_coach.LLMCoach object at 0x7d9827ca7950>                 │ │
+│ │                       logger = <logger.TensorBoardLogger object at 0x7d9927148e00>           │ │
+│ │                MAX_GRAD_NORM = 0.5                                                           │ │
+│ │                   MODEL_NAME = 'Booster-PPOCMA-A100-PureOriginal-v1'                         │ │
+│ │                   model_path = None                                                          │ │
+│ │                   model_type = None                                                          │ │
+│ │                    N_ACTIONS = 12                                                            │ │
+│ │                   N_FEATURES = 45                                                            │ │
+│ │                      NEURONS = [512, 512, 256]                                               │ │
+│ │                           np = <module 'numpy' from                                          │ │
+│ │                                '/usr/local/lib/python3.12/dist-packages/numpy/__init__.py'>  │ │
+│ │                ppo_cma_agent = <ppo_cma_model.PPOCMA object at 0x7d982e2d6f00>               │ │
+│ │                   PPO_EPOCHS = 10                                                            │ │
+│ │                reward_config = {                                                             │ │
+│ │                                │   'robot_distance_ball': 10.0,                              │ │
+│ │                                │   'ball_vel_twd_goal': 1.0,                                 │ │
+│ │                                │   'goal_scored': 25.0,                                      │ │
+│ │                                │   'offside': -10.0,                                         │ │
+│ │                                │   'ball_hits': -1.0,                                        │ │
+│ │                                │   'robot_fallen': -15.0,                                    │ │
+│ │                                │   'ball_blocked': -20.0                                     │ │
+│ │                                }                                                             │ │
+│ │                reward_shaper = <reward_shaper.RewardShaper object at 0x7d982dd6bdd0>         │ │
+│ │                          sai = <sai_rl.sai_client.SAIClient object at 0x7d99dc909730>        │ │
+│ │                    SAVE_FREQ = 25                                                            │ │
+│ │                       scaler = <torch.cuda.amp.grad_scaler.GradScaler object at              │ │
+│ │                                0x7d9818042390>                                               │ │
+│ │                start_episode = 0                                                             │ │
+│ │                        state = tensor([ 0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │ │
+│ │                                0.0000e+00,                                                   │ │
+│ │                                │   │    0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │ │
+│ │                                0.0000e+00,                                                   │ │
+│ │                                │   │    0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │ │
+│ │                                0.0000e+00,                                                   │ │
+│ │                                │   │    0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │ │
+│ │                                0.0000e+00,                                                   │ │
+│ │                                │   │    0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │ │
+│ │                                0.0000e+00,                                                   │ │
+│ │                                │   │   -0.0000e+00, -1.0000e+00,  0.0000e+00,  0.0000e+00,   │ │
+│ │                                0.0000e+00,                                                   │ │
+│ │                                │   │   -1.3137e-16,  4.3333e-17, -2.0262e-15,  0.0000e+00,   │ │
+│ │                                0.0000e+00,                                                   │ │
+│ │                                │   │    0.0000e+00,  5.0000e+00,  0.0000e+00, -7.0000e-01,   │ │
+│ │                                0.0000e+00,                                                   │ │
+│ │                                │   │    0.0000e+00,  0.0000e+00,  1.0000e+00,  0.0000e+00,   │ │
+│ │                                0.0000e+00],                                                  │ │
+│ │                                │      device='cuda:0')                                       │ │
+│ │                          sys = <module 'sys' (built-in)>                                     │ │
+│ │                            t = 1                                                             │ │
+│ │                        torch = <module 'torch' from                                          │ │
+│ │                                '/usr/local/lib/python3.12/dist-packages/torch/__init__.py'>  │ │
+│ │              TOTAL_TIMESTEPS = 2000000                                                       │ │
+│ │                  UPDATE_FREQ = 2048                                                          │ │
+│ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
+│                                                                                                  │
+│ /content/booster_soccer_showdown/Research/ppo_cma_model.py:357 in get_action                     │
+│                                                                                                  │
+│   354 │   │   │   if isinstance(state, np.ndarray):                                              │
+│   355 │   │   │   │   state = torch.FloatTensor(state).unsqueeze(0)                              │
+│   356 │   │   │                                                                                  │
+│ ❱ 357 │   │   │   action, log_prob, _, _ = self.actor.get_action_and_log_prob(state)             │
+│   358 │   │   │   value = self.critic(state)                                                     │
+│   359 │   │   │                                                                                  │
+│   360 │   │   │   return action.cpu().numpy().flatten(), log_prob.cpu().numpy().item(), value.   │
+│                                                                                                  │
+│ ╭────────────────────────────────────── locals ───────────────────────────────────────╮          │
+│ │  self = <ppo_cma_model.PPOCMA object at 0x7d982e2d6f00>                             │          │
+│ │ state = tensor([[ 0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │    -0.0000e+00, -1.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │    -1.3137e-16,  4.3333e-17, -2.0262e-15,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  5.0000e+00,  0.0000e+00, -7.0000e-01,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  1.0000e+00,  0.0000e+00,  0.0000e+00]]) │          │
+│ ╰─────────────────────────────────────────────────────────────────────────────────────╯          │
+│                                                                                                  │
+│ /content/booster_soccer_showdown/Research/ppo_cma_model.py:60 in get_action_and_log_prob         │
+│                                                                                                  │
+│    57 │   │   return mean, log_std                                                               │
+│    58 │                                                                                          │
+│    59 │   def get_action_and_log_prob(self, state):                                              │
+│ ❱  60 │   │   mean, log_std = self.forward(state)                                                │
+│    61 │   │   std = torch.exp(log_std)                                                           │
+│    62 │   │                                                                                      │
+│    63 │   │   # 創建高斯分佈                                                                     │
+│                                                                                                  │
+│ ╭────────────────────────────────────── locals ───────────────────────────────────────╮          │
+│ │  self = ActorNetwork(                                                               │          │
+│ │           (backbone): Sequential(                                                   │          │
+│ │         │   (0): Linear(in_features=45, out_features=512, bias=True)                │          │
+│ │         │   (1): ReLU()                                                             │          │
+│ │         │   (2): Linear(in_features=512, out_features=512, bias=True)               │          │
+│ │         │   (3): ReLU()                                                             │          │
+│ │         │   (4): Linear(in_features=512, out_features=256, bias=True)               │          │
+│ │           )                                                                         │          │
+│ │           (mean_head): Linear(in_features=256, out_features=12, bias=True)          │          │
+│ │           (log_std_head): Linear(in_features=256, out_features=12, bias=True)       │          │
+│ │         )                                                                           │          │
+│ │ state = tensor([[ 0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │    -0.0000e+00, -1.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │    -1.3137e-16,  4.3333e-17, -2.0262e-15,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  5.0000e+00,  0.0000e+00, -7.0000e-01,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  1.0000e+00,  0.0000e+00,  0.0000e+00]]) │          │
+│ ╰─────────────────────────────────────────────────────────────────────────────────────╯          │
+│                                                                                                  │
+│ /content/booster_soccer_showdown/Research/ppo_cma_model.py:52 in forward                         │
+│                                                                                                  │
+│    49 │   │   │   torch.nn.init.constant_(module.bias, 0)                                        │
+│    50 │                                                                                          │
+│    51 │   def forward(self, state):                                                              │
+│ ❱  52 │   │   features = self.backbone(state)                                                    │
+│    53 │   │   mean = torch.tanh(self.mean_head(features))  # 限制在 [-1, 1]                      │
+│    54 │   │   log_std = self.log_std_head(features)                                              │
+│    55 │   │   log_std = torch.clamp(log_std, -20, 2)  # 防止數值不穩定                           │
+│                                                                                                  │
+│ ╭────────────────────────────────────── locals ───────────────────────────────────────╮          │
+│ │  self = ActorNetwork(                                                               │          │
+│ │           (backbone): Sequential(                                                   │          │
+│ │         │   (0): Linear(in_features=45, out_features=512, bias=True)                │          │
+│ │         │   (1): ReLU()                                                             │          │
+│ │         │   (2): Linear(in_features=512, out_features=512, bias=True)               │          │
+│ │         │   (3): ReLU()                                                             │          │
+│ │         │   (4): Linear(in_features=512, out_features=256, bias=True)               │          │
+│ │           )                                                                         │          │
+│ │           (mean_head): Linear(in_features=256, out_features=12, bias=True)          │          │
+│ │           (log_std_head): Linear(in_features=256, out_features=12, bias=True)       │          │
+│ │         )                                                                           │          │
+│ │ state = tensor([[ 0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │    -0.0000e+00, -1.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │    -1.3137e-16,  4.3333e-17, -2.0262e-15,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  5.0000e+00,  0.0000e+00, -7.0000e-01,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  1.0000e+00,  0.0000e+00,  0.0000e+00]]) │          │
+│ ╰─────────────────────────────────────────────────────────────────────────────────────╯          │
+│                                                                                                  │
+│ /usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py:1775 in _wrapped_call_impl    │
+│                                                                                                  │
+│   1772 │   │   if self._compiled_call_impl is not None:                                          │
+│   1773 │   │   │   return self._compiled_call_impl(*args, **kwargs)  # type: ignore[misc]        │
+│   1774 │   │   else:                                                                             │
+│ ❱ 1775 │   │   │   return self._call_impl(*args, **kwargs)                                       │
+│   1776 │                                                                                         │
+│   1777 │   # torchrec tests the code consistency with the following code                         │
+│   1778 │   # fmt: off                                                                            │
+│                                                                                                  │
+│ ╭──────────────────────────────────────── locals ────────────────────────────────────────╮       │
+│ │   args = (                                                                             │       │
+│ │          │   tensor([[ 0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00, │       │
+│ │          │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │       │
+│ │          │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │       │
+│ │          │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │       │
+│ │          │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │       │
+│ │          │   │    -0.0000e+00, -1.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │       │
+│ │          │   │    -1.3137e-16,  4.3333e-17, -2.0262e-15,  0.0000e+00,  0.0000e+00,     │       │
+│ │          │   │     0.0000e+00,  5.0000e+00,  0.0000e+00, -7.0000e-01,  0.0000e+00,     │       │
+│ │          │   │     0.0000e+00,  0.0000e+00,  1.0000e+00,  0.0000e+00,  0.0000e+00]]),  │       │
+│ │          )                                                                             │       │
+│ │ kwargs = {}                                                                            │       │
+│ │   self = Sequential(                                                                   │       │
+│ │            (0): Linear(in_features=45, out_features=512, bias=True)                    │       │
+│ │            (1): ReLU()                                                                 │       │
+│ │            (2): Linear(in_features=512, out_features=512, bias=True)                   │       │
+│ │            (3): ReLU()                                                                 │       │
+│ │            (4): Linear(in_features=512, out_features=256, bias=True)                   │       │
+│ │          )                                                                             │       │
+│ ╰────────────────────────────────────────────────────────────────────────────────────────╯       │
+│                                                                                                  │
+│ /usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py:1786 in _call_impl            │
+│                                                                                                  │
+│   1783 │   │   if not (self._backward_hooks or self._backward_pre_hooks or self._forward_hooks   │
+│   1784 │   │   │   │   or _global_backward_pre_hooks or _global_backward_hooks                   │
+│   1785 │   │   │   │   or _global_forward_hooks or _global_forward_pre_hooks):                   │
+│ ❱ 1786 │   │   │   return forward_call(*args, **kwargs)                                          │
+│   1787 │   │                                                                                     │
+│   1788 │   │   result = None                                                                     │
+│   1789 │   │   called_always_called_hooks = set()                                                │
+│                                                                                                  │
+│ ╭─────────────────────────────────────────── locals ───────────────────────────────────────────╮ │
+│ │         args = (                                                                             │ │
+│ │                │   tensor([[ 0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00, │ │
+│ │                │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │ │
+│ │                │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │ │
+│ │                │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │ │
+│ │                │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │ │
+│ │                │   │    -0.0000e+00, -1.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │ │
+│ │                │   │    -1.3137e-16,  4.3333e-17, -2.0262e-15,  0.0000e+00,  0.0000e+00,     │ │
+│ │                │   │     0.0000e+00,  5.0000e+00,  0.0000e+00, -7.0000e-01,  0.0000e+00,     │ │
+│ │                │   │     0.0000e+00,  0.0000e+00,  1.0000e+00,  0.0000e+00,  0.0000e+00]]),  │ │
+│ │                )                                                                             │ │
+│ │ forward_call = <bound method Sequential.forward of Sequential(                               │ │
+│ │                  (0): Linear(in_features=45, out_features=512, bias=True)                    │ │
+│ │                  (1): ReLU()                                                                 │ │
+│ │                  (2): Linear(in_features=512, out_features=512, bias=True)                   │ │
+│ │                  (3): ReLU()                                                                 │ │
+│ │                  (4): Linear(in_features=512, out_features=256, bias=True)                   │ │
+│ │                )>                                                                            │ │
+│ │       kwargs = {}                                                                            │ │
+│ │         self = Sequential(                                                                   │ │
+│ │                  (0): Linear(in_features=45, out_features=512, bias=True)                    │ │
+│ │                  (1): ReLU()                                                                 │ │
+│ │                  (2): Linear(in_features=512, out_features=512, bias=True)                   │ │
+│ │                  (3): ReLU()                                                                 │ │
+│ │                  (4): Linear(in_features=512, out_features=256, bias=True)                   │ │
+│ │                )                                                                             │ │
+│ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
+│                                                                                                  │
+│ /usr/local/lib/python3.12/dist-packages/torch/nn/modules/container.py:250 in forward             │
+│                                                                                                  │
+│    247 │   │   Runs the forward pass.                                                            │
+│    248 │   │   """                                                                               │
+│    249 │   │   for module in self:                                                               │
+│ ❱  250 │   │   │   input = module(input)                                                         │
+│    251 │   │   return input                                                                      │
+│    252 │                                                                                         │
+│    253 │   def append(self, module: Module) -> Self:                                             │
+│                                                                                                  │
+│ ╭─────────────────────────────────────── locals ───────────────────────────────────────╮         │
+│ │  input = tensor([[ 0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │         │
+│ │          │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │         │
+│ │          │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │         │
+│ │          │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │         │
+│ │          │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │         │
+│ │          │   │    -0.0000e+00, -1.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │         │
+│ │          │   │    -1.3137e-16,  4.3333e-17, -2.0262e-15,  0.0000e+00,  0.0000e+00,   │         │
+│ │          │   │     0.0000e+00,  5.0000e+00,  0.0000e+00, -7.0000e-01,  0.0000e+00,   │         │
+│ │          │   │     0.0000e+00,  0.0000e+00,  1.0000e+00,  0.0000e+00,  0.0000e+00]]) │         │
+│ │ module = Linear(in_features=45, out_features=512, bias=True)                         │         │
+│ │   self = Sequential(                                                                 │         │
+│ │            (0): Linear(in_features=45, out_features=512, bias=True)                  │         │
+│ │            (1): ReLU()                                                               │         │
+│ │            (2): Linear(in_features=512, out_features=512, bias=True)                 │         │
+│ │            (3): ReLU()                                                               │         │
+│ │            (4): Linear(in_features=512, out_features=256, bias=True)                 │         │
+│ │          )                                                                           │         │
+│ ╰──────────────────────────────────────────────────────────────────────────────────────╯         │
+│                                                                                                  │
+│ /usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py:1775 in _wrapped_call_impl    │
+│                                                                                                  │
+│   1772 │   │   if self._compiled_call_impl is not None:                                          │
+│   1773 │   │   │   return self._compiled_call_impl(*args, **kwargs)  # type: ignore[misc]        │
+│   1774 │   │   else:                                                                             │
+│ ❱ 1775 │   │   │   return self._call_impl(*args, **kwargs)                                       │
+│   1776 │                                                                                         │
+│   1777 │   # torchrec tests the code consistency with the following code                         │
+│   1778 │   # fmt: off                                                                            │
+│                                                                                                  │
+│ ╭──────────────────────────────────────── locals ────────────────────────────────────────╮       │
+│ │   args = (                                                                             │       │
+│ │          │   tensor([[ 0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00, │       │
+│ │          │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │       │
+│ │          │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │       │
+│ │          │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │       │
+│ │          │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │       │
+│ │          │   │    -0.0000e+00, -1.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │       │
+│ │          │   │    -1.3137e-16,  4.3333e-17, -2.0262e-15,  0.0000e+00,  0.0000e+00,     │       │
+│ │          │   │     0.0000e+00,  5.0000e+00,  0.0000e+00, -7.0000e-01,  0.0000e+00,     │       │
+│ │          │   │     0.0000e+00,  0.0000e+00,  1.0000e+00,  0.0000e+00,  0.0000e+00]]),  │       │
+│ │          )                                                                             │       │
+│ │ kwargs = {}                                                                            │       │
+│ │   self = Linear(in_features=45, out_features=512, bias=True)                           │       │
+│ ╰────────────────────────────────────────────────────────────────────────────────────────╯       │
+│                                                                                                  │
+│ /usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py:1786 in _call_impl            │
+│                                                                                                  │
+│   1783 │   │   if not (self._backward_hooks or self._backward_pre_hooks or self._forward_hooks   │
+│   1784 │   │   │   │   or _global_backward_pre_hooks or _global_backward_hooks                   │
+│   1785 │   │   │   │   or _global_forward_hooks or _global_forward_pre_hooks):                   │
+│ ❱ 1786 │   │   │   return forward_call(*args, **kwargs)                                          │
+│   1787 │   │                                                                                     │
+│   1788 │   │   result = None                                                                     │
+│   1789 │   │   called_always_called_hooks = set()                                                │
+│                                                                                                  │
+│ ╭─────────────────────────────────────────── locals ───────────────────────────────────────────╮ │
+│ │         args = (                                                                             │ │
+│ │                │   tensor([[ 0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00, │ │
+│ │                │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │ │
+│ │                │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │ │
+│ │                │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │ │
+│ │                │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │ │
+│ │                │   │    -0.0000e+00, -1.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,     │ │
+│ │                │   │    -1.3137e-16,  4.3333e-17, -2.0262e-15,  0.0000e+00,  0.0000e+00,     │ │
+│ │                │   │     0.0000e+00,  5.0000e+00,  0.0000e+00, -7.0000e-01,  0.0000e+00,     │ │
+│ │                │   │     0.0000e+00,  0.0000e+00,  1.0000e+00,  0.0000e+00,  0.0000e+00]]),  │ │
+│ │                )                                                                             │ │
+│ │ forward_call = <bound method Linear.forward of Linear(in_features=45, out_features=512,      │ │
+│ │                bias=True)>                                                                   │ │
+│ │       kwargs = {}                                                                            │ │
+│ │         self = Linear(in_features=45, out_features=512, bias=True)                           │ │
+│ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
+│                                                                                                  │
+│ /usr/local/lib/python3.12/dist-packages/torch/nn/modules/linear.py:134 in forward                │
+│                                                                                                  │
+│   131 │   │   """                                                                                │
+│   132 │   │   Runs the forward pass.                                                             │
+│   133 │   │   """                                                                                │
+│ ❱ 134 │   │   return F.linear(input, self.weight, self.bias)                                     │
+│   135 │                                                                                          │
+│   136 │   def extra_repr(self) -> str:                                                           │
+│   137 │   │   """                                                                                │
+│                                                                                                  │
+│ ╭────────────────────────────────────── locals ───────────────────────────────────────╮          │
+│ │ input = tensor([[ 0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │    -0.0000e+00, -1.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │    -1.3137e-16,  4.3333e-17, -2.0262e-15,  0.0000e+00,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  5.0000e+00,  0.0000e+00, -7.0000e-01,  0.0000e+00,   │          │
+│ │         │   │     0.0000e+00,  0.0000e+00,  1.0000e+00,  0.0000e+00,  0.0000e+00]]) │          │
+│ │  self = Linear(in_features=45, out_features=512, bias=True)                         │          │
+│ ╰─────────────────────────────────────────────────────────────────────────────────────╯          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+RuntimeError: Expected all tensors to be on the same device, but got mat1 is on cpu, different from other tensors on cuda:0 (when checking 
+argument in method wrapper_CUDA_addmm)
+/content/booster_soccer_showdown/Research# 

@@ -352,7 +352,11 @@ class PPOCMA:
         """根據當前策略選擇動作"""
         with torch.no_grad():
             if isinstance(state, np.ndarray):
-                state = torch.FloatTensor(state).unsqueeze(0)
+                device = next(self.actor.parameters()).device
+                state = torch.FloatTensor(state).unsqueeze(0).to(device)
+            else:
+                device = next(self.actor.parameters()).device
+                state = state.to(device)
             
             action, log_prob, _, _ = self.actor.get_action_and_log_prob(state)
             value = self.critic(state)
