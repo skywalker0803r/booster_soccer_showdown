@@ -333,9 +333,10 @@ class PPOCMA:
         self.buffer = PPOCMABuffer(buffer_capacity, state_dim, action_dim)
         
         # CMA-ES 模組 (用於策略參數優化)
-        # 現在我們將對整個 Actor 網路參數使用CMA-ES (請注意，這可能會顯著增加記憶體和計算負擔)
-        actor_param_count = sum(p.numel() for p in self.actor.parameters())
-        print(f"CMA-ES參數數量 (整個Actor網路): {actor_param_count}")
+        # 為避免內存問題，我們只對最後一層參數使用CMA-ES
+        last_layer_params = list(self.actor.mean_head.parameters()) + list(self.actor.log_std_head.parameters())
+        actor_param_count = sum(p.numel() for p in last_layer_params)
+        print(f"CMA-ES參數數量: {actor_param_count}")
         
         self.cma = CovarianceMatrixAdaptation(
             actor_param_count, 
@@ -370,18 +371,18 @@ class PPOCMA:
         self.total_steps += 1
     
     def _flatten_parameters(self, model):
-        """將模型所有參數展平為一維向量"""
+        """將模型最後一層參數展平為一維向量"""
         params = []
-        for param in model.parameters(): # 修改為遍歷所有參數
+        for param in list(model.mean_head.parameters()) + list(model.log_std_head.parameters()):
             params.append(param.data.view(-1))
         return torch.cat(params).cpu().numpy()
     
     def _unflatten_parameters(self, model, flat_params):
-        """將一維參數向量重新設置到模型所有層中"""
+        """將一維參數向量重新設置到模型最後一層中"""
         device = next(model.parameters()).device
         flat_params = torch.FloatTensor(flat_params).to(device)
         idx = 0
-        target_params = list(model.parameters()) # 修改為遍歷所有參數
+        target_params = list(model.mean_head.parameters()) + list(model.log_std_head.parameters())
         for param in target_params:
             param_length = param.numel()
             param.data = flat_params[idx:idx + param_length].view(param.shape)
