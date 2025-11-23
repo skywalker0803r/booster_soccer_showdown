@@ -303,6 +303,11 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     # 🚫 後處理移除時間懲罰 (如果環境配置修改失敗)
     processed_reward = reward
     
+    # [使用者自訂規則] 當原始獎勵過低時，給予一個小的步數獎勵以鼓勵探索
+    if reward <= -2.49:
+        step_encouragement_reward = 0.1  # 可以調整的步數獎勵值
+        processed_reward += step_encouragement_reward
+    
     # # 檢測並移除可能的時間懲罰模式
     # if episode_steps > 10:  # 避免初期誤判
     #     # 如果reward是固定的小負值，可能是時間懲罰
