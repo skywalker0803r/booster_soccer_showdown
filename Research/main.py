@@ -47,7 +47,7 @@ BATCH_SIZE = 512                  # 簡化版減小batch size
 BUFFER_CAPACITY = 4096            # 對應減小buffer
 LEARNING_RATE_ACTOR = 3e-4
 LEARNING_RATE_CRITIC = 1e-3
-HIDDEN_LAYERS = [256, 256]        # 簡化網絡結構
+HIDDEN_DIMS = [256, 256]        # 簡化網絡結構
 SAVE_FREQ = 50
 
 # PPO參數
@@ -84,7 +84,7 @@ ppo_agent = PPOCMA(
     gae_lambda=GAE_LAMBDA,
     clip_epsilon=CLIP_EPSILON,
     entropy_coef=ENTROPY_COEF,
-    hidden_layers=HIDDEN_LAYERS,
+    hidden_dims=HIDDEN_DIMS,
     buffer_capacity=BUFFER_CAPACITY,
     batch_size=BATCH_SIZE,
     ppo_epochs=PPO_EPOCHS,
