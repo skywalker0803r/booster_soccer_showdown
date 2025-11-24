@@ -19,6 +19,7 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from utils import Preprocessor
 from gdrive_utils import SimpleGDriveSync
+from PBRS_module import create_pbrs_wrapper
 
 # =================================================================
 # 1. 環境設置
@@ -31,14 +32,26 @@ sai = SAIClient(
     api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv",
 )
 
-def make_sai_env():
+def make_sai_env(use_pbrs=True, pbrs_debug=False):
     """創建SAI環境的工廠函數"""
     env = sai.make_env()
     env = Monitor(env)  # 添加監控
+    
+    if use_pbrs:
+        # 🎯 添加 PBRS 獎勵塑形
+        env = create_pbrs_wrapper(env, gamma=0.99, debug=pbrs_debug)
+        print("✅ PBRS 獎勵塑形已啟用")
+    
     return env
 
-env = make_sai_env()
+# 🎯 PBRS 設置
+USE_PBRS = True  # 是否使用獎勵塑形
+PBRS_DEBUG = False  # 是否輸出PBRS調試信息
+
+env = make_sai_env(use_pbrs=USE_PBRS, pbrs_debug=PBRS_DEBUG)
 print(f"✅ 環境已創建 | 觀察: {env.observation_space} | 動作: {env.action_space}")
+if USE_PBRS:
+    print("🎯 PBRS獎勵塑形: 啟用 - 將幫助突破ep_rew_mean瓶頸")
 
 # =================================================================
 # 2. 超參數配置
