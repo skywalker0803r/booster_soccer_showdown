@@ -91,9 +91,11 @@ ppo_agent = PPOCMA(
     max_grad_norm=MAX_GRAD_NORM,
     cma_population_size=0,  # 禁用CMA-ES
     cma_sigma=0.0,          # 禁用CMA-ES
-    cma_update_freq=999999, # 禁用CMA-ES
-    device=device
+    cma_update_freq=999999  # 禁用CMA-ES
 )
+
+# 手動將模型移到正確的設備
+ppo_agent = ppo_agent.to(device)
 
 # 手動禁用CMA-ES機制
 ppo_agent.use_cma = False
