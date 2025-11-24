@@ -49,23 +49,16 @@ sai = SAIClient(
     api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv",
 )
 
-# 動作轉換函數
+# 動作轉換函數 (修正版)
 def action_function(policy):
-    """動作縮放函數"""
-    expected_bounds = [-1, 1]
-    action_percent = (policy - expected_bounds[0]) / (
-        expected_bounds[1] - expected_bounds[0]
-    )
-    bounded_percent = np.minimum(np.maximum(action_percent, 0), 1)
-    
-    # 需要環境信息來計算動作空間
-    env = sai.make_env()
-    result = (
-        env.action_space.low
-        + (env.action_space.high - env.action_space.low) * bounded_percent
-    )
-    env.close()
-    return result
+    """
+    根據docs/Action Functions.md的規範：
+    - 只能訪問numpy(np)和環境(env)
+    - 不能訪問外部變量或模組
+    - 預設連續動作會用tanh然後重新縮放
+    """
+    # 簡化版本：假設模型輸出已經在正確範圍內
+    return policy
 
 # =================================================================
 # 2. SB3模型包裝器
