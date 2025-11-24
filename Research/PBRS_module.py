@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+import gym
+from gym import Wrapper
 
 def calculate_potential(state_45: np.ndarray) -> float:
     """
@@ -83,7 +85,7 @@ def create_pbrs_wrapper(env, gamma=0.99, debug=False):
     return PBRSWrapper(env, gamma=gamma, debug=debug)
 
 
-class PBRSWrapper:
+class PBRSWrapper(Wrapper):
     """
     PBRS (Potential-Based Reward Shaping) 環境包裝器
     
@@ -92,7 +94,7 @@ class PBRSWrapper:
     """
     
     def __init__(self, env, gamma=0.99, debug=False):
-        self.env = env
+        super().__init__(env)
         self.gamma = gamma
         self.debug = debug
         self.prev_potential = 0.0
@@ -148,6 +150,14 @@ class PBRSWrapper:
         
         return obs, shaped_reward, terminated, truncated, info
     
-    def __getattr__(self, name):
-        """代理到原始環境"""
-        return getattr(self.env, name)
+    def close(self):
+        """關閉環境"""
+        self.env.close()
+        
+    def seed(self, seed=None):
+        """設置隨機種子"""
+        return self.env.seed(seed) if hasattr(self.env, 'seed') else None
+        
+    def render(self, mode='human'):
+        """渲染環境"""
+        return self.env.render(mode=mode) if hasattr(self.env, 'render') else None
