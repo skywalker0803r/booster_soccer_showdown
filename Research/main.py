@@ -265,11 +265,10 @@ print("="*60)
 for t in range(1, TOTAL_TIMESTEPS + 1):
     # PPO動作選擇
     with torch.no_grad():
-        action_probs, values, log_probs = ppo_agent.forward(state.unsqueeze(0))
-        action = ppo_agent.get_action(state.unsqueeze(0)).squeeze()
+        action, log_prob, value = ppo_agent.get_action(state.cpu().numpy())
     
     # 執行動作
-    bounded_action = action_function(action.cpu().numpy())
+    bounded_action = action_function(action)
     next_obs, reward, done, _, info = env.step(bounded_action)
     
     # 處理下一狀態
@@ -281,7 +280,9 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     
     # 存儲經驗 (只使用環境原生獎勵)
     ppo_agent.store_transition(
-        state, action, reward, next_state, done, log_probs.squeeze(), values.squeeze()
+        state.cpu().numpy(), action, reward, 
+        next_state.cpu().numpy() if next_state is not None else None, 
+        done, log_prob, value
     )
     
     # 累計統計
