@@ -13,6 +13,7 @@ from curiosity_module import CuriosityDrivenExploration
 from gdrive_utils import SimpleGDriveSync
 # [AI-Integrate] 導入LLM輔助模組
 import sys
+import os  # 添加os導入
 sys.path.append('..')  # 添加上級目錄到路徑
 from llm_coach import LLMCoach
 from reward_shaper import RewardShaper
@@ -207,6 +208,15 @@ model_type, model_path = choose_model_loading()
 # 🚀 A100 GPU設置與混合精度
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ppo_cma_agent.to(device)
+
+# 在ppo_cma_agent創建後添加
+from simple_bc_integration import BCPretrainer
+expert_data_path = "../data/dataset_kick.npz"
+if os.path.exists(expert_data_path):
+    bc_pretrainer = BCPretrainer(ppo_cma_agent, expert_data_path, device)
+    bc_loss = bc_pretrainer.pretrain(epochs=50)
+    print(f"✅ BC預訓練完成，損失: {bc_loss:.6f}")
+
 curiosity_explorer.to(device)
 
 # A100混合精度加速
