@@ -113,8 +113,8 @@ class BCPretrainer:
                 batch_obs = observations[batch_indices]
                 batch_actions = actions[batch_indices]
                 
-                # 前向傳播 - 使用actor網絡
-                predicted_actions = self.ppo_agent.actor(batch_obs)
+                # 前向傳播 - 使用actor網絡 (只取mean，忽略log_std)
+                predicted_actions, _ = self.ppo_agent.actor(batch_obs)
                 
                 # 計算損失
                 loss = self.loss_fn(predicted_actions, batch_actions)
@@ -169,8 +169,8 @@ class BCPretrainer:
             test_obs = torch.tensor(self.expert_data['observations'][indices]).to(self.device)
             test_actions = torch.tensor(self.expert_data['actions'][indices]).to(self.device)
             
-            # 預測動作
-            predicted_actions = self.ppo_agent.actor(test_obs)
+            # 預測動作 (只取mean，忽略log_std)
+            predicted_actions, _ = self.ppo_agent.actor(test_obs)
             
             # 計算各種誤差
             mse = nn.MSELoss()(predicted_actions, test_actions).item()
