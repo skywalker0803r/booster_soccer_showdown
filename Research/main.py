@@ -295,14 +295,12 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
         
         # 記錄訓練信息
         if actor_loss is not None:
-            logger.log({
-                'ppo/policy_loss': actor_loss,
-                'ppo/value_loss': critic_loss,
-                'training/learning_rate': LEARNING_RATE_ACTOR,
-                'environment/episode_length': episode_steps,
-                'environment/episode_reward': episode_reward,
-                'ppo/update_counter': ppo_agent.update_counter
-            }, step=t)
+            logger.log_scalar('ppo/policy_loss', actor_loss, t)
+            logger.log_scalar('ppo/value_loss', critic_loss, t)
+            logger.log_scalar('training/learning_rate', LEARNING_RATE_ACTOR, t)
+            logger.log_scalar('environment/episode_length', episode_steps, t)
+            logger.log_scalar('environment/episode_reward', episode_reward, t)
+            logger.log_scalar('ppo/update_counter', ppo_agent.update_counter, t)
     
     # Episode結束處理
     if done:
