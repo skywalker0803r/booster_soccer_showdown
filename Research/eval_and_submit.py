@@ -1,214 +1,257 @@
 # -*- coding: utf-8 -*-
-# eval_and_submit.py
-# Updated to support PPOCMA model
+# eval_and_submit_sb3.py
+# 專為Stable Baselines3 PPO模型設計的評估和提交腳本
 
 import torch
 import numpy as np
 import os
 import glob
-import copy
 from sai_rl import SAIClient
-
-# Import the correct model and utility classes
-from ppo_cma_model import PPOCMA
+from stable_baselines3 import PPO
 from utils import Preprocessor
 
 # =================================================================
-# 1. Configuration (Synced with main.py)
+# 1. Configuration
 # =================================================================
-# Find the latest best model automatically
-try:
-    list_of_files = glob.glob('latest_checkpoint_Booster-PPOCMA-A100-PureOriginal-v1.pth')
-    latest_file = max(list_of_files, key=os.path.getctime)
-    MODEL_PATH = latest_file
-    print(f"✅ Automatically found the latest best model: {MODEL_PATH}")
-except (ValueError, FileNotFoundError):
-    MODEL_PATH = "latest_checkpoint_Booster-PPOCMA-A100-PureOriginal-v1.pth" # Fallback
-    print(f"⚠️ Could not find a model automatically. Using fallback: {MODEL_PATH}")
+# 自動尋找最新的SB3模型
+def find_latest_sb3_model():
+    """自動找到最新的SB3模型檔案"""
+    patterns = [
+        'BC-SB3-PPO_*.zip',
+        'best_*.zip', 
+        'final_*.zip',
+        'checkpoint_*.zip'
+    ]
+    
+    all_models = []
+    for pattern in patterns:
+        models = glob.glob(pattern)
+        all_models.extend(models)
+    
+    if all_models:
+        # 按修改時間排序，取最新的
+        latest_model = max(all_models, key=os.path.getmtime)
+        return latest_model
+    else:
+        return None
 
+# 尋找模型檔案
+MODEL_PATH = find_latest_sb3_model()
+if MODEL_PATH:
+    print(f"✅ 自動找到最新的SB3模型: {MODEL_PATH}")
+else:
+    MODEL_PATH = "BC-SB3-PPO_100000_steps.zip"  # 您的模型
+    print(f"⚠️ 使用指定模型: {MODEL_PATH}")
 
-# --- Hyperparameters (Must match the trained model's architecture) ---
-N_FEATURES = 45 
-# These hyperparameters define the model structure and must match main.py
-BUFFER_CAPACITY = 8192
-BATCH_SIZE = 1024
-NEURONS = [512, 512, 256]
-PPO_EPOCHS = 15
-CMA_POPULATION_SIZE = 64
-# --- The following params are for agent initialization, but less critical for eval ---
-LEARNING_RATE_ACTOR = 3e-4
-LEARNING_RATE_CRITIC = 1e-3
-GAMMA = 0.99
-GAE_LAMBDA = 0.95
-CLIP_EPSILON = 0.2
-ENTROPY_COEF = 0.01
-MAX_GRAD_NORM = 0.5
-CMA_SIGMA = 0.1
-CMA_UPDATE_FREQ = 10
-
-# Initialize SAIClient and environment to get action space info
+# 初始化環境獲取動作空間信息
 sai = SAIClient(
     comp_id="booster-soccer-showdown",
     api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv",
 )
-env = sai.make_env() 
-N_ACTIONS = env.action_space.shape[0]
 
-# Action function to scale model output
+# 動作轉換函數
 def action_function(policy):
+    """動作縮放函數"""
     expected_bounds = [-1, 1]
     action_percent = (policy - expected_bounds[0]) / (
         expected_bounds[1] - expected_bounds[0]
     )
     bounded_percent = np.minimum(np.maximum(action_percent, 0), 1)
-    return (
+    
+    # 需要環境信息來計算動作空間
+    env = sai.make_env()
+    result = (
         env.action_space.low
         + (env.action_space.high - env.action_space.low) * bounded_percent
     )
+    env.close()
+    return result
 
 # =================================================================
-# 2. Load PPOCMA model
+# 2. SB3模型包裝器
 # =================================================================
-
-class ActorWrapper(torch.nn.Module):
+class SB3ModelWrapper(torch.nn.Module):
     """
-    A wrapper for the ActorNetwork to ensure its forward method returns a single
-    tensor (the mean), which is expected by the SAI evaluation tools.
+    將SB3 PPO模型包裝成符合SAI評估工具期望的格式
     """
-    def __init__(self, actor_network):
+    def __init__(self, sb3_model):
         super().__init__()
-        self.actor_network = actor_network
-
+        self.sb3_model = sb3_model
+        self.preprocessor = Preprocessor()
+        
+        # 獲取環境信息
+        self.env = sai.make_env()
+        
     def forward(self, state):
-        # The sai.benchmark tool will pass the state tensor here.
-        # We call the original actor but only return the 'mean' part.
-        mean, _ = self.actor_network(state)
-        return mean
-
-def load_ppocma_model(model_path):
-    """Load PPOCMA model weights"""
-    if not os.path.exists(model_path):
-        print(f"❌ Error: Model file '{model_path}' not found.")
-        return None
-
-    # Use CPU for evaluation by default, it's generally sufficient
-    device = torch.device('cpu')
-    print(f"Evaluating on device: {device}")
-
-    # 1. Initialize the agent with the same architecture as during training
-    ppo_cma_agent = PPOCMA(
-        state_dim=N_FEATURES,
-        action_dim=N_ACTIONS,
-        hidden_dims=NEURONS,
-        lr_actor=LEARNING_RATE_ACTOR,
-        lr_critic=LEARNING_RATE_CRITIC,
-        gamma=GAMMA,
-        gae_lambda=GAE_LAMBDA,
-        clip_epsilon=CLIP_EPSILON,
-        entropy_coef=ENTROPY_COEF,
-        max_grad_norm=MAX_GRAD_NORM,
-        ppo_epochs=PPO_EPOCHS,
-        batch_size=BATCH_SIZE,
-        buffer_capacity=BUFFER_CAPACITY,
-        cma_population_size=CMA_POPULATION_SIZE,
-        cma_sigma=CMA_SIGMA,
-        cma_update_freq=CMA_UPDATE_FREQ
-    )
-
-    try:
-        # 2. Load the checkpoint
-        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
-        
-        # 3. Load weights into the agent
-        if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
-            ppo_cma_agent.load_state_dict(checkpoint['model_state_dict'])
-            print(f"✅ Successfully loaded model weights from: {model_path}")
-            print(f"   - Trained for Episode: {checkpoint.get('episode', 'N/A')}")
-            print(f"   - Best recorded reward: {checkpoint.get('best_reward', 'N/A')}")
+        """
+        符合SAI評估工具的forward接口
+        輸入: state tensor [batch_size, state_dim]
+        輸出: action tensor [batch_size, action_dim]
+        """
+        # 將tensor轉為numpy (SB3期望numpy輸入)
+        if isinstance(state, torch.Tensor):
+            state_np = state.detach().cpu().numpy()
         else:
-            # Fallback for older format if necessary
-            ppo_cma_agent.load_state_dict(checkpoint)
-            print(f"✅ Successfully loaded model weights (direct state dict): {model_path}")
+            state_np = state
         
-        # 4. Set the actor network to evaluation mode
-        ppo_cma_agent.actor.eval()
+        # 處理批次維度
+        if state_np.ndim == 1:
+            state_np = state_np.reshape(1, -1)
+            single_sample = True
+        else:
+            single_sample = False
         
-        env.close() 
-        return ppo_cma_agent
+        # 使用SB3模型預測
+        actions, _ = self.sb3_model.predict(state_np, deterministic=True)
+        
+        # 處理返回維度
+        if single_sample and actions.ndim > 1:
+            actions = actions.squeeze(0)
+        
+        # 轉回tensor格式 (如果原本是tensor)
+        if isinstance(state, torch.Tensor):
+            actions = torch.tensor(actions, dtype=state.dtype, device=state.device)
+        
+        return actions
+    
+    def __del__(self):
+        """清理環境資源"""
+        if hasattr(self, 'env'):
+            self.env.close()
 
+def load_sb3_model(model_path):
+    """載入SB3模型"""
+    if not os.path.exists(model_path):
+        print(f"❌ 錯誤: 找不到模型檔案 '{model_path}'")
+        print("📁 當前目錄中的.zip檔案:")
+        for f in glob.glob("*.zip"):
+            print(f"   - {f}")
+        return None
+    
+    try:
+        print(f"📂 載入SB3模型: {model_path}")
+        
+        # 載入SB3模型 (不需要環境，稍後會設置)
+        sb3_model = PPO.load(model_path)
+        print(f"✅ 成功載入SB3模型")
+        
+        # 設置為評估模式
+        sb3_model.policy.set_training_mode(False)
+        
+        # 包裝模型
+        wrapped_model = SB3ModelWrapper(sb3_model)
+        
+        return wrapped_model
+        
     except Exception as e:
-        print(f"❌ Error loading model: {e}")
-        env.close()
+        print(f"❌ 載入模型時發生錯誤: {e}")
+        print(f"💡 提示: 確保 {model_path} 是有效的SB3模型檔案")
         return None
 
-
 # =================================================================
-# 3. Execute operations
+# 3. 主要執行流程
 # =================================================================
-
 def main_flow():
-    """Main execution flow"""
+    """主要執行流程"""
     
-    # Load the PPOCMA agent
-    loaded_agent = load_ppocma_model(MODEL_PATH)
-    if loaded_agent is None:
+    # 載入SB3模型
+    print("🔧 載入SB3模型...")
+    loaded_model = load_sb3_model(MODEL_PATH)
+    if loaded_model is None:
         return
-
-    # Wrap the actor network to conform to the evaluation tool's interface
-    evaluation_model = ActorWrapper(loaded_agent.actor)
-
-    # --- Watch model performance (Watch) ---
-    print("\n--- 👁️ Watching model performance (sai.watch) ---")
-    print("Press Ctrl+C in the console to stop watching.")
+    
+    print(f"✅ 模型載入成功！")
+    
+    # --- 觀看模型表現 (Watch) ---
+    print("\n" + "="*50)
+    print("👁️ 觀看模型表現 (sai.watch)")
+    print("="*50)
+    print("💡 提示: 在控制台按 Ctrl+C 停止觀看")
+    
     try:
         sai.watch(
-            model=evaluation_model,
+            model=loaded_model,
             action_function=action_function,
             preprocessor_class=Preprocessor,
         )
-        print("Watching ended.")
+        print("觀看結束")
+    except KeyboardInterrupt:
+        print("\n⏹️ 觀看被用戶中斷")
     except Exception as e:
-        print(f"❌ sai.watch execution failed: {e}")
+        print(f"❌ sai.watch 執行失敗: {e}")
     
-    # --- Evaluate model performance (Benchmark) ---
-    print("\n--- 📊 Evaluating model performance (sai.benchmark) ---")
+    # --- 評估模型性能 (Benchmark) ---
+    print("\n" + "="*50)
+    print("📊 評估模型性能 (sai.benchmark)")
+    print("="*50)
+    
     try:
         results = sai.benchmark(
-            model=evaluation_model,
+            model=loaded_model,
             action_function=action_function,
             preprocessor_class=Preprocessor,
         )
-        print("\n=== Benchmark Results ===")
+        print("\n🏆 === 基準測試結果 ===")
         print(results)
-        print("=========================")
+        print("=" * 30)
     except Exception as e:
-        print(f"❌ sai.benchmark execution failed: {e}")
-
-
-    # --- Submit model (Submit) ---
-    submit_prompt = input("\nDo you want to submit this model to the competition? (y/n): ")
+        print(f"❌ sai.benchmark 執行失敗: {e}")
     
-    if submit_prompt.lower() == 'y':
-        submission_name = input("Please enter a name for this submission (e.g., 'PPOCMA_Curiosity_Run1'): ")
+    # --- 提交模型 (Submit) ---
+    print("\n" + "="*50)
+    print("🚀 模型提交")
+    print("="*50)
+    
+    submit_prompt = input("是否要將此模型提交到比賽？ (y/n): ").strip().lower()
+    
+    if submit_prompt in ['y', 'yes', '是']:
+        submission_name = input("請輸入提交名稱 (例如: 'BC_SB3_PPO_100k'): ").strip()
         if not submission_name:
-            submission_name = f"PPOCMA_{os.path.basename(MODEL_PATH)}"
-
-        print(f"--- 🚀 Submitting model: {submission_name} ---")
+            submission_name = f"BC_SB3_PPO_{os.path.basename(MODEL_PATH).replace('.zip', '')}"
+        
+        print(f"🚀 正在提交模型: {submission_name}")
         try:
-            # For submission, it's also recommended to submit the wrapped actor model
             submission = sai.submit(
                 name=submission_name,
-                model=evaluation_model,
+                model=loaded_model,
                 action_function=action_function,
                 preprocessor_class=Preprocessor,
             )
-            print("\n=== Submission Results ===")
+            print("\n🎉 === 提交結果 ===")
             print(submission)
-            print("==========================")
+            print("=" * 20)
         except Exception as e:
-            print(f"❌ sai.submit execution failed: {e}")
+            print(f"❌ sai.submit 執行失敗: {e}")
     else:
-        print("Model submission cancelled.")
+        print("❌ 取消模型提交")
+
+# =================================================================
+# 4. 輔助功能
+# =================================================================
+def quick_test():
+    """快速測試模型載入和基本功能"""
+    print("🧪 快速測試模式")
+    
+    model = load_sb3_model(MODEL_PATH)
+    if model is None:
+        return
+        
+    # 測試forward方法
+    try:
+        test_input = torch.randn(1, 45)  # 假設45維狀態
+        output = model.forward(test_input)
+        print(f"✅ Forward測試成功:")
+        print(f"   輸入形狀: {test_input.shape}")
+        print(f"   輸出形狀: {output.shape}")
+        print(f"   輸出範圍: [{output.min():.3f}, {output.max():.3f}]")
+    except Exception as e:
+        print(f"❌ Forward測試失敗: {e}")
 
 if __name__ == "__main__":
-    main_flow()
+    import sys
+    
+    # 檢查命令行參數
+    if len(sys.argv) > 1 and sys.argv[1] == "test":
+        quick_test()
+    else:
+        main_flow()
