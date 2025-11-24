@@ -49,16 +49,27 @@ sai = SAIClient(
     api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv",
 )
 
-# 動作轉換函數 (修正版)
+# 動作轉換函數 (根據docs/About.md的動作空間定義)
 def action_function(policy):
     """
-    根據docs/Action Functions.md的規範：
+    根據docs/About.md和Action Functions.md的規範：
+    - 動作空間: Box(shape=(12,), low=[-45,-45,-30,-65,-24,-15,-45,-45,-30,-65,-24,-15], high=[45,45,30,65,24,15,45,45,30,65,24,15])
+    - 12個關節的力矩控制（左腿6個關節 + 右腿6個關節）
     - 只能訪問numpy(np)和環境(env)
-    - 不能訪問外部變量或模組
-    - 預設連續動作會用tanh然後重新縮放
     """
-    # 簡化版本：假設模型輸出已經在正確範圍內
-    return policy
+    
+    # 動作空間的上下界（從docs/About.md第55行）
+    action_low = np.array([-45,-45,-30,-65,-24,-15,-45,-45,-30,-65,-24,-15], dtype=np.float32)
+    action_high = np.array([45,45,30,65,24,15,45,45,30,65,24,15], dtype=np.float32)
+    
+    # 假設模型輸出在[-1, 1]範圍，縮放到實際動作空間
+    # policy: [-1, 1] -> action_space: [action_low, action_high]
+    scaled_actions = action_low + (policy + 1.0) * (action_high - action_low) / 2.0
+    
+    # 確保動作在有效範圍內
+    clipped_actions = np.clip(scaled_actions, action_low, action_high)
+    
+    return clipped_actions
 
 # =================================================================
 # 2. SB3模型包裝器
