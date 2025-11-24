@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import gym
-from gym import Wrapper
+try:
+    import gymnasium as gym
+    from gymnasium import Wrapper
+except ImportError:
+    import gym
+    from gym import Wrapper
 
 def calculate_potential(state_45: np.ndarray) -> float:
     """
@@ -75,14 +79,23 @@ def create_pbrs_wrapper(env, gamma=0.99, debug=False):
     創建 PBRS 包裝器的便利函數
     
     Args:
-        env: 原始環境
+        env: 原始環境 (應該已經過 Gymnasium 兼容性處理)
         gamma: 折扣因子
         debug: 是否輸出調試信息
     
     Returns:
         包裝後的環境
     """
-    return PBRSWrapper(env, gamma=gamma, debug=debug)
+    pbrs_env = PBRSWrapper(env, gamma=gamma, debug=debug)
+    
+    if debug:
+        print(f"🎯 PBRS包裝器創建完成:")
+        print(f"   環境類型: {type(pbrs_env)}")
+        print(f"   原始環境: {type(env)}")
+        print(f"   觀察空間: {pbrs_env.observation_space}")
+        print(f"   動作空間: {pbrs_env.action_space}")
+    
+    return pbrs_env
 
 
 class PBRSWrapper(Wrapper):

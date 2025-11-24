@@ -10,7 +10,10 @@ import torch
 import os
 import sys
 import glob
-import gym
+try:
+    import gymnasium as gym
+except ImportError:
+    import gym
 from sai_rl import SAIClient 
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
@@ -20,6 +23,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from utils import Preprocessor
 from gdrive_utils import SimpleGDriveSync
 from PBRS_module import create_pbrs_wrapper
+from gym_compatibility import make_gymnasium_compatible, test_compatibility
 
 # =================================================================
 # 1. 環境設置
@@ -35,12 +39,23 @@ sai = SAIClient(
 def make_sai_env(use_pbrs=True, pbrs_debug=False):
     """創建SAI環境的工廠函數"""
     env = sai.make_env()
+    print("✅ SAI 原始環境創建成功")
+    
+    # 🔧 添加 Gymnasium 兼容性
+    env = make_gymnasium_compatible(env)
+    print("✅ Gymnasium 兼容性適配完成")
+    
     env = Monitor(env)  # 添加監控
+    print("✅ SB3 Monitor 包裝完成")
     
     if use_pbrs:
         # 🎯 添加 PBRS 獎勵塑形
         env = create_pbrs_wrapper(env, gamma=0.99, debug=pbrs_debug)
         print("✅ PBRS 獎勵塑形已啟用")
+    
+    # 🧪 測試最終環境兼容性
+    if pbrs_debug:
+        test_compatibility(env)
     
     return env
 
