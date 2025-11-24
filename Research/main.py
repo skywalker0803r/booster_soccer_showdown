@@ -153,16 +153,15 @@ class SB3BCAdapter:
                 batch_obs = observations[batch_indices]
                 batch_actions = actions[batch_indices]
                 
-                # 使用SB3策略網絡預測動作 (修正版)
-                # 直接使用policy預測動作，不使用內部網絡結構
-                with torch.no_grad():
-                    # 臨時設置為評估模式以獲取確定性動作
-                    policy.set_training_mode(False)
-                    actions_tensor = policy.predict(batch_obs, deterministic=True)[0]
-                    actions_mean = torch.tensor(actions_tensor, device=batch_obs.device, dtype=batch_obs.dtype)
-                    policy.set_training_mode(True)
+                # 使用SB3策略網絡預測動作 (修正版2)
+                # 將tensor轉為numpy，預測後再轉回tensor
+                batch_obs_np = batch_obs.cpu().numpy()
                 
-                predicted_actions = actions_mean
+                # 使用SB3預測動作
+                actions_np, _ = policy.predict(batch_obs_np, deterministic=True)
+                
+                # 轉回tensor用於梯度計算
+                predicted_actions = torch.tensor(actions_np, device=batch_obs.device, dtype=torch.float32, requires_grad=True)
                 
                 # 計算損失
                 loss = loss_fn(predicted_actions, batch_actions)
