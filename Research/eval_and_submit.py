@@ -255,7 +255,6 @@ def main_flow():
     print("="*50)
     print("💡 提示: 在控制台按 Ctrl+C 停止觀看")
     
-    '''
     try:
         sai.watch(
             model=loaded_model,
@@ -284,7 +283,6 @@ def main_flow():
         print("=" * 30)
     except Exception as e:
         print(f"❌ sai.benchmark 執行失敗: {e}")
-    '''
     
     # --- 詳細評估 (收集episode統計) ---
     print("\n" + "="*50)
