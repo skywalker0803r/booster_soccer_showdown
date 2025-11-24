@@ -289,19 +289,19 @@ for t in range(1, TOTAL_TIMESTEPS + 1):
     episode_reward += reward
     episode_steps += 1
     
-    # 更新模型
-    if ppo_agent.should_update():
-        update_info = ppo_agent.update()
+    # 更新模型 (當緩衝區有足夠數據時)
+    if ppo_agent.buffer.size >= BATCH_SIZE:
+        actor_loss, critic_loss, candidate_params = ppo_agent.update()
         
         # 記錄訓練信息
-        if update_info:
+        if actor_loss is not None:
             logger.log({
-                'ppo/policy_loss': update_info.get('policy_loss', 0),
-                'ppo/value_loss': update_info.get('value_loss', 0),
-                'ppo/entropy': update_info.get('entropy', 0),
+                'ppo/policy_loss': actor_loss,
+                'ppo/value_loss': critic_loss,
                 'training/learning_rate': LEARNING_RATE_ACTOR,
                 'environment/episode_length': episode_steps,
-                'environment/episode_reward': episode_reward
+                'environment/episode_reward': episode_reward,
+                'ppo/update_counter': ppo_agent.update_counter
             }, step=t)
     
     # Episode結束處理
