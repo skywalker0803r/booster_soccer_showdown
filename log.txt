@@ -1,77 +1,186 @@
 ╭─ Response ───────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ 完美！我為您創建了專門的SB3評估腳本！🎉                                                                              │
+│ 很好的問題！讓我深入分析為什麼獎勵上不去，以及BC-PPO方法的潛在問題：                                                 │
 │                                                                                                                      │
 │                                                                                                                      │
-│                                        🎯 新腳本特色：eval_and_submit_sb3.py                                         │
+│                                                🔍 獎勵停滯的可能原因                                                 │
 │                                                                                                                      │
-│                                                     專為SB3設計                                                      │
+│                                              1. 維度縮減導致的信息丟失                                               │
 │                                                                                                                      │
-│  • ✅ 自動模型檢測 - 會自動找到您的 BC-SB3-PPO_100000_steps.zip                                                      │
-│  • ✅ SB3模型包裝 - 完美適配SAI評估工具的API                                                                         │
-│  • ✅ 智能維度處理 - 自動處理批次和單樣本維度                                                                        │
-│  • ✅ 資源管理 - 自動清理環境資源                                                                                    │
+│ 我們之前分析過，從89維→45維丟失了關鍵信息：                                                                          │
 │                                                                                                                      │
-│                                                       核心功能                                                       │
+│  • ❌ 目標信息 (12維) - 兩個球門位置                                                                                 │
+│  • ❌ 對手信息 (15維) - 守門員和防守者                                                                               │
+│  • ❌ 精確射門目標 (6維)                                                                                             │
 │                                                                                                                      │
-│  1 觀看模型表現 - sai.watch() 可視化機器人動作                                                                       │
-│  2 性能基準測試 - sai.benchmark() 量化評估                                                                           │
-│  3 競賽提交 - sai.submit() 直接提交到比賽                                                                            │
+│ 影響：機器人能控球但不知道往哪踢！                                                                                   │
 │                                                                                                                      │
-│                                                                                                                      │
-│                                                     🚀 使用方式                                                      │
-│                                                                                                                      │
-│                                                     完整評估流程                                                     │
+│                                                 2. BC預訓練的侷限性                                                  │
 │                                                                                                                      │
 │                                                                                                                      │
-│  cd Research                                                                                                         │
-│  python eval_and_submit_sb3.py                                                                                       │
+│  專家數據 → 學會基本控制 → 但策略可能次優                                                                            │
 │                                                                                                                      │
 │                                                                                                                      │
-│                                                       快速測試                                                       │
+│  • ✅ 學會了控球不丟（長Episode）                                                                                    │
+│  • ❌ 沒學會進球策略（低獎勵）                                                                                       │
+│  • 🔄 PPO在次優策略周圍探索，難突破                                                                                  │
+│                                                                                                                      │
+│                                               3. 獎勵函數可能過於稀疏                                                │
+│                                                                                                                      │
+│ 如果獎勵主要來自進球：                                                                                               │
+│                                                                                                                      │
+│  • 機器人學會了不失敗（避免負獎勵）                                                                                  │
+│  • 但沒學會主動進球（獲得正獎勵）                                                                                    │
 │                                                                                                                      │
 │                                                                                                                      │
-│  python eval_and_submit_sb3.py test                                                                                  │
+│                                               📊 BC-PPO方法的根本問題                                                │
+│                                                                                                                      │
+│                                              🔴 核心問題：局部最優困境                                               │
+│                                                                                                                      │
+│                                                                                                                      │
+│  BC預訓練權重 → 次優但穩定的策略 → PPO在附近小幅優化 → 無法跳出局部最優                                              │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                       具體表現                                                       │
+│                                                                                                                      │
+│  • Episode很長 = 學會防守性策略（不丟球）                                                                            │
+│  • 獎勵不高 = 沒學會攻擊性策略（進球）                                                                               │
+│  • 穩定震盪 = 在局部最優附近徘徊                                                                                     │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                     💡 改進方案                                                      │
+│                                                                                                                      │
+│                                                 方案1：數據質量改善                                                  │
+│                                                                                                                      │
+│                                                                                                                      │
+│  # 問題：您的專家數據可能偏向"安全"策略                                                                              │
+│  # 解決：收集更多積極進攻的專家數據                                                                                  │
+│                                                                                                                      │
+│  # 檢查專家數據的成功率                                                                                              │
+│  success_rate = 成功進球的episodes / 總episodes                                                                      │
+│  # 如果 < 70%，需要重新收集更aggressive的數據                                                                        │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                 方案2：混合訓練策略                                                  │
+│                                                                                                                      │
+│                                                                                                                      │
+│  # 不要100%依賴BC初始化                                                                                              │
+│  # 方案A：BC預訓練 + 更強探索                                                                                        │
+│  ppo_config = {                                                                                                      │
+│      'ent_coef': 0.1,        # 增加熵係數，鼓勵探索                                                                  │
+│      'learning_rate': 5e-4,  # 提高學習率                                                                            │
+│      'clip_range': 0.3       # 放寬裁剪範圍                                                                          │
+│  }                                                                                                                   │
+│                                                                                                                      │
+│  # 方案B：Curriculum Learning                                                                                        │
+│  # 階段1：BC預訓練（基本控制）                                                                                       │
+│  # 階段2：降低BC影響，增加獎勵權重                                                                                   │
+│  # 階段3：純PPO探索                                                                                                  │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                   方案3：獎勵塑形                                                    │
+│                                                                                                                      │
+│                                                                                                                      │
+│  # 添加中間獎勵，引導進球行為                                                                                        │
+│  def shaped_reward(obs, action, reward, info):                                                                       │
+│      # 基礎環境獎勵                                                                                                  │
+│      total_reward = reward                                                                                           │
+│                                                                                                                      │
+│      # 接近球獎勵                                                                                                    │
+│      ball_distance = np.linalg.norm(obs[:3] - ball_pos)                                                              │
+│      total_reward += -0.1 * ball_distance                                                                            │
+│                                                                                                                      │
+│      # 朝向球門獎勵                                                                                                  │
+│      goal_direction_reward = calculate_goal_direction_reward(obs)                                                    │
+│      total_reward += 0.2 * goal_direction_reward                                                                     │
+│                                                                                                                      │
+│      # 射門嘗試獎勵                                                                                                  │
+│      if is_shooting_motion(action):                                                                                  │
+│          total_reward += 0.5                                                                                         │
+│                                                                                                                      │
+│      return total_reward                                                                                             │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                 方案4：恢復完整維度                                                  │
+│                                                                                                                      │
+│                                                                                                                      │
+│  # 修改BC預訓練，使用完整89維                                                                                        │
+│  # 重新設計Research系統支援89維輸入                                                                                  │
+│  class ImprovedBCPretrainer:                                                                                         │
+│      def convert_observations(self, il_observations):                                                                │
+│          # 保留更多關鍵信息                                                                                          │
+│          converted_obs = []                                                                                          │
+│          for obs in il_observations:                                                                                 │
+│              # 保留：機器人(30) + 球(9) + 目標(12) + 任務(3) = 54維                                                  │
+│              key_features = np.concatenate([                                                                         │
+│                  obs[:30],      # 機器人狀態                                                                         │
+│                  obs[36:45],    # 球信息                                                                             │
+│                  obs[48:60],    # 目標信息                                                                           │
+│                  obs[-3:]       # 任務編碼                                                                           │
+│              ])                                                                                                      │
+│              converted_obs.append(key_features)                                                                      │
+│          return np.array(converted_obs)                                                                              │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                 方案5：診斷當前模型                                                  │
+│                                                                                                                      │
+│ 讓我們先診斷問題：                                                                                                   │
+│                                                                                                                      │
+│                                                                                                                      │
+│  # 添加這個診斷腳本                                                                                                  │
+│  def analyze_current_model():                                                                                        │
+│      # 1. 檢查專家數據質量                                                                                           │
+│      analyze_expert_success_rate()                                                                                   │
+│                                                                                                                      │
+│      # 2. 檢查模型行為                                                                                               │
+│      model = load_current_model()                                                                                    │
+│                                                                                                                      │
+│      # 測試：模型是否學會進球？                                                                                      │
+│      goal_attempts = count_goal_attempts(model, 100_episodes)                                                        │
+│                                                                                                                      │
+│      # 測試：模型是否過度保守？                                                                                      │
+│      risk_taking_score = measure_risk_taking(model)                                                                  │
+│                                                                                                                      │
+│      print(f"Goal attempts: {goal_attempts}")                                                                        │
+│      print(f"Risk taking: {risk_taking_score}")                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
-│                                                     📊 運行流程                                                      │
+│                                                  🎯 立即可行的改進                                                   │
 │                                                                                                                      │
-│  1 自動檢測模型 - 找到您的 BC-SB3-PPO_100000_steps.zip                                                               │
-│  2 載入SB3模型 - 使用 PPO.load()                                                                                     │
-│  3 包裝適配 - 轉換為SAI格式                                                                                          │
-│  4 可視化觀看 - 看機器人踢球動作                                                                                     │
-│  5 基準測試 - 獲得量化成績                                                                                           │
-│  6 選擇提交 - 可直接提交到競賽                                                                                       │
+│                                                快速測試1：調整PPO參數                                                │
 │                                                                                                                      │
 │                                                                                                                      │
-│                                                   💡 與原版的差異                                                    │
+│  # 在你的main.py中修改PPO_CONFIG                                                                                     │
+│  PPO_CONFIG = {                                                                                                      │
+│      'learning_rate': 5e-4,    # 提高學習率                                                                          │
+│      'ent_coef': 0.05,         # 增加探索                                                                            │
+│      'clip_range': 0.3,        # 放寬裁剪                                                                            │
+│      'n_steps': 4096,          # 增加收集步數                                                                        │
+│  }                                                                                                                   │
 │                                                                                                                      │
 │                                                                                                                      │
-│   功能        原版 eval_and_submit.py   新版 eval_and_submit_sb3.py                                                  │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                                                 │
-│   模型類型    PPOCMA                    Stable Baselines3 PPO ✅                                                     │
-│   載入方式    torch.load()              PPO.load() ✅                                                                │
-│   檔案格式    .pth                      .zip ✅                                                                      │
-│   API相容性   需要包裝器                內建包裝器 ✅                                                                │
+│                                               快速測試2：評估當前模型                                                │
+│                                                                                                                      │
+│                                                                                                                      │
+│  python eval_and_submit.py                                                                                           │
+│  # 觀察：機器人是否嘗試射門？還是只是控球？                                                                          │
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
-│                                                     🎮 立即試用                                                      │
+│                                                     🤔 根本反思                                                      │
 │                                                                                                                      │
-│ 您現在可以直接運行：                                                                                                 │
+│ BC-PPO的限制：                                                                                                       │
 │                                                                                                                      │
+│  • 只能學到不比專家差的策略                                                                                          │
+│  • 如果專家數據本身不是最優，BC會限制上限                                                                            │
+│  • 需要結合其他技術突破專家水準                                                                                      │
 │                                                                                                                      │
-│  cd Research                                                                                                         │
-│  python eval_and_submit_sb3.py                                                                                       │
+│ 您的訓練其實很成功：                                                                                                 │
 │                                                                                                                      │
+│  • 734步Episode = 學會了精細控制                                                                                     │
+│  • 穩定訓練 = 沒有發散或崩潰                                                                                         │
+│  • 問題可能是目標設定而非方法問題                                                                                    │
 │                                                                                                                      │
-│ 這將會：                                                                                                             │
-│                                                                                                                      │
-│  1 📂 載入您的 BC-SB3-PPO_100000_steps.zip 模型                                                                      │
-│  2 👁️ 開啟視覺化觀看機器人踢球表現
-  │
-│  3 📊 進行性能基準測試                                                                                               │
-│  4 🚀 選擇是否提交到競賽                                                                                             │
-│                                                                                                                      │
-│ 您的BC預訓練+SB3 PPO模型現在可以完美地進行評估和提交了！ ✨                                                          │
-╰────────────────────────────────────────────────────────────────────
+│ 您覺得先評估一下當前模型的實際行為如何？這樣我們能更精確地診斷問題所在！ 🎯                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+--- Logging error in Loguru Handler #1 ---
