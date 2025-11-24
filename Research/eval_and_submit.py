@@ -153,7 +153,90 @@ def load_sb3_model(model_path):
         return None
 
 # =================================================================
-# 3. 主要執行流程
+# 3. 詳細評估函數
+# =================================================================
+def evaluate_model_detailed(model, num_episodes=10):
+    """
+    執行詳細的模型評估，收集episode統計數據
+    類似訓練時的ep_length_mean和ep_reward_mean
+    """
+    print(f"🔍 開始詳細評估 ({num_episodes} episodes)")
+    
+    # 創建評估環境
+    eval_env = sai.make_env()
+    
+    episode_rewards = []
+    episode_lengths = []
+    success_count = 0
+    
+    try:
+        for episode in range(num_episodes):
+            obs, info = eval_env.reset()
+            episode_reward = 0
+            episode_length = 0
+            done = False
+            
+            print(f"  Episode {episode + 1}/{num_episodes}", end=" ")
+            
+            while not done:
+                # 使用模型預測動作
+                with torch.no_grad():
+                    if hasattr(model, 'forward'):
+                        # 使用包裝器的forward方法
+                        obs_tensor = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
+                        action_tensor = model.forward(obs_tensor)
+                        action = action_tensor.squeeze(0).cpu().numpy()
+                    else:
+                        # 直接使用SB3模型
+                        action, _ = model.predict(obs, deterministic=True)
+                
+                # 應用動作函數轉換
+                final_action = action_function(action)
+                
+                # 執行動作
+                obs, reward, terminated, truncated, info = eval_env.step(final_action)
+                done = terminated or truncated
+                
+                episode_reward += reward
+                episode_length += 1
+                
+                # 防止無限長的episode
+                if episode_length > 1000:
+                    break
+            
+            episode_rewards.append(episode_reward)
+            episode_lengths.append(episode_length)
+            
+            # 判斷成功 (這裡可以根據具體任務調整成功條件)
+            if episode_reward > 0:  # 簡單的成功標準
+                success_count += 1
+                print(f"✅ 獎勵: {episode_reward:.3f}, 長度: {episode_length}")
+            else:
+                print(f"❌ 獎勵: {episode_reward:.3f}, 長度: {episode_length}")
+    
+    finally:
+        eval_env.close()
+    
+    # 計算統計數據
+    if episode_rewards:
+        stats = {
+            'ep_reward_mean': np.mean(episode_rewards),
+            'ep_reward_std': np.std(episode_rewards),
+            'ep_length_mean': np.mean(episode_lengths),
+            'ep_length_std': np.std(episode_lengths),
+            'total_episodes': len(episode_rewards),
+            'success_rate': success_count / len(episode_rewards),
+            'min_reward': np.min(episode_rewards),
+            'max_reward': np.max(episode_rewards),
+            'min_length': np.min(episode_lengths),
+            'max_length': np.max(episode_lengths)
+        }
+        return stats
+    else:
+        return None
+
+# =================================================================
+# 4. 主要執行流程
 # =================================================================
 def main_flow():
     """主要執行流程"""
@@ -172,6 +255,7 @@ def main_flow():
     print("="*50)
     print("💡 提示: 在控制台按 Ctrl+C 停止觀看")
     
+    '''
     try:
         sai.watch(
             model=loaded_model,
@@ -200,6 +284,26 @@ def main_flow():
         print("=" * 30)
     except Exception as e:
         print(f"❌ sai.benchmark 執行失敗: {e}")
+    '''
+    
+    # --- 詳細評估 (收集episode統計) ---
+    print("\n" + "="*50)
+    print("📈 詳細episode統計分析")
+    print("="*50)
+    
+    try:
+        episode_stats = evaluate_model_detailed(loaded_model, num_episodes=10)
+        if episode_stats:
+            print("\n📊 === Episode統計結果 ===")
+            print(f"ep_length_mean: {episode_stats['ep_length_mean']:.2f}")
+            print(f"ep_reward_mean: {episode_stats['ep_reward_mean']:.4f}")
+            print(f"ep_length_std: {episode_stats['ep_length_std']:.2f}")
+            print(f"ep_reward_std: {episode_stats['ep_reward_std']:.4f}")
+            print(f"total_episodes: {episode_stats['total_episodes']}")
+            print(f"success_rate: {episode_stats['success_rate']:.2%}")
+            print("=" * 30)
+    except Exception as e:
+        print(f"❌ 詳細評估執行失敗: {e}")
     
     # --- 提交模型 (Submit) ---
     print("\n" + "="*50)
@@ -230,7 +334,7 @@ def main_flow():
         print("❌ 取消模型提交")
 
 # =================================================================
-# 4. 輔助功能
+# 5. 輔助功能
 # =================================================================
 def quick_test():
     """快速測試模型載入和基本功能"""
@@ -255,7 +359,15 @@ if __name__ == "__main__":
     import sys
     
     # 檢查命令行參數
-    if len(sys.argv) > 1 and sys.argv[1] == "test":
-        quick_test()
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "test":
+            quick_test()
+        elif sys.argv[1] == "eval":
+            # 允許指定評估episode數量
+            num_eps = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+            print(f"🎯 評估模式: {num_eps} episodes")
+            main_flow()
+        else:
+            main_flow()
     else:
         main_flow()
