@@ -340,11 +340,12 @@ print("🏁 BC預訓練 + Stable Baselines3 PPO訓練完成!")
 # 9. 簡單測試
 # =================================================================
 print("\n🧪 進行簡單測試...")
-obs = env.reset()
+# 修正Gymnasium API兼容性問題
+obs, info = env.reset()  # 新版Gym API返回tuple (obs, info)
 for i in range(100):
     action, _states = model.predict(obs, deterministic=True)
-    obs, rewards, dones, info = env.step(action)
-    if dones:
+    obs, rewards, dones, truncated, info = env.step(action)  # 新版API返回5個值
+    if dones or truncated:
         break
 
 print(f"✅ 測試完成，執行了 {i+1} 步")
