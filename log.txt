@@ -1,10 +1,46 @@
-Evaluating on device: cpu
-CMA-ES參數數量: 6168
-❌ Error loading model: Weights only load failed. This file can still be loaded, to do so you have two options, do those steps only if you trust the source of the checkpoint.
-        (1) In PyTorch 2.6, we changed the default value of the `weights_only` argument in `torch.load` from `False` to `True`. Re-running `torch.load` with `weights_only` set to `False` will likely succeed, but it can result in arbitrary code execution. Do it only if you got the file from a trusted source.
-        (2) Alternatively, to load with `weights_only=True` please check the recommended steps in the following error message.
-        WeightsUnpickler error: Unsupported global: GLOBAL numpy._core.multiarray._reconstruct was not an allowed global by default. Please use `torch.serialization.add_safe_globals([numpy._core.multiarray._reconstruct])` or the `torch.serialization.safe_globals([numpy._core.multiarray._reconstruct])` context manager to allowlist this global if you trust this class/function.
+(Vedanta) C:\Users\ricky\Desktop\booster_soccer_showdown>python imitation_learning/scripts/collect_data.py
 
-Check the documentation of torch.load to learn more about types accepted by default with weights_only https://pytorch.org/docs/stable/generated/torch.load.html.
+Keyboard Controls:
+Keyboard Controller for SE(3): Se3Keyboard
+        ----------------------------------------------
+        Move T1 along x-axis: W/S
+        Move T1 along y-axis: A/D
+        Rotate T1 along z-axis: Q/E
+        Reset commands: L
+        Quit: ESC
+        Reset environment: P
 
-(Vedanta) C:\Users\ricky\Desktop\booster_soccer_showdown\Research>
+Starting episode 1
+Episode 1 completed without success
+
+Starting episode 2
+Episode 2 completed without success
+
+Starting episode 3
+Episode 3 completed successfully!
+
+Starting episode 4
+Episode 4 completed successfully!
+
+Starting episode 5
+Episode 5 completed successfully!
+
+Starting episode 6
+
+[INFO] ESC pressed — exiting teleop.
+Traceback (most recent call last):
+  File "C:\Users\ricky\Desktop\booster_soccer_showdown\imitation_learning\scripts\collect_data.py", line 113, in <module>
+    teleop(args.env, args.pos_sensitivity, args.rot_sensitivity, args.data_set_directory)
+  File "C:\Users\ricky\Desktop\booster_soccer_showdown\imitation_learning\scripts\collect_data.py", line 76, in teleop
+    np.savez(dataset_directory, observations=dataset["observations"], actions=dataset["actions"], done = dataset["done"])
+  File "C:\Users\ricky\AppData\Local\miniconda3\envs\Vedanta\lib\site-packages\numpy\lib\_npyio_impl.py", line 681, in savez
+    _savez(file, args, kwds, False)
+  File "C:\Users\ricky\AppData\Local\miniconda3\envs\Vedanta\lib\site-packages\numpy\lib\_npyio_impl.py", line 779, in _savez
+    zipf = zipfile_factory(file, mode="w", compression=compression)
+  File "C:\Users\ricky\AppData\Local\miniconda3\envs\Vedanta\lib\site-packages\numpy\lib\_npyio_impl.py", line 103, in zipfile_factory
+    return zipfile.ZipFile(file, *args, **kwargs)
+  File "C:\Users\ricky\AppData\Local\miniconda3\envs\Vedanta\lib\zipfile.py", line 1254, in __init__
+    self.fp = io.open(file, filemode)
+FileNotFoundError: [Errno 2] No such file or directory: './data/dataset_kick.npz'
+
+(Vedanta) C:\Users\ricky\Desktop\booster_soccer_showdown>
