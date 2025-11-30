@@ -9,7 +9,7 @@ sai = SAIClient(
 )
 env = sai.make_env()
 obs_raw,info = env.reset()
-obs_dim = len(Preprocessor().modify_state(obs_raw, info)[0])
+obs_dim = len(Preprocessor().modify_state(obs_raw, info))
 act_dim = env.action_space.shape[0]
 
 agent = SACAgent(obs_dim, act_dim, env)
