@@ -118,8 +118,8 @@ for episode in range(1000):
     # 更新代理性能並觸發自動保存
     agent.update_episode_performance(episode, episode_reward)
     
-    # 每 10 回合打印詳細資訊
-    if episode % 10 == 0:
+    # 每 1 回合打印詳細資訊
+    if episode % 1 == 0:
         avg_reward_10 = np.mean(total_rewards[-10:]) if len(total_rewards) >= 10 else np.mean(total_rewards)
         avg_length_10 = np.mean(episode_lengths[-10:]) if len(episode_lengths) >= 10 else np.mean(episode_lengths)
         buffer_size = len(agent.buffer)
