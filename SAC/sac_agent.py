@@ -7,6 +7,7 @@ from collections import deque
 import random
 
 from utils import Preprocessor, action_function
+from rnd_module import RNDModule, RNDBuffer
 
 # --- SAC Hyperparameters ---
 GAMMA = 0.99
@@ -85,11 +86,12 @@ class Critic(nn.Module):
 
 # --- SAC Agent ---
 class SACAgent:
-    def __init__(self, obs_dim, act_dim, env):
+    def __init__(self, obs_dim, act_dim, env, use_rnd=True, rnd_scale=0.1):
         self.env = env
         self.preproc = Preprocessor()
         self.obs_dim = obs_dim
         self.act_dim = act_dim
+        self.use_rnd = use_rnd
 
         # Networks
         self.actor = Actor(obs_dim, act_dim).to(DEVICE)
@@ -107,6 +109,17 @@ class SACAgent:
 
         # Replay buffer
         self.buffer = ReplayBuffer()
+        
+        # RND 模組
+        if self.use_rnd:
+            self.rnd = RNDModule(obs_dim, intrinsic_reward_scale=rnd_scale)
+            self.rnd_buffer = RNDBuffer(maxlen=10000)
+            self.rnd_update_freq = 10  # 每10步更新一次RND
+            self.step_count = 0
+            print(f"RND 模組已啟用 - 獎勵縮放: {rnd_scale}")
+        else:
+            self.rnd = None
+            print("RND 模組未啟用")
 
     def select_action(self, obs_raw, info):
         obs = self.preproc.modify_state(obs_raw, info)
@@ -122,15 +135,32 @@ class SACAgent:
     def update(self):
         if len(self.buffer) < BATCH_SIZE:
             return
+        
+        # 更新步數計數器
+        self.step_count += 1
 
         state, action, reward, next_state, done = self.buffer.sample()
+
+        # 計算內在獎勵（如果啟用RND）
+        if self.use_rnd and self.rnd is not None:
+            with torch.no_grad():
+                intrinsic_rewards = []
+                for i in range(state.shape[0]):
+                    intrinsic_reward = self.rnd.compute_intrinsic_reward(state[i])
+                    intrinsic_rewards.append(intrinsic_reward[0])
+                
+                intrinsic_rewards = torch.FloatTensor(intrinsic_rewards).unsqueeze(1).to(DEVICE)
+                # 結合外在獎勵和內在獎勵
+                combined_reward = reward + intrinsic_rewards
+        else:
+            combined_reward = reward
 
         with torch.no_grad():
             next_action, next_log_prob = self.actor(next_state)
             q1_target = self.critic1_target(next_state, next_action)
             q2_target = self.critic2_target(next_state, next_action)
             q_target = torch.min(q1_target, q2_target) - ALPHA * next_log_prob
-            y = reward + (1 - done) * GAMMA * q_target
+            y = combined_reward + (1 - done) * GAMMA * q_target
 
         # Critic update
         q1 = self.critic1(state, action)
@@ -159,4 +189,45 @@ class SACAgent:
             target_param.data.copy_(TAU * param.data + (1 - TAU) * target_param.data)
         for target_param, param in zip(self.critic2_target.parameters(), self.critic2.parameters()):
             target_param.data.copy_(TAU * param.data + (1 - TAU) * target_param.data)
+        
+        # 更新 RND 網絡
+        if self.use_rnd and self.rnd is not None:
+            # 將當前批次的狀態加入 RND buffer
+            for i in range(state.shape[0]):
+                self.rnd_buffer.push(state[i])
+            
+            # 定期更新 RND 網絡
+            if self.step_count % self.rnd_update_freq == 0 and len(self.rnd_buffer) > 0:
+                rnd_states = self.rnd_buffer.sample(min(64, len(self.rnd_buffer)))
+                rnd_loss = self.rnd.update(rnd_states)
+                
+                if self.step_count % 100 == 0:  # 每100步打印一次RND統計
+                    rnd_stats = self.rnd.get_statistics()
+                    print(f"[RND] 步驟 {self.step_count}: 損失={rnd_loss:.4f}, "
+                          f"平均內在獎勵={rnd_stats['mean_intrinsic_reward']:.4f}")
+    
+    def get_intrinsic_reward(self, obs_raw, info):
+        """獲取單個觀測的內在獎勵（用於調試）"""
+        if not self.use_rnd or self.rnd is None:
+            return 0.0
+        
+        obs = self.preproc.modify_state(obs_raw, info)
+        if len(obs.shape) > 1:
+            obs = obs.flatten()
+        obs_tensor = torch.FloatTensor(obs).to(DEVICE)
+        return self.rnd.compute_intrinsic_reward(obs_tensor)[0]
+    
+    def save_rnd_model(self, filepath):
+        """保存 RND 模型"""
+        if self.use_rnd and self.rnd is not None:
+            self.rnd.save(filepath)
+        else:
+            print("RND 模組未啟用，無法保存")
+    
+    def load_rnd_model(self, filepath):
+        """加載 RND 模型"""
+        if self.use_rnd and self.rnd is not None:
+            self.rnd.load(filepath)
+        else:
+            print("RND 模組未啟用，無法加載")
 

@@ -15,7 +15,8 @@ obs = Preprocessor().modify_state(obs_raw, info)
 obs_dim = obs.shape[-1] if len(obs.shape) > 1 else obs.shape[0]
 act_dim = env.action_space.shape[0]
 
-agent = SACAgent(obs_dim, act_dim, env)
+# 創建帶有RND模組的SAC代理
+agent = SACAgent(obs_dim, act_dim, env, use_rnd=True, rnd_scale=0.1)
 
 print(f"=== SAC 訓練開始 ===")
 print(f"觀測維度: {obs_dim}")
@@ -74,11 +75,18 @@ for episode in range(1000):
         buffer_size = len(agent.buffer)
         elapsed_time = time.time() - start_time
         
+        # 獲取 RND 統計資訊
+        rnd_info = ""
+        if agent.use_rnd and agent.rnd is not None:
+            rnd_stats = agent.rnd.get_statistics()
+            rnd_buffer_size = len(agent.rnd_buffer) if hasattr(agent, 'rnd_buffer') else 0
+            rnd_info = f" | RND內在獎勵: {rnd_stats['mean_intrinsic_reward']:6.3f} | RND_Buffer: {rnd_buffer_size:4d}"
+        
         print(f"回合 {episode:4d} | "
               f"獎勵: {episode_reward:8.2f} | "
               f"步數: {episode_steps:3d} | "
               f"時間: {episode_time:.1f}s | "
-              f"Buffer: {buffer_size:6d}")
+              f"Buffer: {buffer_size:6d}{rnd_info}")
         print(f"         | "
               f"平均獎勵(10回合): {avg_reward_10:8.2f} | "
               f"平均步數(10回合): {avg_length_10:6.1f} | "
@@ -103,4 +111,15 @@ print(f"平均每回合時間: {total_time/1000:.2f} 秒")
 print(f"總平均獎勵: {np.mean(total_rewards):.2f}")
 print(f"最佳獎勵: {np.max(total_rewards):.2f}")
 print(f"最後100回合平均獎勵: {np.mean(total_rewards[-100:]):.2f}")
+
+# 保存 RND 模型
+if agent.use_rnd:
+    agent.save_rnd_model("rnd_model.pth")
+    final_rnd_stats = agent.rnd.get_statistics()
+    print(f"\nRND 最終統計:")
+    print(f"- 觀測處理次數: {final_rnd_stats['obs_count']}")
+    print(f"- 最終平均內在獎勵: {final_rnd_stats['mean_intrinsic_reward']:.4f}")
+    print(f"- 內在獎勵標準差: {final_rnd_stats['std_intrinsic_reward']:.4f}")
+    print(f"- RND Buffer 大小: {len(agent.rnd_buffer)}")
+
 print("=" * 50)
