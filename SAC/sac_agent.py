@@ -86,12 +86,13 @@ class Critic(nn.Module):
 
 # --- SAC Agent ---
 class SACAgent:
-    def __init__(self, obs_dim, act_dim, env, use_rnd=True, rnd_scale=0.1):
+    def __init__(self, obs_dim, act_dim, env, use_rnd=True, rnd_scale=0.1, logger=None):
         self.env = env
         self.preproc = Preprocessor()
         self.obs_dim = obs_dim
         self.act_dim = act_dim
         self.use_rnd = use_rnd
+        self.logger = logger
 
         # Networks
         self.actor = Actor(obs_dim, act_dim).to(DEVICE)
@@ -183,6 +184,29 @@ class SACAgent:
         self.actor_opt.zero_grad()
         actor_loss.backward()
         self.actor_opt.step()
+        
+        # 記錄 SAC 訓練指標到 TensorBoard
+        if self.logger is not None:
+            self.logger.log_sac_update(
+                step=self.step_count,
+                actor_loss=actor_loss.item(),
+                critic1_loss=critic1_loss.item(),
+                critic2_loss=critic2_loss.item(),
+                q1_value=q1,
+                q2_value=q2,
+                log_prob=log_prob,
+                alpha=ALPHA
+            )
+            
+            # 記錄動作分佈
+            if self.step_count % 50 == 0:  # 每50步記錄一次動作分佈
+                self.logger.log_action_distribution(self.step_count, action_new)
+            
+            # 記錄網絡參數統計
+            if self.step_count % 100 == 0:  # 每100步記錄一次網絡統計
+                self.logger.log_network_metrics(self.step_count, 'Actor', self.actor)
+                self.logger.log_network_metrics(self.step_count, 'Critic1', self.critic1)
+                self.logger.log_network_metrics(self.step_count, 'Critic2', self.critic2)
 
         # Soft update
         for target_param, param in zip(self.critic1_target.parameters(), self.critic1.parameters()):
@@ -200,11 +224,39 @@ class SACAgent:
             if self.step_count % self.rnd_update_freq == 0 and len(self.rnd_buffer) > 0:
                 rnd_states = self.rnd_buffer.sample(min(64, len(self.rnd_buffer)))
                 rnd_loss = self.rnd.update(rnd_states)
+                rnd_stats = self.rnd.get_statistics()
+                
+                # 記錄 RND 指標到 TensorBoard
+                if self.logger is not None:
+                    self.logger.log_rnd_update(
+                        step=self.step_count,
+                        rnd_loss=rnd_loss,
+                        mean_intrinsic_reward=rnd_stats['mean_intrinsic_reward'],
+                        std_intrinsic_reward=rnd_stats['std_intrinsic_reward'],
+                        obs_count=rnd_stats['obs_count'],
+                        rnd_buffer_size=len(self.rnd_buffer)
+                    )
+                    
+                    # 記錄獎勵分解
+                    if len(intrinsic_rewards) > 0:
+                        avg_ext_reward = reward.mean().item()
+                        avg_int_reward = intrinsic_rewards.mean().item()
+                        avg_total_reward = combined_reward.mean().item()
+                        self.logger.log_reward_breakdown(
+                            self.step_count, avg_ext_reward, avg_int_reward, avg_total_reward
+                        )
                 
                 if self.step_count % 100 == 0:  # 每100步打印一次RND統計
-                    rnd_stats = self.rnd.get_statistics()
                     print(f"[RND] 步驟 {self.step_count}: 損失={rnd_loss:.4f}, "
                           f"平均內在獎勵={rnd_stats['mean_intrinsic_reward']:.4f}")
+            
+            # 記錄 Buffer 使用情況
+            if self.logger is not None and self.step_count % 50 == 0:
+                self.logger.log_buffer_metrics(
+                    self.step_count, 
+                    len(self.buffer), 
+                    self.buffer.buffer.maxlen
+                )
     
     def get_intrinsic_reward(self, obs_raw, info):
         """獲取單個觀測的內在獎勵（用於調試）"""

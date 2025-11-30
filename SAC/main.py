@@ -1,6 +1,7 @@
 from sac_agent import SACAgent
 from utils import Preprocessor
 from sai_rl import SAIClient
+from tensorboard_logger import SAC_RND_TensorBoardLogger
 import time
 import numpy as np
 
@@ -15,15 +16,40 @@ obs = Preprocessor().modify_state(obs_raw, info)
 obs_dim = obs.shape[-1] if len(obs.shape) > 1 else obs.shape[0]
 act_dim = env.action_space.shape[0]
 
-# 創建帶有RND模組的SAC代理
-agent = SACAgent(obs_dim, act_dim, env, use_rnd=True, rnd_scale=0.1)
+# 創建 TensorBoard Logger
+logger = SAC_RND_TensorBoardLogger(
+    log_dir="tensorboard_logs",
+    experiment_name="SAC_RND_Soccer",
+    comment="booster_soccer_showdown"
+)
 
-print(f"=== SAC 訓練開始 ===")
+# 記錄超參數
+hyperparameters = {
+    'obs_dim': obs_dim,
+    'act_dim': act_dim,
+    'gamma': 0.99,
+    'tau': 0.005,
+    'alpha': 0.2,
+    'learning_rate': 3e-4,
+    'buffer_size': 1_000_000,
+    'batch_size': 256,
+    'rnd_scale': 0.1,
+    'rnd_update_freq': 10,
+    'total_episodes': 1000
+}
+logger.log_hyperparameters(hyperparameters)
+
+# 創建帶有RND模組和Logger的SAC代理
+agent = SACAgent(obs_dim, act_dim, env, use_rnd=True, rnd_scale=0.1, logger=logger)
+
+print(f"=== SAC + RND + TensorBoard 訓練開始 ===")
 print(f"觀測維度: {obs_dim}")
 print(f"動作維度: {act_dim}")
 print(f"Buffer 大小: {agent.buffer.__dict__['buffer'].maxlen}")
 print(f"訓練總回合數: 1000")
-print("=" * 50)
+print(f"TensorBoard 日誌: {logger.log_dir}")
+print(f"啟動 TensorBoard: tensorboard --logdir=tensorboard_logs")
+print("=" * 60)
 
 # 訓練統計
 total_rewards = []
@@ -67,6 +93,17 @@ for episode in range(1000):
     total_rewards.append(episode_reward)
     episode_lengths.append(episode_steps)
     episode_time = time.time() - episode_start_time
+    
+    # 記錄到 TensorBoard
+    logger.log_episode_summary(
+        episode=episode,
+        episode_reward=episode_reward,
+        episode_steps=episode_steps,
+        episode_time=episode_time
+    )
+    
+    # 記錄滑動平均
+    logger.log_moving_averages(episode, total_rewards, episode_lengths)
     
     # 每 10 回合打印詳細資訊
     if episode % 10 == 0:
@@ -112,14 +149,53 @@ print(f"總平均獎勵: {np.mean(total_rewards):.2f}")
 print(f"最佳獎勵: {np.max(total_rewards):.2f}")
 print(f"最後100回合平均獎勵: {np.mean(total_rewards[-100:]):.2f}")
 
+# 記錄最終學習曲線和統計
+final_metrics = {
+    'Final_Average_Reward': np.mean(total_rewards),
+    'Final_Best_Reward': np.max(total_rewards),
+    'Final_Last100_Average': np.mean(total_rewards[-100:]) if len(total_rewards) >= 100 else np.mean(total_rewards),
+    'Total_Training_Time': total_time,
+    'Episodes_Completed': len(total_rewards)
+}
+logger.log_learning_curves(len(total_rewards), final_metrics)
+
 # 保存 RND 模型
 if agent.use_rnd:
     agent.save_rnd_model("rnd_model.pth")
     final_rnd_stats = agent.rnd.get_statistics()
+    
+    # 記錄 RND 最終統計到 TensorBoard
+    logger.log_text("Final_RND_Statistics", f"""
+    RND 最終統計:
+    - 觀測處理次數: {final_rnd_stats['obs_count']}
+    - 最終平均內在獎勵: {final_rnd_stats['mean_intrinsic_reward']:.4f}
+    - 內在獎勵標準差: {final_rnd_stats['std_intrinsic_reward']:.4f}
+    - RND Buffer 大小: {len(agent.rnd_buffer)}
+    """)
+    
     print(f"\nRND 最終統計:")
     print(f"- 觀測處理次數: {final_rnd_stats['obs_count']}")
     print(f"- 最終平均內在獎勵: {final_rnd_stats['mean_intrinsic_reward']:.4f}")
     print(f"- 內在獎勵標準差: {final_rnd_stats['std_intrinsic_reward']:.4f}")
     print(f"- RND Buffer 大小: {len(agent.rnd_buffer)}")
 
-print("=" * 50)
+# 記錄訓練總結到 TensorBoard
+training_summary = f"""
+=== 訓練總結 ===
+- 總訓練時間: {total_time/3600:.2f} 小時
+- 平均每回合時間: {total_time/1000:.2f} 秒
+- 總平均獎勵: {np.mean(total_rewards):.2f}
+- 最佳獎勵: {np.max(total_rewards):.2f}
+- 最後100回合平均獎勵: {np.mean(total_rewards[-100:]):.2f}
+- 使用 RND: {'是' if agent.use_rnd else '否'}
+- TensorBoard 日誌: {logger.log_dir}
+"""
+logger.log_text("Training_Summary", training_summary)
+
+# 關閉 TensorBoard Logger
+logger.close()
+
+print("=" * 60)
+print("✅ 訓練完成！TensorBoard 日誌已保存")
+print(f"📊 查看訓練結果: tensorboard --logdir=tensorboard_logs")
+print("=" * 60)
