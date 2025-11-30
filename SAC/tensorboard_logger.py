@@ -72,18 +72,18 @@ class TensorBoardLogger:
         for name, param in network.named_parameters():
             if param.grad is not None:
                 # 參數統計
-                self.writer.add_histogram(f'{network_name}/{name}', param.data, step)
-                self.writer.add_scalar(f'{network_name}/{name}_mean', param.data.mean(), step)
-                self.writer.add_scalar(f'{network_name}/{name}_std', param.data.std(), step)
+                self.writer.add_histogram(f'{network_name}/{name}', param.data.detach().cpu(), step)
+                self.writer.add_scalar(f'{network_name}/{name}_mean', param.data.detach().mean().item(), step)
+                self.writer.add_scalar(f'{network_name}/{name}_std', param.data.detach().std().item(), step)
                 
                 # 梯度統計
-                self.writer.add_histogram(f'{network_name}/{name}_grad', param.grad.data, step)
-                self.writer.add_scalar(f'{network_name}/{name}_grad_norm', param.grad.data.norm(), step)
+                self.writer.add_histogram(f'{network_name}/{name}_grad', param.grad.data.detach().cpu(), step)
+                self.writer.add_scalar(f'{network_name}/{name}_grad_norm', param.grad.data.detach().norm().item(), step)
     
     def log_action_distribution(self, step, actions):
         """記錄動作分佈"""
         if isinstance(actions, torch.Tensor):
-            actions = actions.cpu().numpy()
+            actions = actions.detach().cpu().numpy()
         
         # 記錄每個動作維度的統計
         for i in range(actions.shape[-1]):
@@ -198,9 +198,9 @@ class SAC_RND_TensorBoardLogger(TensorBoardLogger):
             'Actor_Loss': actor_loss,
             'Critic1_Loss': critic1_loss,
             'Critic2_Loss': critic2_loss,
-            'Q1_Value_Mean': q1_value.mean() if q1_value is not None else None,
-            'Q2_Value_Mean': q2_value.mean() if q2_value is not None else None,
-            'Log_Prob_Mean': log_prob.mean() if log_prob is not None else None,
+            'Q1_Value_Mean': q1_value.detach().mean().item() if q1_value is not None else None,
+            'Q2_Value_Mean': q2_value.detach().mean().item() if q2_value is not None else None,
+            'Log_Prob_Mean': log_prob.detach().mean().item() if log_prob is not None else None,
             'Alpha': alpha
         }
         

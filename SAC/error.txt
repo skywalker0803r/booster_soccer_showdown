@@ -1,0 +1,26 @@
+│                                                                                                  │
+│ /content/booster_soccer_showdown/SAC/tensorboard_logger.py:86 in log_action_distribution         │
+│                                                                                                  │
+│    83 │   def log_action_distribution(self, step, actions):                                      │
+│    84 │   │   """記錄動作分佈"""                                                                 │
+│    85 │   │   if isinstance(actions, torch.Tensor):                                              │
+│ ❱  86 │   │   │   actions = actions.cpu().numpy()                                                │
+│    87 │   │                                                                                      │
+│    88 │   │   # 記錄每個動作維度的統計                                                           │
+│    89 │   │   for i in range(actions.shape[-1]):                                                 │
+│                                                                                                  │
+│ ╭───────────────────────────────────── locals ──────────────────────────────────────╮            │
+│ │ actions = tensor([[ 0.9960, -1.0000,  1.0000,  ...,  1.0000,  0.9956, -1.0000],   │            │
+│ │           │   │   [-1.0000, -0.9989, -1.0000,  ...,  1.0000,  1.0000,  1.0000],   │            │
+│ │           │   │   [-1.0000, -0.9999, -0.9998,  ...,  1.0000, -0.9725, -1.0000],   │            │
+│ │           │   │   ...,                                                            │            │
+│ │           │   │   [-1.0000, -1.0000, -1.0000,  ...,  1.0000, -1.0000,  1.0000],   │            │
+│ │           │   │   [-1.0000, -0.9998, -0.9981,  ...,  0.9979, -0.9996,  0.9983],   │            │
+│ │           │   │   [-1.0000, -1.0000,  0.9848,  ...,  0.8726, -1.0000, -1.0000]],  │            │
+│ │           │      device='cuda:0', grad_fn=<TanhBackward0>)                        │            │
+│ │    self = <tensorboard_logger.SAC_RND_TensorBoardLogger object at 0x7a9db14073b0> │            │
+│ │    step = 50                                                                      │            │
+│ ╰───────────────────────────────────────────────────────────────────────────────────╯            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+RuntimeError: Can't call numpy() on Tensor that requires grad. Use tensor.detach().numpy() instead.
+/content/booster_soccer_showdown/SAC# 
