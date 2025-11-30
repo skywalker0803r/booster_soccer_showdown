@@ -2,6 +2,7 @@ from sac_agent import SACAgent
 from utils import Preprocessor
 from sai_rl import SAIClient
 from tensorboard_logger import SAC_RND_TensorBoardLogger
+from config import ExperimentConfig, DEFAULT_CONFIG
 # from gdrive_saver import GoogleDriveAutoSaver  # Colab 環境不需要
 import time
 import numpy as np
@@ -12,6 +13,11 @@ sai = SAIClient(
     api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv",
 )
 env = sai.make_env()
+# === 實驗配置 ===
+# 使用統一的配置系統
+config = DEFAULT_CONFIG
+config.experiment_name = "SAC_RND_Soccer_Colab"
+
 obs_raw,info = env.reset()
 obs = Preprocessor().modify_state(obs_raw, info)
 obs_dim = obs.shape[-1] if len(obs.shape) > 1 else obs.shape[0]
@@ -19,40 +25,33 @@ act_dim = env.action_space.shape[0]
 
 # 創建 TensorBoard Logger
 logger = SAC_RND_TensorBoardLogger(
-    log_dir="tensorboard_logs",
-    experiment_name="SAC_RND_Soccer",
-    comment="booster_soccer_showdown"
+    log_dir=config.training.tensorboard_log_dir,
+    experiment_name=config.experiment_name,
+    comment="colab_unified_config"
 )
 
 # Colab 環境直接使用本地保存（文件會自動同步到 Google Drive）
 gdrive_saver = None
 print("💾 Colab 模式：使用本地保存（文件自動同步到 Google Drive）")
 
-# 記錄超參數
-hyperparameters = {
+# 記錄所有超參數（從配置對象獲取）
+all_hyperparameters = config.get_all_hyperparameters()
+all_hyperparameters.update({
     'obs_dim': obs_dim,
     'act_dim': act_dim,
-    'gamma': 0.99,
-    'tau': 0.005,
-    'alpha': 0.2,
-    'learning_rate': 3e-4,
-    'buffer_size': 1_000_000,
-    'batch_size': 256,
-    'rnd_scale': 0.1,
-    'rnd_update_freq': 10,
-    'total_episodes': 1000,
     'environment': 'colab'
-}
-logger.log_hyperparameters(hyperparameters)
+})
+logger.log_hyperparameters(all_hyperparameters)
 
-# 創建帶有RND模組、Logger和Google Drive保存器的SAC代理
-agent = SACAgent(obs_dim, act_dim, env, use_rnd=True, rnd_scale=0.1, logger=logger, gdrive_saver=gdrive_saver)
+# 打印配置摘要
+config.print_config()
 
-print(f"=== SAC + RND + TensorBoard 訓練開始 ===")
+# 創建 SAC 代理（使用統一配置）
+agent = SACAgent(obs_dim, act_dim, env, config=config, logger=logger, gdrive_saver=gdrive_saver)
+
 print(f"觀測維度: {obs_dim}")
 print(f"動作維度: {act_dim}")
 print(f"Buffer 大小: {agent.buffer.__dict__['buffer'].maxlen}")
-print(f"訓練總回合數: 1000")
 print(f"TensorBoard 日誌: {logger.log_dir}")
 print(f"啟動 TensorBoard: tensorboard --logdir=tensorboard_logs")
 
@@ -66,7 +65,7 @@ total_rewards = []
 episode_lengths = []
 start_time = time.time()
 
-for episode in range(1000):
+for episode in range(config.training.total_episodes):
     obs_raw, info = env.reset()
     done = False
     episode_reward = 0

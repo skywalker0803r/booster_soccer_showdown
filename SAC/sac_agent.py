@@ -9,25 +9,19 @@ import random
 from utils import Preprocessor, action_function
 from rnd_module import RNDModule  # 移除 RNDBuffer 導入
 
-# --- SAC Hyperparameters ---
-GAMMA = 0.99
-TAU = 0.005
-ALPHA = 0.2
-LR = 3e-4
-BUFFER_SIZE = 1_000_000
-BATCH_SIZE = 256
+# 設備配置
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # --- Replay Buffer ---
 class ReplayBuffer:
-    def __init__(self, size=BUFFER_SIZE):
+    def __init__(self, size=1000000):
         self.buffer = deque(maxlen=size)
 
     def push(self, state, action, reward, next_state, done):
         self.buffer.append((state, action, reward, next_state, done))
 
-    def sample(self, batch_size=BATCH_SIZE):
+    def sample(self, batch_size=256):
         batch = random.sample(self.buffer, batch_size)
         state, action, reward, next_state, done = map(np.stack, zip(*batch))
         
@@ -49,12 +43,12 @@ class ReplayBuffer:
 
 # --- Actor Network ---
 class Actor(nn.Module):
-    def __init__(self, obs_dim, act_dim):
+    def __init__(self, obs_dim, act_dim, hidden_dim=256):
         super().__init__()
-        self.fc1 = nn.Linear(obs_dim, 256)
-        self.fc2 = nn.Linear(256, 256)
-        self.mean = nn.Linear(256, act_dim)
-        self.log_std = nn.Linear(256, act_dim)
+        self.fc1 = nn.Linear(obs_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.mean = nn.Linear(hidden_dim, act_dim)
+        self.log_std = nn.Linear(hidden_dim, act_dim)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -71,11 +65,11 @@ class Actor(nn.Module):
 
 # --- Critic Network ---
 class Critic(nn.Module):
-    def __init__(self, obs_dim, act_dim):
+    def __init__(self, obs_dim, act_dim, hidden_dim=256):
         super().__init__()
-        self.fc1 = nn.Linear(obs_dim + act_dim, 256)
-        self.fc2 = nn.Linear(256, 256)
-        self.q = nn.Linear(256, 1)
+        self.fc1 = nn.Linear(obs_dim + act_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.q = nn.Linear(hidden_dim, 1)
 
     def forward(self, obs, act):
         x = torch.cat([obs, act], dim=1)
@@ -86,42 +80,52 @@ class Critic(nn.Module):
 
 # --- SAC Agent ---
 class SACAgent:
-    def __init__(self, obs_dim, act_dim, env, use_rnd=True, rnd_scale=0.1, logger=None, gdrive_saver=None):
+    def __init__(self, obs_dim, act_dim, env, config, logger=None, gdrive_saver=None):
         self.env = env
         self.preproc = Preprocessor()
         self.obs_dim = obs_dim
         self.act_dim = act_dim
-        self.use_rnd = use_rnd
+        self.config = config
         self.logger = logger
         self.gdrive_saver = gdrive_saver
+        
+        # 從配置中提取參數
+        self.sac_config = config.sac
+        self.rnd_config = config.rnd
+        self.use_rnd = config.rnd.use_rnd
         
         # 跟蹤最佳性能
         self.best_episode_reward = float('-inf')
         self.current_episode = 0
 
         # Networks
-        self.actor = Actor(obs_dim, act_dim).to(DEVICE)
-        self.critic1 = Critic(obs_dim, act_dim).to(DEVICE)
-        self.critic2 = Critic(obs_dim, act_dim).to(DEVICE)
-        self.critic1_target = Critic(obs_dim, act_dim).to(DEVICE)
-        self.critic2_target = Critic(obs_dim, act_dim).to(DEVICE)
+        self.actor = Actor(obs_dim, act_dim, self.sac_config.actor_hidden_dim).to(DEVICE)
+        self.critic1 = Critic(obs_dim, act_dim, self.sac_config.critic_hidden_dim).to(DEVICE)
+        self.critic2 = Critic(obs_dim, act_dim, self.sac_config.critic_hidden_dim).to(DEVICE)
+        self.critic1_target = Critic(obs_dim, act_dim, self.sac_config.critic_hidden_dim).to(DEVICE)
+        self.critic2_target = Critic(obs_dim, act_dim, self.sac_config.critic_hidden_dim).to(DEVICE)
         self.critic1_target.load_state_dict(self.critic1.state_dict())
         self.critic2_target.load_state_dict(self.critic2.state_dict())
 
         # Optimizers
-        self.actor_opt = optim.Adam(self.actor.parameters(), lr=LR)
-        self.critic1_opt = optim.Adam(self.critic1.parameters(), lr=LR)
-        self.critic2_opt = optim.Adam(self.critic2.parameters(), lr=LR)
+        self.actor_opt = optim.Adam(self.actor.parameters(), lr=self.sac_config.learning_rate)
+        self.critic1_opt = optim.Adam(self.critic1.parameters(), lr=self.sac_config.learning_rate)
+        self.critic2_opt = optim.Adam(self.critic2.parameters(), lr=self.sac_config.learning_rate)
 
         # Replay buffer
-        self.buffer = ReplayBuffer()
+        self.buffer = ReplayBuffer(self.sac_config.buffer_size)
         
         # RND 模組
         if self.use_rnd:
-            self.rnd = RNDModule(obs_dim, intrinsic_reward_scale=rnd_scale)
-            self.rnd_update_freq = 10  # 每10步更新一次RND
+            self.rnd = RNDModule(
+                input_dim=obs_dim,
+                hidden_dim=self.rnd_config.hidden_dim,
+                lr=self.rnd_config.learning_rate,
+                intrinsic_reward_scale=self.rnd_config.intrinsic_reward_scale
+            )
+            self.rnd_update_freq = self.rnd_config.update_frequency
             self.step_count = 0
-            print(f"RND 模組已啟用 - 獎勵縮放: {rnd_scale}")
+            print(f"RND 模組已啟用 - 獎勵縮放: {self.rnd_config.intrinsic_reward_scale}")
             print("✅ RND 使用 next_state 計算內在獎勵（符合原始論文）")
         else:
             self.rnd = None
@@ -139,13 +143,13 @@ class SACAgent:
         return action_function(action, self.env)
 
     def update(self):
-        if len(self.buffer) < BATCH_SIZE:
+        if len(self.buffer) < self.sac_config.batch_size:
             return
         
         # 更新步數計數器
         self.step_count += 1
 
-        state, action, reward, next_state, done = self.buffer.sample()
+        state, action, reward, next_state, done = self.buffer.sample(self.sac_config.batch_size)
 
         # 計算內在獎勵（如果啟用RND）- 使用 next_state 根據原始論文
         if self.use_rnd and self.rnd is not None:
@@ -165,8 +169,8 @@ class SACAgent:
             next_action, next_log_prob = self.actor(next_state)
             q1_target = self.critic1_target(next_state, next_action)
             q2_target = self.critic2_target(next_state, next_action)
-            q_target = torch.min(q1_target, q2_target) - ALPHA * next_log_prob
-            y = combined_reward + (1 - done) * GAMMA * q_target
+            q_target = torch.min(q1_target, q2_target) - self.sac_config.alpha * next_log_prob
+            y = combined_reward + (1 - done) * self.sac_config.gamma * q_target
 
         # Critic update
         q1 = self.critic1(state, action)
@@ -185,7 +189,7 @@ class SACAgent:
         q1_new = self.critic1(state, action_new)
         q2_new = self.critic2(state, action_new)
         q_new = torch.min(q1_new, q2_new)
-        actor_loss = (ALPHA * log_prob - q_new).mean()
+        actor_loss = (self.sac_config.alpha * log_prob - q_new).mean()
         self.actor_opt.zero_grad()
         actor_loss.backward()
         self.actor_opt.step()
@@ -200,7 +204,7 @@ class SACAgent:
                 q1_value=q1,
                 q2_value=q2,
                 log_prob=log_prob,
-                alpha=ALPHA
+                alpha=self.sac_config.alpha
             )
             
             # 記錄動作分佈
@@ -215,9 +219,9 @@ class SACAgent:
 
         # Soft update
         for target_param, param in zip(self.critic1_target.parameters(), self.critic1.parameters()):
-            target_param.data.copy_(TAU * param.data + (1 - TAU) * target_param.data)
+            target_param.data.copy_(self.sac_config.tau * param.data + (1 - self.sac_config.tau) * target_param.data)
         for target_param, param in zip(self.critic2_target.parameters(), self.critic2.parameters()):
-            target_param.data.copy_(TAU * param.data + (1 - TAU) * target_param.data)
+            target_param.data.copy_(self.sac_config.tau * param.data + (1 - self.sac_config.tau) * target_param.data)
         
         # 更新 RND 網絡 - 修正：使用 next_state 並直接從主 buffer 採樣
         if self.use_rnd and self.rnd is not None:
