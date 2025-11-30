@@ -29,6 +29,13 @@ class ReplayBuffer:
     def sample(self, batch_size=BATCH_SIZE):
         batch = random.sample(self.buffer, batch_size)
         state, action, reward, next_state, done = map(np.stack, zip(*batch))
+        
+        # Ensure states have correct shape (batch_size, feature_dim)
+        if len(state.shape) == 3:
+            state = state.squeeze(1)  # Remove extra dimension if present
+        if len(next_state.shape) == 3:
+            next_state = next_state.squeeze(1)  # Remove extra dimension if present
+            
         return (torch.FloatTensor(state).to(DEVICE),
                 torch.FloatTensor(action).to(DEVICE),
                 torch.FloatTensor(reward).unsqueeze(1).to(DEVICE),
@@ -103,7 +110,10 @@ class SACAgent:
 
     def select_action(self, obs_raw, info):
         obs = self.preproc.modify_state(obs_raw, info)
-        obs_tensor = torch.FloatTensor(obs).to(DEVICE)
+        # Ensure obs is properly shaped - flatten if needed and add batch dimension if missing
+        if len(obs.shape) > 1:
+            obs = obs.flatten()
+        obs_tensor = torch.FloatTensor(obs).unsqueeze(0).to(DEVICE)  # Add batch dimension
         with torch.no_grad():
             action, _ = self.actor(obs_tensor)
         action = action.cpu().numpy()[0]
