@@ -7,7 +7,7 @@ from collections import deque
 import random
 
 from utils import Preprocessor, action_function
-from rnd_module import RNDModule, RNDBuffer
+from rnd_module import RNDModule  # 移除 RNDBuffer 導入
 
 # --- SAC Hyperparameters ---
 GAMMA = 0.99
@@ -119,10 +119,10 @@ class SACAgent:
         # RND 模組
         if self.use_rnd:
             self.rnd = RNDModule(obs_dim, intrinsic_reward_scale=rnd_scale)
-            self.rnd_buffer = RNDBuffer(maxlen=10000)
             self.rnd_update_freq = 10  # 每10步更新一次RND
             self.step_count = 0
             print(f"RND 模組已啟用 - 獎勵縮放: {rnd_scale}")
+            print("✅ RND 使用 next_state 計算內在獎勵（符合原始論文）")
         else:
             self.rnd = None
             print("RND 模組未啟用")
@@ -147,12 +147,12 @@ class SACAgent:
 
         state, action, reward, next_state, done = self.buffer.sample()
 
-        # 計算內在獎勵（如果啟用RND）
+        # 計算內在獎勵（如果啟用RND）- 使用 next_state 根據原始論文
         if self.use_rnd and self.rnd is not None:
             with torch.no_grad():
                 intrinsic_rewards = []
-                for i in range(state.shape[0]):
-                    intrinsic_reward = self.rnd.compute_intrinsic_reward(state[i])
+                for i in range(next_state.shape[0]):  # 修正：使用 next_state
+                    intrinsic_reward = self.rnd.compute_intrinsic_reward(next_state[i])
                     intrinsic_rewards.append(intrinsic_reward[0])
                 
                 intrinsic_rewards = torch.FloatTensor(intrinsic_rewards).unsqueeze(1).to(DEVICE)
@@ -219,15 +219,12 @@ class SACAgent:
         for target_param, param in zip(self.critic2_target.parameters(), self.critic2.parameters()):
             target_param.data.copy_(TAU * param.data + (1 - TAU) * target_param.data)
         
-        # 更新 RND 網絡
+        # 更新 RND 網絡 - 修正：使用 next_state 並直接從主 buffer 採樣
         if self.use_rnd and self.rnd is not None:
-            # 將當前批次的狀態加入 RND buffer
-            for i in range(state.shape[0]):
-                self.rnd_buffer.push(state[i])
-            
             # 定期更新 RND 網絡
-            if self.step_count % self.rnd_update_freq == 0 and len(self.rnd_buffer) > 0:
-                rnd_states = self.rnd_buffer.sample(min(64, len(self.rnd_buffer)))
+            if self.step_count % self.rnd_update_freq == 0:
+                # 使用 next_state 來更新 RND 預測網絡（符合原始論文）
+                rnd_states = [next_state[i] for i in range(next_state.shape[0])]
                 rnd_loss = self.rnd.update(rnd_states)
                 rnd_stats = self.rnd.get_statistics()
                 
@@ -239,7 +236,7 @@ class SACAgent:
                         mean_intrinsic_reward=rnd_stats['mean_intrinsic_reward'],
                         std_intrinsic_reward=rnd_stats['std_intrinsic_reward'],
                         obs_count=rnd_stats['obs_count'],
-                        rnd_buffer_size=len(self.rnd_buffer)
+                        rnd_buffer_size=None  # 不再使用獨立的 RND buffer
                     )
                     
                     # 記錄獎勵分解

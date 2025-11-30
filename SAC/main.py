@@ -129,8 +129,7 @@ for episode in range(1000):
         rnd_info = ""
         if agent.use_rnd and agent.rnd is not None:
             rnd_stats = agent.rnd.get_statistics()
-            rnd_buffer_size = len(agent.rnd_buffer) if hasattr(agent, 'rnd_buffer') else 0
-            rnd_info = f" | RND內在獎勵: {rnd_stats['mean_intrinsic_reward']:6.3f} | RND_Buffer: {rnd_buffer_size:4d}"
+            rnd_info = f" | RND內在獎勵: {rnd_stats['mean_intrinsic_reward']:6.3f} | RND觀測數: {rnd_stats['obs_count']:6d}"
         
         print(f"回合 {episode:4d} | "
               f"獎勵: {episode_reward:8.2f} | "
@@ -197,7 +196,7 @@ if agent.use_rnd:
     print(f"- 觀測處理次數: {final_rnd_stats['obs_count']}")
     print(f"- 最終平均內在獎勵: {final_rnd_stats['mean_intrinsic_reward']:.4f}")
     print(f"- 內在獎勵標準差: {final_rnd_stats['std_intrinsic_reward']:.4f}")
-    print(f"- RND Buffer 大小: {len(agent.rnd_buffer)}")
+    print(f"- RND 更新頻率: 每 {agent.rnd_update_freq} 步")
 
 # 記錄訓練總結到 TensorBoard
 training_summary = f"""
