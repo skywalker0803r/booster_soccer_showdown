@@ -74,6 +74,10 @@ class RNDModule:
             obs_np = obs.cpu().numpy()
         else:
             obs_np = np.array(obs)
+        
+        # 確保觀測是一維的
+        if len(obs_np.shape) > 1:
+            obs_np = obs_np.flatten()
             
         # 更新運行統計
         self.obs_count += 1
@@ -93,12 +97,14 @@ class RNDModule:
     def compute_intrinsic_reward(self, state):
         """計算內在獎勵（好奇心獎勵）"""
         with torch.no_grad():
-            # 確保是正確的形狀
-            if len(state.shape) == 1:
-                state = state.unsqueeze(0)
-                
-            # 歸一化觀測
+            # 歸一化觀測 (normalize_observation 內部已處理維度)
             normalized_state = self.normalize_observation(state)
+            
+            # 轉換為張量並確保正確的批次維度
+            if not isinstance(normalized_state, torch.Tensor):
+                normalized_state = torch.FloatTensor(normalized_state).to(DEVICE)
+            
+            # 確保有批次維度
             if len(normalized_state.shape) == 1:
                 normalized_state = normalized_state.unsqueeze(0)
             
@@ -128,9 +134,14 @@ class RNDModule:
         batch_states = [states[i] for i in batch_indices]
         
         # 轉換為張量並歸一化
-        state_tensor = torch.stack([
-            self.normalize_observation(state) for state in batch_states
-        ]).to(DEVICE)
+        normalized_states = []
+        for state in batch_states:
+            norm_state = self.normalize_observation(state)
+            if not isinstance(norm_state, torch.Tensor):
+                norm_state = torch.FloatTensor(norm_state)
+            normalized_states.append(norm_state)
+        
+        state_tensor = torch.stack(normalized_states).to(DEVICE)
         
         # 前向傳播
         target_output, predictor_output = self.rnd_network(state_tensor)
