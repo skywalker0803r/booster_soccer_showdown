@@ -15,8 +15,7 @@ act_dim = env.action_space.shape[0]
 agent = SACAgent(obs_dim, act_dim, env)
 
 for episode in range(1000):
-    obs_raw = env.reset()
-    info = {}
+    obs_raw,info = env.reset()
     done = False
     while not done:
         action = agent.select_action(obs_raw, info)
