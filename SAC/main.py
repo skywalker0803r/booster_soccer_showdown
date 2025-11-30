@@ -19,7 +19,8 @@ for episode in range(1000):
     done = False
     while not done:
         action = agent.select_action(obs_raw, info)
-        next_obs_raw, reward, done, info = env.step(action)
+        next_obs_raw, reward, terminated, truncated, info = env.step(action)
+        done = terminated or truncated
         next_obs = Preprocessor().modify_state(next_obs_raw, info)
         agent.buffer.push(
             Preprocessor().modify_state(obs_raw, info),
