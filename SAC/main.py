@@ -8,8 +8,7 @@ sai = SAIClient(
     api_key="sai_LFcuaCZiqEkUbNVolQ3wbk5yU7H11jfv",
 )
 env = sai.make_env()
-obs_raw = env.reset()
-info = {}
+obs_raw,info = env.reset()
 obs_dim = len(Preprocessor().modify_state(obs_raw, info)[0])
 act_dim = env.action_space.shape[0]
 
