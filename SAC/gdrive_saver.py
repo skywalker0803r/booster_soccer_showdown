@@ -165,6 +165,7 @@ class GoogleDriveAutoSaver:
     def should_save(self, episode, reward):
         """判斷是否應該保存模型"""
         if not self.drive or not self.folder_id:
+            # print(f"📝 跳過 Google Drive 保存 (未認證): 回合 {episode}, 獎勵 {reward:.2f}")
             return False
         
         # 檢查保存間隔

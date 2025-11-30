@@ -2,7 +2,7 @@ from sac_agent import SACAgent
 from utils import Preprocessor
 from sai_rl import SAIClient
 from tensorboard_logger import SAC_RND_TensorBoardLogger
-from gdrive_saver import GoogleDriveAutoSaver
+# from gdrive_saver import GoogleDriveAutoSaver  # Colab 環境不需要
 import time
 import numpy as np
 
@@ -24,13 +24,9 @@ logger = SAC_RND_TensorBoardLogger(
     comment="booster_soccer_showdown"
 )
 
-# 創建 Google Drive 自動保存器
-gdrive_saver = GoogleDriveAutoSaver(
-    save_folder_name="SAC_RND_Soccer_Models",
-    save_interval=50,  # 每50回合檢查是否保存
-    keep_best_n=10,    # 保留最佳10個模型
-    auto_auth=True     # 自動認證
-)
+# Colab 環境直接使用本地保存（文件會自動同步到 Google Drive）
+gdrive_saver = None
+print("💾 Colab 模式：使用本地保存（文件自動同步到 Google Drive）")
 
 # 記錄超參數
 hyperparameters = {
@@ -45,8 +41,7 @@ hyperparameters = {
     'rnd_scale': 0.1,
     'rnd_update_freq': 10,
     'total_episodes': 1000,
-    'gdrive_save_interval': 50,
-    'gdrive_keep_best': 10
+    'environment': 'colab'
 }
 logger.log_hyperparameters(hyperparameters)
 
@@ -60,6 +55,10 @@ print(f"Buffer 大小: {agent.buffer.__dict__['buffer'].maxlen}")
 print(f"訓練總回合數: 1000")
 print(f"TensorBoard 日誌: {logger.log_dir}")
 print(f"啟動 TensorBoard: tensorboard --logdir=tensorboard_logs")
+
+# Colab 環境狀態
+print(f"💾 保存模式: Colab 本地保存（自動同步到 Google Drive）")
+
 print("=" * 60)
 
 # 訓練統計
@@ -154,20 +153,10 @@ for episode in range(1000):
         print(f"過去100回合 - 平均獎勵: {avg_reward_100:.2f}, 最高: {max_reward_100:.2f}, 最低: {min_reward_100:.2f}")
         print(f"Buffer 使用率: {len(agent.buffer)/agent.buffer.__dict__['buffer'].maxlen*100:.1f}%")
         
-        # 顯示 Google Drive 保存統計
-        gdrive_stats = agent.get_gdrive_statistics()
-        if gdrive_stats:
-            print(f"Google Drive 保存統計:")
-            print(f"  - 已保存模型數: {gdrive_stats['total_saved']}")
-            print(f"  - 最佳保存獎勵: {gdrive_stats['best_reward']:.2f}")
-            print(f"  - 最後保存回合: {gdrive_stats['last_save_episode']}")
-            if 'latest_save' in gdrive_stats:
-                latest = gdrive_stats['latest_save']
-                print(f"  - 最新保存: 回合 {latest['episode']}, 獎勵 {latest['reward']:.2f}")
-        
         # 保存本地檢查點
         checkpoint_name = f"checkpoint_episode_{episode}.pth"
         agent.save_checkpoint(checkpoint_name, episode, episode_reward)
+        print(f"📁 本地檢查點已保存: {checkpoint_name}")
         
         print("=" * 60)
 
@@ -223,38 +212,13 @@ training_summary = f"""
 """
 logger.log_text("Training_Summary", training_summary)
 
-# 強制保存最終模型到 Google Drive
+# 保存最終模型
 print("\n=== 保存最終模型 ===")
-final_save_success = agent.force_save_to_gdrive("training_completed")
-if final_save_success:
-    print("💾 最終模型已保存到 Google Drive")
 
 # 保存最終本地檢查點
 final_checkpoint = f"final_checkpoint_{len(total_rewards)}episodes.pth"
 agent.save_checkpoint(final_checkpoint)
-
-# 顯示最終 Google Drive 統計
-final_gdrive_stats = agent.get_gdrive_statistics()
-if final_gdrive_stats:
-    print(f"\n📊 Google Drive 最終統計:")
-    print(f"  - 總保存模型數: {final_gdrive_stats['total_saved']}")
-    print(f"  - 最佳模型獎勵: {final_gdrive_stats['best_reward']:.2f}")
-    if final_gdrive_stats['total_saved'] > 0:
-        print(f"  - 平均保存獎勵: {final_gdrive_stats.get('average_reward', 0):.2f}")
-        latest_save = final_gdrive_stats.get('latest_save', {})
-        if latest_save:
-            print(f"  - 最後保存: 回合 {latest_save.get('episode', 0)}, 獎勵 {latest_save.get('reward', 0):.2f}")
-
-# 記錄 Google Drive 統計到 TensorBoard
-if final_gdrive_stats:
-    gdrive_summary = f"""
-    Google Drive 保存總結:
-    - 總保存模型數: {final_gdrive_stats['total_saved']}
-    - 最佳模型獎勵: {final_gdrive_stats['best_reward']:.2f}
-    - 保存間隔: 每 {gdrive_saver.save_interval} 回合
-    - 保留模型數: {gdrive_saver.keep_best_n}
-    """
-    logger.log_text("GoogleDrive_Final_Summary", gdrive_summary)
+print(f"💾 最終檢查點已保存: {final_checkpoint}")
 
 # 關閉 TensorBoard Logger
 logger.close()
@@ -263,5 +227,5 @@ print("\n" + "=" * 70)
 print("✅ 訓練完成！所有數據已保存")
 print(f"📊 TensorBoard: tensorboard --logdir=tensorboard_logs")
 print(f"💾 本地檢查點: {final_checkpoint}")
-print(f"☁️  Google Drive: {final_gdrive_stats['total_saved'] if final_gdrive_stats else 0} 個模型已上傳")
+print(f"☁️  Colab 文件會自動同步到 Google Drive")
 print("=" * 70)
