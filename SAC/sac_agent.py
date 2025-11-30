@@ -86,13 +86,18 @@ class Critic(nn.Module):
 
 # --- SAC Agent ---
 class SACAgent:
-    def __init__(self, obs_dim, act_dim, env, use_rnd=True, rnd_scale=0.1, logger=None):
+    def __init__(self, obs_dim, act_dim, env, use_rnd=True, rnd_scale=0.1, logger=None, gdrive_saver=None):
         self.env = env
         self.preproc = Preprocessor()
         self.obs_dim = obs_dim
         self.act_dim = act_dim
         self.use_rnd = use_rnd
         self.logger = logger
+        self.gdrive_saver = gdrive_saver
+        
+        # 跟蹤最佳性能
+        self.best_episode_reward = float('-inf')
+        self.current_episode = 0
 
         # Networks
         self.actor = Actor(obs_dim, act_dim).to(DEVICE)
@@ -282,4 +287,149 @@ class SACAgent:
             self.rnd.load(filepath)
         else:
             print("RND 模組未啟用，無法加載")
+    
+    def update_episode_performance(self, episode, episode_reward):
+        """更新回合性能並觸發自動保存"""
+        self.current_episode = episode
+        
+        # 檢查是否是新的最佳性能
+        is_new_best = episode_reward > self.best_episode_reward
+        if is_new_best:
+            self.best_episode_reward = episode_reward
+        
+        # 觸發 Google Drive 自動保存
+        if self.gdrive_saver is not None:
+            try:
+                # 準備保存指標
+                metrics = {
+                    'episode': episode,
+                    'reward': episode_reward,
+                    'is_best': is_new_best,
+                    'step_count': self.step_count if hasattr(self, 'step_count') else 0
+                }
+                
+                # 添加 RND 統計（如果可用）
+                if self.use_rnd and self.rnd is not None:
+                    rnd_stats = self.rnd.get_statistics()
+                    metrics.update({
+                        'rnd_mean_intrinsic_reward': rnd_stats.get('mean_intrinsic_reward', 0),
+                        'rnd_obs_count': rnd_stats.get('obs_count', 0)
+                    })
+                
+                # 嘗試保存到 Google Drive
+                saved = self.gdrive_saver.save_model(self, episode, episode_reward, metrics)
+                
+                if saved:
+                    print(f"💾 模型已自動保存到 Google Drive (回合 {episode}, 獎勵 {episode_reward:.2f})")
+                    
+                    # 記錄到 TensorBoard
+                    if self.logger is not None:
+                        self.logger.log_text("GoogleDrive_Save", 
+                                           f"回合 {episode}: 獎勵 {episode_reward:.2f} - {'最佳' if is_new_best else '定期'}保存")
+                
+            except Exception as e:
+                print(f"❌ Google Drive 自動保存失敗: {e}")
+    
+    def save_checkpoint(self, filepath, episode=None, reward=None):
+        """保存完整的訓練檢查點"""
+        if episode is None:
+            episode = self.current_episode
+        if reward is None:
+            reward = self.best_episode_reward
+            
+        checkpoint = {
+            # SAC 網絡狀態
+            'actor_state_dict': self.actor.state_dict(),
+            'critic1_state_dict': self.critic1.state_dict(),
+            'critic2_state_dict': self.critic2.state_dict(),
+            'critic1_target_state_dict': self.critic1_target.state_dict(),
+            'critic2_target_state_dict': self.critic2_target.state_dict(),
+            
+            # 優化器狀態
+            'actor_optimizer_state_dict': self.actor_opt.state_dict(),
+            'critic1_optimizer_state_dict': self.critic1_opt.state_dict(),
+            'critic2_optimizer_state_dict': self.critic2_opt.state_dict(),
+            
+            # 訓練狀態
+            'episode': episode,
+            'reward': reward,
+            'best_episode_reward': self.best_episode_reward,
+            'step_count': getattr(self, 'step_count', 0),
+            
+            # 模型配置
+            'obs_dim': self.obs_dim,
+            'act_dim': self.act_dim,
+            'use_rnd': self.use_rnd,
+        }
+        
+        # 添加 RND 狀態（如果啟用）
+        if self.use_rnd and self.rnd is not None:
+            checkpoint['rnd_state'] = {
+                'network_state_dict': self.rnd.rnd_network.state_dict(),
+                'optimizer_state_dict': self.rnd.optimizer.state_dict(),
+                'running_mean': self.rnd.running_mean,
+                'running_var': self.rnd.running_var,
+                'obs_count': self.rnd.obs_count,
+                'reward_history': list(self.rnd.reward_history)
+            }
+        
+        torch.save(checkpoint, filepath)
+        print(f"✅ 檢查點已保存: {filepath}")
+        
+        return checkpoint
+    
+    def load_checkpoint(self, filepath):
+        """加載完整的訓練檢查點"""
+        try:
+            checkpoint = torch.load(filepath, map_location=DEVICE)
+            
+            # 恢復 SAC 網絡狀態
+            self.actor.load_state_dict(checkpoint['actor_state_dict'])
+            self.critic1.load_state_dict(checkpoint['critic1_state_dict'])
+            self.critic2.load_state_dict(checkpoint['critic2_state_dict'])
+            self.critic1_target.load_state_dict(checkpoint['critic1_target_state_dict'])
+            self.critic2_target.load_state_dict(checkpoint['critic2_target_state_dict'])
+            
+            # 恢復優化器狀態
+            self.actor_opt.load_state_dict(checkpoint['actor_optimizer_state_dict'])
+            self.critic1_opt.load_state_dict(checkpoint['critic1_optimizer_state_dict'])
+            self.critic2_opt.load_state_dict(checkpoint['critic2_optimizer_state_dict'])
+            
+            # 恢復訓練狀態
+            self.current_episode = checkpoint.get('episode', 0)
+            self.best_episode_reward = checkpoint.get('best_episode_reward', float('-inf'))
+            self.step_count = checkpoint.get('step_count', 0)
+            
+            # 恢復 RND 狀態（如果啟用）
+            if self.use_rnd and self.rnd is not None and 'rnd_state' in checkpoint:
+                rnd_state = checkpoint['rnd_state']
+                self.rnd.rnd_network.load_state_dict(rnd_state['network_state_dict'])
+                self.rnd.optimizer.load_state_dict(rnd_state['optimizer_state_dict'])
+                self.rnd.running_mean = rnd_state['running_mean']
+                self.rnd.running_var = rnd_state['running_var']
+                self.rnd.obs_count = rnd_state['obs_count']
+                self.rnd.reward_history.extend(rnd_state['reward_history'])
+            
+            print(f"✅ 檢查點已加載: {filepath}")
+            print(f"   回合: {self.current_episode}, 最佳獎勵: {self.best_episode_reward:.2f}")
+            
+            return checkpoint
+            
+        except Exception as e:
+            print(f"❌ 加載檢查點失敗: {e}")
+            return None
+    
+    def force_save_to_gdrive(self, reason="manual"):
+        """強制保存到 Google Drive"""
+        if self.gdrive_saver is not None:
+            return self.gdrive_saver.manual_save(self, self.current_episode, self.best_episode_reward, reason)
+        else:
+            print("❌ Google Drive 保存器未配置")
+            return False
+    
+    def get_gdrive_statistics(self):
+        """獲取 Google Drive 保存統計"""
+        if self.gdrive_saver is not None:
+            return self.gdrive_saver.get_statistics()
+        return None
 
